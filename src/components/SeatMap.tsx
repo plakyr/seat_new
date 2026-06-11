@@ -1,51 +1,92 @@
 import React, { useState } from 'react';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { cn } from '../lib/utils';
 import { useStore } from '../store/useStore';
 import { useSocket } from '../store/useSocket';
+
+// 모바일 툴팁 컴포넌트
+function SeatTooltip({ text, onClose }: { text: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center pb-16 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-gray-900 text-white px-6 py-3 rounded-2xl shadow-2xl text-base font-bold"
+        onClick={e => e.stopPropagation()}
+      >
+        {text}
+      </div>
+    </div>
+  );
+}
 
 export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }) {
   const { seats, participants, user, isAdmin: storeIsAdmin, isFrozen, sessionColors, layout } = useStore();
   const isAdmin = forceAdmin || storeIsAdmin;
   const socket = useSocket();
-  const [selectedSeatInfo, setSelectedSeatInfo] = useState<{ seatId: string, participant: any } | null>(null);
+
+  const [selectedSeatInfo, setSelectedSeatInfo] = useState<{ seatId: string; participant: any } | null>(null);
+  // 모바일 툴팁 (예약된 좌석 터치 시)
+  const [tooltipText, setTooltipText] = useState<string | null>(null);
+  // 좌석 선택 확인 팝업
+  const [confirmSeat, setConfirmSeat] = useState<{ seatId: string; label: string } | null>(null);
 
   const maxRow = seats.length > 0 ? Math.max(...seats.map(s => s.row)) : 0;
   const maxCol = seats.length > 0 ? Math.max(...seats.map(s => s.col)) : 0;
-
   const aisleAfterRows: number[] = layout?.aisle_after_rows ?? [];
   const aisleAfterCols: number[] = layout?.aisle_after_cols ?? [];
 
   const grid: any[][] = Array.from({ length: maxRow + 1 }, () => Array(maxCol + 1).fill(null));
   seats.forEach(seat => {
-    if (seat.row <= maxRow && seat.col <= maxCol) {
-      grid[seat.row][seat.col] = seat;
-    }
+    if (seat.row <= maxRow && seat.col <= maxCol) grid[seat.row][seat.col] = seat;
   });
 
   const getSeatColor = (seat: any) => {
     if (seat.status === 'EMPTY') return '#FFFFFF';
     if (seat.status === 'LOCKED') return '#E5E7EB';
-    const colorObj = sessionColors.find(sc => sc.session_id === seat.session_id);
-    if (colorObj) return colorObj.color;
-    return '#4374D9';
+    const colorObj = sessionColors.find((sc: any) => sc.session_id === seat.session_id);
+    return colorObj ? colorObj.color : '#4374D9';
   };
 
   const handleSeatClick = (seat: any) => {
     if (!socket) return;
+
     if (isAdmin) {
+      // 관리자: 예약 좌석 클릭 → 팝업, 빈 좌석 클릭 → 확인 후 강제배정 패널
       if ((seat.status === 'RESERVED' || seat.status === 'AUTO_ASSIGNED') && seat.assigned_to) {
-        const participant = participants.find(p => p.id === seat.assigned_to);
+        const participant = participants.find((p: any) => p.id === seat.assigned_to);
         if (participant) setSelectedSeatInfo({ seatId: seat.id, participant });
       } else if (seat.status === 'EMPTY') {
         setSelectedSeatInfo({ seatId: seat.id, participant: null });
       }
     } else if (user) {
       if (user.turn_status === 'COMPLETED' || user.is_final) {
-        alert('이미 좌석 선택이 완료되었습니다.');
+        // 내 자리 터치 → 좌석 정보 툴팁 표시
+        if (seat.assigned_to === user.id) {
+          setTooltipText(`내 자리: ${seat.row}열 ${seat.col}번`);
+        }
         return;
       }
-      socket.emit('seat:select', { seatId: seat.id });
+      if (seat.status !== 'EMPTY') {
+        // 다른 사람 자리 터치 → 좌석 정보 툴팁
+        const assignedParticipant = participants.find((p: any) => p.id === seat.assigned_to);
+        if (assignedParticipant) {
+          setTooltipText(`${seat.row}열 ${seat.col}번 — ${assignedParticipant.name}`);
+        } else {
+          setTooltipText(`${seat.row}열 ${seat.col}번`);
+        }
+        return;
+      }
+      // 빈 자리 → 확인 팝업
+      setConfirmSeat({ seatId: seat.id, label: `${seat.row}열 ${seat.col}번` });
     }
+  };
+
+  const handleConfirmSelect = () => {
+    if (!socket || !confirmSeat) return;
+    socket.emit('seat:select', { seatId: confirmSeat.seatId });
+    setConfirmSeat(null);
   };
 
   const handleForceCancel = () => {
@@ -54,7 +95,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       socket.emit('admin:cancel_seat', {
         eventId: selectedSeatInfo.participant.event_id,
         seatId: selectedSeatInfo.seatId,
-        participantId: selectedSeatInfo.participant.id
+        participantId: selectedSeatInfo.participant.id,
       });
       setSelectedSeatInfo(null);
     }
@@ -62,16 +103,17 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
 
   const handleForceAssign = (participantId: string) => {
     if (!socket || !selectedSeatInfo) return;
-    if (window.confirm('이 참가자를 이 좌석에 강제 배정하시겠습니까?')) {
-      const eventId = selectedSeatInfo.participant?.event_id || user?.event_id || (participants.length > 0 ? participants[0].event_id : null);
-      if (!eventId) { alert('이벤트 ID를 찾을 수 없습니다.'); return; }
-      socket.emit('admin:force_assign', { eventId, seatId: selectedSeatInfo.seatId, participantId });
-      setSelectedSeatInfo(null);
-    }
+    const targetSeat = seats.find(s => s.id === selectedSeatInfo.seatId);
+    const label = targetSeat ? `${targetSeat.row}열 ${targetSeat.col}번` : '해당 좌석';
+    if (!window.confirm(`이 참가자를 ${label}에 강제 배정하시겠습니까?`)) return;
+    const eventId =
+      selectedSeatInfo.participant?.event_id ||
+      user?.event_id ||
+      (participants.length > 0 ? participants[0].event_id : null);
+    if (!eventId) { alert('이벤트 ID를 찾을 수 없습니다.'); return; }
+    socket.emit('admin:force_assign', { eventId, seatId: selectedSeatInfo.seatId, participantId });
+    setSelectedSeatInfo(null);
   };
-
-  // 열 번호 툴팁: "n열 n번" 형식
-  const getSeatLabel = (seat: any) => `${seat.row}열 ${seat.col}번`;
 
   return (
     <div className="w-full h-full min-h-[60vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
@@ -81,62 +123,103 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         </div>
       )}
 
-      <div
-        className="flex-1 overflow-auto"
-        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
-      >
-        <div className="inline-block p-4 min-w-full">
+      {/* 좌석 선택 확인 팝업 */}
+      {confirmSeat && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 mx-4 w-full max-w-sm">
+            <p className="text-base font-bold text-gray-900 mb-1 text-center">좌석 선택</p>
+            <p className="text-gray-600 text-sm text-center mb-6">
+              <span className="font-semibold text-blue-600">{confirmSeat.label}</span>을 선택하시겠습니까?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmSeat(null)}
+                className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 active:bg-gray-100"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConfirmSelect}
+                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 active:bg-blue-800"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-          {/* STAGE 표시 */}
-          <div className="flex justify-center mb-4">
-            <div className="border-2 border-gray-800 rounded px-12 py-2 font-black text-lg tracking-widest text-gray-800 bg-white shadow-sm">
+      {/* 모바일 좌석 정보 툴팁 */}
+      {tooltipText && (
+        <SeatTooltip text={tooltipText} onClose={() => setTooltipText(null)} />
+      )}
+
+      {/* pinch-to-zoom 지원 */}
+      <TransformWrapper
+        initialScale={1}
+        minScale={0.3}
+        maxScale={5}
+        centerOnInit
+        wheel={{ step: 0.08 }}
+        doubleClick={{ step: 0.7 }}
+      >
+        <TransformComponent
+          wrapperStyle={{ width: '100%', flex: 1, overflow: 'hidden' }}
+          contentStyle={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+        >
+          {/* STAGE */}
+          <div className="flex justify-center mb-5 w-full">
+            <div className="border-2 border-gray-800 rounded px-14 py-2 font-black text-lg tracking-widest text-gray-800 bg-white shadow-sm select-none">
               STAGE
             </div>
           </div>
 
           {/* 좌석 그리드 */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-4 mx-auto w-fit">
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5 w-fit">
             {grid.slice(1).map((row, rIdx) => {
               const rowNum = rIdx + 1;
-              const hasAisleAfter = aisleAfterRows.includes(rowNum);
+              const hasRowAisle = aisleAfterRows.includes(rowNum);
               return (
                 <React.Fragment key={`row-${rowNum}`}>
-                  <div className="flex gap-1.5">
-                    {row.slice(1).map((seat, cIdx) => {
+                  <div className="flex gap-2">
+                    {row.slice(1).map((seat: any, cIdx: number) => {
                       const colNum = cIdx + 1;
-                      const hasAisleAfterCol = aisleAfterCols.includes(colNum);
+                      const hasColAisle = aisleAfterCols.includes(colNum);
 
                       if (!seat) return (
                         <React.Fragment key={`empty-${rowNum}-${colNum}`}>
-                          <div className="w-10 h-10 bg-gray-50/50 rounded-sm" />
-                          {hasAisleAfterCol && <div className="w-5 shrink-0" />}
+                          <div className="w-11 h-11 bg-gray-50/50 rounded-sm shrink-0" />
+                          {hasColAisle && <div className="w-5 shrink-0" />}
                         </React.Fragment>
                       );
 
                       const isMySeat = seat.assigned_to === user?.id;
-                      const assignedParticipant = seat.assigned_to ? participants.find(p => p.id === seat.assigned_to) : null;
-                      const displayName = assignedParticipant ? assignedParticipant.name : '';
+                      const assignedParticipant = seat.assigned_to
+                        ? participants.find((p: any) => p.id === seat.assigned_to)
+                        : null;
+                      const displayName = assignedParticipant?.name ?? '';
 
-                      let seatClass = 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 cursor-pointer text-gray-800';
+                      let seatClass = 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 cursor-pointer text-gray-700';
                       let customStyle: React.CSSProperties = {};
 
                       if (seat.status === 'RESERVED' || seat.status === 'AUTO_ASSIGNED') {
-                        const bgColor = getSeatColor(seat);
-                        customStyle = { backgroundColor: bgColor };
+                        customStyle = { backgroundColor: getSeatColor(seat) };
                         if (isMySeat) {
-                          seatClass = 'text-white shadow-md ring-2 ring-blue-400 scale-110 z-10 cursor-default';
+                          // 내 자리: 밝은 노랑-초록 계열로 가독성 좋게
+                          customStyle = { backgroundColor: '#22c55e' }; // green-500
+                          seatClass = 'text-white shadow-lg ring-2 ring-green-300 scale-110 z-10 cursor-default font-extrabold';
                         } else if (isAdmin) {
                           seatClass = 'text-white cursor-pointer hover:opacity-80 active:opacity-60';
                         } else {
-                          seatClass = 'text-white opacity-90 cursor-not-allowed';
+                          seatClass = 'text-white opacity-80 cursor-pointer';
                         }
                       } else if (seat.status === 'FROZEN') {
                         seatClass = 'bg-red-100 border-2 border-red-300 cursor-not-allowed text-red-800';
                       }
 
-                      const isDisabled = (!isAdmin && seat.status !== 'EMPTY')
-                        || (!isAdmin && isFrozen)
-                        || (!isAdmin && (user?.turn_status === 'COMPLETED' || user?.is_final));
+                      const isDisabled =
+                        (!isAdmin && isFrozen) ||
+                        (!isAdmin && (user?.turn_status === 'COMPLETED' || user?.is_final) && !isMySeat);
 
                       return (
                         <React.Fragment key={seat.id}>
@@ -144,41 +227,47 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                             onClick={() => handleSeatClick(seat)}
                             disabled={isDisabled}
                             className={cn(
-                              'w-10 h-10 rounded-t-lg rounded-b-sm flex items-center justify-center text-[9px] font-bold transition-all duration-150 overflow-hidden whitespace-nowrap px-0.5 shadow-sm select-none shrink-0',
+                              'w-11 h-11 rounded-t-lg rounded-b-sm flex flex-col items-center justify-center',
+                              'text-[9px] font-bold leading-tight transition-all duration-150',
+                              'overflow-hidden shadow-sm select-none shrink-0',
                               seatClass,
                               !isAdmin && isFrozen && 'opacity-50 cursor-not-allowed',
-                              !isAdmin && (user?.turn_status === 'COMPLETED' || user?.is_final) && 'opacity-70 cursor-not-allowed'
                             )}
                             style={customStyle}
                             title={displayName
-                              ? `${displayName} (${getSeatLabel(seat)})`
-                              : getSeatLabel(seat)}
+                              ? `${displayName} (${seat.row}열 ${seat.col}번)`
+                              : `${seat.row}열 ${seat.col}번`}
                           >
-                            {displayName || `${seat.row}-${seat.col}`}
+                            {displayName ? (
+                              <span className="truncate w-full text-center px-0.5">
+                                {displayName.length > 4 ? displayName.slice(0, 4) : displayName}
+                              </span>
+                            ) : (
+                              <span className="text-[8px] text-gray-500">{seat.row}-{seat.col}</span>
+                            )}
                           </button>
-                          {/* 세로 복도 */}
-                          {hasAisleAfterCol && <div className="w-5 shrink-0" />}
+                          {hasColAisle && <div className="w-5 shrink-0" />}
                         </React.Fragment>
                       );
                     })}
                   </div>
-                  {/* 가로 복도 */}
-                  {hasAisleAfter && <div className="h-5" />}
+                  {hasRowAisle && <div className="h-5" />}
+                  <div className="h-2" />
                 </React.Fragment>
               );
             })}
           </div>
-        </div>
-      </div>
+        </TransformComponent>
+      </TransformWrapper>
 
       {/* 범례 */}
       <div className="shrink-0 flex justify-center gap-4 bg-white/95 py-2 px-4 border-t border-gray-200 text-xs font-medium">
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-200 shadow-sm" />선택 가능</div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-500 opacity-60 shadow-sm" />예약됨</div>
-        {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-blue-500 shadow-sm" />내 자리</div>}
+        {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-green-500 shadow-sm" />내 자리</div>}
       </div>
 
-      {/* 좌석 클릭 팝업 (관리자용) */}
+      {/* 관리자용 좌석 팝업 */}
       {selectedSeatInfo && (
         <div className="absolute top-4 right-4 bg-white p-4 rounded-xl shadow-xl border border-gray-200 z-20 w-64 max-h-[80vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-3">
@@ -199,13 +288,13 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
           ) : (
             <div className="space-y-2 text-sm text-gray-700">
               <p className="font-medium text-gray-500">
-                빈 좌석 ({seats.find(s => s.id === selectedSeatInfo.seatId)?.row}열 {seats.find(s => s.id === selectedSeatInfo.seatId)?.col}번)
+                빈 좌석 ({seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.row}열 {seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.col}번)
               </p>
               <div className="mt-2 space-y-1 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-1">
-                {participants.filter(p => !p.seat_id).length === 0 ? (
+                {participants.filter((p: any) => !p.seat_id).length === 0 ? (
                   <p className="text-xs text-gray-400 text-center py-2">미배정 참가자가 없습니다.</p>
                 ) : (
-                  participants.filter(p => !p.seat_id).sort((a, b) => a.turn_order - b.turn_order).map(p => (
+                  participants.filter((p: any) => !p.seat_id).sort((a: any, b: any) => a.turn_order - b.turn_order).map((p: any) => (
                     <button key={p.id} onClick={() => handleForceAssign(p.id)}
                       className="w-full text-left px-2 py-1.5 text-xs hover:bg-blue-50 active:bg-blue-100 rounded flex justify-between items-center border-b last:border-0 border-gray-50">
                       <span>{p.name} ({p.turn_order}번)</span>
