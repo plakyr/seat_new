@@ -23,6 +23,7 @@ export default function AnnouncementBar({
   timerPaused,
 }: Props) {
   const [timeLeft, setTimeLeft] = useState<string>('03:00');
+  const [timeLeftMs, setTimeLeftMs] = useState<number>(3 * 60 * 1000);
   // 클라이언트 기준 시작 시각 보정값 (서버 시간 - 클라이언트 시간)
   const offsetRef = useRef<number>(0);
 
@@ -43,10 +44,12 @@ export default function AnnouncementBar({
       const diff = end - now;
       if (diff <= 0) {
         setTimeLeft('00:00');
+        setTimeLeftMs(0);
       } else {
         const m = Math.floor(diff / 60000);
         const s = Math.floor((diff % 60000) / 1000);
         setTimeLeft(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+        setTimeLeftMs(diff);
       }
     };
 
@@ -94,7 +97,7 @@ export default function AnnouncementBar({
     >
       <span className="font-bold text-sm md:text-base truncate">{text}</span>
       {showTimer && (
-        <span className="ml-4 font-mono font-bold text-lg shrink-0 tabular-nums">
+        <span className={`ml-4 font-mono font-bold text-lg shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}>
           {timeLeft}
         </span>
       )}

@@ -120,7 +120,7 @@ export default function User() {
           <h1 className="text-2xl font-bold text-center mb-8">참가자 로그인</h1>
           <form onSubmit={handleLogin} className="space-y-5">
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 rounded-xl border" placeholder="이름" required />
-            <input type="text" maxLength={4} value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-3 rounded-xl border" placeholder="전화번호 뒷자리" required />
+            <input type="text" maxLength={4} value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-3 rounded-xl border" placeholder="비밀번호" required />
             {requiresCode && <input type="text" value={uniqueCode} onChange={(e) => setUniqueCode(e.target.value)} className="w-full px-4 py-3 rounded-xl border" placeholder="고유 코드" required />}
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold">입장하기</button>
