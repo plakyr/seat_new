@@ -101,7 +101,9 @@ export const useStore = create<AppState>((set) => ({
     participants: state.participants.map(p => p.id === updatedParticipant.id ? updatedParticipant : p)
   })),
   setMessages: (messages) => set({ messages }),
-  addMessage: (message) => set((state) => ({
-    messages: [...state.messages, message]
-  })),
+  addMessage: (message) => set((state) => (
+    state.messages.some(m => m.id === message.id)
+      ? {}
+      : { messages: [...state.messages, message] }
+  )),
 }));
