@@ -704,57 +704,12 @@ app.post('/api/admin/login', async (req, res) => {
       }
     });
 
-    // Admin skip turn
+    // Admin: 현재 선택자 좌석 자동배정 후 다음 턴으로 넘기기
     socket.on('admin:next_turn', async (data: { eventId: string }) => {
       if (!socket.data.isAdmin) return;
 
       try {
-        const result = await prisma.$transaction(async (tx) => {
-          const systemState = await tx.systemState.findUnique({ where: { event_id: data.eventId } });
-          if (!systemState) throw new Error('시스템 상태를 찾을 수 없습니다.');
-
-          const nextTurnOrder = systemState.current_turn_order + 1;
-          const updatedSystemState = await tx.systemState.update({
-            where: { event_id: data.eventId },
-            data: {
-              current_turn_order: nextTurnOrder,
-              current_turn_start_time: new Date()
-            }
-          });
-
-          // Update the participant whose turn was skipped
-          const skippedParticipant = await tx.participant.findFirst({
-            where: { event_id: data.eventId, turn_order: systemState.current_turn_order }
-          });
-
-          if (skippedParticipant && !skippedParticipant.is_final) {
-             await tx.participant.update({
-                where: { id: skippedParticipant.id },
-                data: { turn_status: 'EXPIRED' }
-             });
-          }
-
-          return { updatedSystemState, skippedParticipant };
-        });
-
-        io.to(`event:${data.eventId}`).emit('system:turn', {
-          currentTurnOrder: result.updatedSystemState.current_turn_order,
-          currentTurnStartTime: result.updatedSystemState.current_turn_start_time
-        });
-        io.to(`admin:event:${data.eventId}`).emit('system:turn', {
-          currentTurnOrder: result.updatedSystemState.current_turn_order,
-          currentTurnStartTime: result.updatedSystemState.current_turn_start_time
-        });
-
-        if (result.skippedParticipant) {
-           const updatedParticipant = await prisma.participant.findUnique({ where: { id: result.skippedParticipant.id } });
-           io.to(`admin:event:${data.eventId}`).emit('participant:update_admin', { participant: updatedParticipant });
-           const userSocketId = activeSockets.get(result.skippedParticipant.id);
-           if (userSocketId) {
-             io.to(userSocketId).emit('participant:update', { participant: updatedParticipant });
-           }
-        }
-
+        await forceAssignAndAdvanceTurn(data.eventId);
       } catch (error: any) {
         socket.emit('admin:error', { error: error.message });
       }
@@ -995,6 +950,56 @@ app.post('/api/admin/login', async (req, res) => {
         if (distA !== distB) return distA - distB;
         return a.col - b.col;
       });
+  }
+
+  // 관리자가 "다음 턴으로 넘기기"를 누르면, 현재 선택자의 좌석을 자동배정 기준에 맞춰 즉시 배정한 뒤 다음 턴으로 전환
+  async function forceAssignAndAdvanceTurn(eventId: string) {
+    const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+    if (!systemState) throw new Error('시스템 상태를 찾을 수 없습니다.');
+
+    const currentParticipant = await prisma.participant.findFirst({
+      where: { event_id: eventId, turn_order: systemState.current_turn_order }
+    });
+
+    if (currentParticipant && !currentParticipant.is_final) {
+      const layout = await prisma.venueLayout.findFirst({ where: { event_id: eventId }, include: { seats: true } });
+      const sortedSeats = layout ? sortSeatsForAutoAssign(layout.seats, layout.cols) : [];
+
+      let updatedParticipant;
+      if (sortedSeats.length > 0) {
+        const targetSeat = sortedSeats[0];
+        const result = await prisma.$transaction(async (tx) => {
+          const updatedSeat = await tx.seat.update({
+            where: { id: targetSeat.id },
+            data: { status: 'AUTO_ASSIGNED', assigned_to: currentParticipant.id, session_id: currentParticipant.session_id }
+          });
+          const updatedParticipant = await tx.participant.update({
+            where: { id: currentParticipant.id },
+            data: { seat_id: targetSeat.id, is_final: true, turn_status: 'COMPLETED' }
+          });
+          return { updatedSeat, updatedParticipant };
+        });
+        io.to(`event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
+        io.to(`admin:event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
+        updatedParticipant = result.updatedParticipant;
+      } else {
+        updatedParticipant = await prisma.participant.update({
+          where: { id: currentParticipant.id },
+          data: { turn_status: 'EXPIRED' }
+        });
+      }
+
+      io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: updatedParticipant });
+      const userSocketId = activeSockets.get(currentParticipant.id);
+      if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: updatedParticipant });
+    }
+
+    const nextTurnOrder = systemState.current_turn_order + 1;
+    const updatedState = await prisma.systemState.update({
+      where: { event_id: eventId },
+      data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
+    });
+    emitTurn(eventId, updatedState);
   }
 
   async function runAutoAssignIfExpired(eventId: string) {

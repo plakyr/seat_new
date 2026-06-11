@@ -33,6 +33,7 @@ export default function Admin() {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
+  const [isSessionPanelOpen, setIsSessionPanelOpen] = useState(false);
 
   useEffect(() => {
     if (adminToken && activeTab === 'MONITOR') {
@@ -453,29 +454,29 @@ const updateStoreWithEventData = (event: any) => {
                 </div>
                 
                 {selectedEventId && (
-                  <div className="w-full md:w-auto mt-4 md:mt-0 md:self-end flex gap-2">
-                    <button 
+                  <div className="w-full md:w-auto mt-4 md:mt-0 md:self-end flex flex-wrap gap-2">
+                    <button
                       onClick={handleNextTurn}
-                      className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md bg-blue-600 hover:bg-blue-700"
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors shadow-sm bg-blue-600 hover:bg-blue-700"
                     >
                       다음 턴으로 넘기기
                     </button>
-                    <button 
+                    <button
                       onClick={handleToggleFreeze}
-                      className={`w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md ${isFrozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors shadow-sm ${isFrozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
                     >
-                      {isFrozen ? '시스템 재개 (Unfreeze)' : '시스템 정지 (Freeze)'}
+                      {isFrozen ? '시스템 재개' : '시스템 정지'}
                     </button>
                     <button
                       onClick={handleResetEvent}
                       title="테스트용: 모든 좌석 배정을 초기화합니다 (완성본에서는 삭제 예정)"
-                      className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md bg-orange-500 hover:bg-orange-600"
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors shadow-sm bg-orange-500 hover:bg-orange-600"
                     >
-                      이벤트 초기화 (테스트용)
+                      이벤트 초기화
                     </button>
                     <button
                       onClick={handleDeleteEvent}
-                      className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md bg-gray-700 hover:bg-gray-800"
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors shadow-sm bg-gray-700 hover:bg-gray-800"
                     >
                       이벤트 삭제
                     </button>
@@ -497,10 +498,31 @@ const updateStoreWithEventData = (event: any) => {
                     timerPaused={timerPaused}
                   />
 
+                  <div className="flex-1 flex gap-4">
+                    <div className="flex-[2] flex flex-col">
+                      <div className="flex-1 border border-gray-200 rounded-xl overflow-hidden bg-gray-50 min-h-[400px]">
+  <SeatMap forceAdmin={true} />
+</div>
+                      <p className="text-sm text-gray-500 mt-4 text-center font-medium">
+                        예약된 좌석을 클릭하면 참가자 정보를 확인하고 강제 취소할 수 있습니다.
+                      </p>
+                    </div>
+                    <div className="flex-1 flex flex-col min-h-[400px]">
+                      <ChatWindow eventId={selectedEventId} />
+                    </div>
+                  </div>
+
                   {/* Session Info Panel */}
-                  <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <h3 className="text-sm font-bold text-gray-700 mb-2">그룹별 현황 및 시간 설정</h3>
-                    <div className="flex flex-col gap-3">
+                  <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <button
+                      onClick={() => setIsSessionPanelOpen(prev => !prev)}
+                      className="w-full flex items-center justify-between text-sm font-bold text-gray-700"
+                    >
+                      <span>그룹별 현황 및 시간 설정</span>
+                      <span className="text-gray-400">{isSessionPanelOpen ? '▲ 접기' : '▼ 펼치기'}</span>
+                    </button>
+                    {isSessionPanelOpen && (
+                    <div className="flex flex-col gap-3 mt-3">
                       {sessionColors.map(sc => {
                         const sessionParticipants = participants.filter(p => p.session_id === sc.session_id);
                         const completedCount = sessionParticipants.filter(p => p.seat_id).length;
@@ -566,20 +588,7 @@ const updateStoreWithEventData = (event: any) => {
                         );
                       })}
                     </div>
-                  </div>
-
-                  <div className="flex-1 flex gap-4">
-                    <div className="flex-[2] flex flex-col">
-                      <div className="flex-1 border border-gray-200 rounded-xl overflow-hidden bg-gray-50 min-h-[400px]">
-  <SeatMap forceAdmin={true} /> 
-</div>
-                      <p className="text-sm text-gray-500 mt-4 text-center font-medium">
-                        예약된 좌석을 클릭하면 참가자 정보를 확인하고 강제 취소할 수 있습니다.
-                      </p>
-                    </div>
-                    <div className="flex-1 flex flex-col min-h-[400px]">
-                      <ChatWindow eventId={selectedEventId} />
-                    </div>
+                    )}
                   </div>
                 </div>
               ) : (
