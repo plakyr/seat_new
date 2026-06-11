@@ -7,7 +7,7 @@ import { useSocket } from '../store/useSocket';
 import ChatWindow from '../components/ChatWindow';
 
 export default function User() {
-  const { user, setUser, serverTime, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, announcement, setLayout, participants } = useStore();
+  const { user, setUser, serverTime, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, announcement, setLayout, participants, timerPaused } = useStore();
   const socket = useSocket();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -148,6 +148,7 @@ export default function User() {
           isFrozen={isFrozen}
           frozenReason={frozenReason}
           participants={participants}
+          timerPaused={timerPaused}
         />
         <div className="flex-1 relative min-h-[400px]">
           <SeatMap />

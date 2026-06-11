@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnnouncementState } from '../store/useStore';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   isFrozen: boolean;
   frozenReason: string | null;
   participants: any[];
+  timerPaused: boolean;
 }
 
 export default function AnnouncementBar({
@@ -19,17 +20,27 @@ export default function AnnouncementBar({
   isFrozen,
   frozenReason,
   participants,
+  timerPaused,
 }: Props) {
-  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [timeLeft, setTimeLeft] = useState<string>('03:00');
+  // 클라이언트 기준 시작 시각 보정값 (서버 시간 - 클라이언트 시간)
+  const offsetRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (serverTime) {
+      offsetRef.current = new Date(serverTime).getTime() - Date.now();
+    }
+  }, [serverTime]);
 
   useEffect(() => {
     if (!currentTurnStartTime) return;
 
     const update = () => {
-      const now = serverTime ? new Date(serverTime).getTime() + (Date.now() - Date.now()) : Date.now();
+      if (timerPaused) return; // 자동배정 중 멈춤
+      const now = Date.now() + offsetRef.current;
       const start = new Date(currentTurnStartTime).getTime();
       const end = start + 3 * 60 * 1000;
-      const diff = end - Date.now();
+      const diff = end - now;
       if (diff <= 0) {
         setTimeLeft('00:00');
       } else {
@@ -42,11 +53,10 @@ export default function AnnouncementBar({
     update();
     const interval = setInterval(update, 500);
     return () => clearInterval(interval);
-  }, [currentTurnStartTime, serverTime]);
+  }, [currentTurnStartTime, timerPaused]);
 
   const currentParticipant = participants.find(p => p.turn_order === currentTurnOrder);
 
-  // 우선순위: 일시정지 > 자동배정 > 세션전환 > 진행중
   let bgColor = 'bg-blue-600';
   let text = '';
   let pulse = false;
@@ -57,7 +67,7 @@ export default function AnnouncementBar({
     pulse = true;
   } else if (announcement.type === 'AUTO_ASSIGN') {
     bgColor = 'bg-orange-500';
-    text = '⚙️ 시스템 자동 배정';
+    text = '⚙️ 시스템 자동 배정 중...';
     pulse = true;
   } else if (announcement.type === 'SESSION_CHANGE') {
     bgColor = 'bg-purple-600';
@@ -72,11 +82,15 @@ export default function AnnouncementBar({
     text = '대기 중';
   }
 
-  const showTimer = !isFrozen && announcement.type !== 'SESSION_CHANGE' && announcement.type !== 'AUTO_ASSIGN' && timeLeft;
+  const showTimer =
+    !isFrozen &&
+    !timerPaused &&
+    announcement.type !== 'SESSION_CHANGE' &&
+    announcement.type !== 'AUTO_ASSIGN';
 
   return (
     <div
-      className={`${bgColor} text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-all duration-300 ${pulse ? 'animate-pulse' : ''}`}
+      className={`${bgColor} text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
     >
       <span className="font-bold text-sm md:text-base truncate">{text}</span>
       {showTimer && (

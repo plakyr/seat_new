@@ -44,6 +44,11 @@ export const useSocket = () => {
     });
 
     socketInstance.on('system:turn', (data: { currentTurnOrder: number; currentTurnStartTime: string }) => {
+      // 새 차례 공지 뜨는 순간 타이머 재개 + 시작 시간 갱신
+      storeRef.current.setTimerPaused(false);
+      storeRef.current.setAnnouncement({
+        type: 'IDLE', currentParticipantName: null, nextSessionId: null, nextStartTime: null,
+      });
       storeRef.current.setSystemTurn(data.currentTurnOrder, data.currentTurnStartTime);
     });
 
@@ -119,17 +124,15 @@ export const useSocket = () => {
     });
 
     socketInstance.on('system:auto_assign', (data: { participantName: string }) => {
+      // 자동배정 진행 중 타이머 멈춤
+      storeRef.current.setTimerPaused(true);
       storeRef.current.setAnnouncement({
         type: 'AUTO_ASSIGN',
         currentParticipantName: data.participantName,
         nextSessionId: null,
         nextStartTime: null,
       });
-      setTimeout(() => {
-        storeRef.current.setAnnouncement({
-          type: 'IDLE', currentParticipantName: null, nextSessionId: null, nextStartTime: null,
-        });
-      }, 5000);
+      // system:turn 이벤트에서 타이머 재개되므로 setTimeout 제거
     });
 
     socketInstance.on('system:session_change', (data: { prevSession: string; nextSession: string; nextStartTime: string | null }) => {

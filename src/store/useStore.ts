@@ -66,6 +66,7 @@ interface AppState {
   sessionColors: { id: string; session_id: string; color: string; start_time?: string | null; end_time?: string | null }[];
   messages: ChatMessage[];
   announcement: AnnouncementState;
+  timerPaused: boolean; // 자동배정 중 타이머 멈춤
 
   setUser: (user: User | null, sessionToken: string | null) => void;
   logoutUser: () => void;
@@ -82,6 +83,7 @@ interface AppState {
   setMessages: (messages: ChatMessage[]) => void;
   addMessage: (message: ChatMessage) => void;
   setAnnouncement: (a: AnnouncementState) => void;
+  setTimerPaused: (paused: boolean) => void;
 
   // 하위 호환용 (Admin.tsx에서 rows/cols 직접 쓰는 곳 대비)
   rows: number;
@@ -107,6 +109,7 @@ export const useStore = create<AppState>((set) => ({
   sessionColors: [],
   messages: [],
   announcement: { type: 'IDLE', currentParticipantName: null, nextSessionId: null, nextStartTime: null },
+  timerPaused: false,
   rows: 10,
   cols: 10,
 
@@ -139,4 +142,5 @@ export const useStore = create<AppState>((set) => ({
       : { messages: [...state.messages, message] }
   ),
   setAnnouncement: (announcement) => set({ announcement }),
+  setTimerPaused: (timerPaused) => set({ timerPaused }),
 }));
