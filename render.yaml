@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: seat-selection-app
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx prisma generate && npx prisma db push && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Render 대시보드에서 직접 입력 (Neon 연결 주소)
+      - key: JWT_SECRET
+        generateValue: true # Render가 자동으로 안전한 무작위 값 생성
