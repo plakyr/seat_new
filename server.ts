@@ -123,6 +123,90 @@ app.post('/api/admin/login', async (req, res) => {
     }
   });
 
+  // 테스트용: 이벤트의 모든 좌석/참가자 상태를 초기화
+  app.post('/api/admin/events/:eventId/reset', requireAdmin, async (req, res) => {
+    const { eventId } = req.params;
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.seat.updateMany({
+          where: { layout: { event_id: eventId } },
+          data: { status: 'EMPTY', assigned_to: null, session_id: null }
+        });
+        await tx.participant.updateMany({
+          where: { event_id: eventId },
+          data: { seat_id: null, is_final: false, turn_status: 'WAITING', session_token: null }
+        });
+        await tx.systemState.upsert({
+          where: { event_id: eventId },
+          update: { is_frozen: false, frozen_reason: null, current_turn_order: 1, current_turn_start_time: new Date() },
+          create: { event_id: eventId, current_turn_order: 1, current_turn_start_time: new Date() }
+        });
+      });
+
+      const layout = await prisma.venueLayout.findFirst({ where: { event_id: eventId }, include: { seats: true } });
+      const participants = await prisma.participant.findMany({ where: { event_id: eventId } });
+      const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+
+      io.to(`event:${eventId}`).emit('seat:init', {
+        seats: layout?.seats || [],
+        layout: layout ? {
+          rows: layout.rows,
+          cols: layout.cols,
+          aisle_after_rows: layout.aisle_after_rows ? JSON.parse(layout.aisle_after_rows) : [],
+          aisle_after_cols: layout.aisle_after_cols ? JSON.parse(layout.aisle_after_cols) : [],
+        } : null,
+      });
+      if (systemState) {
+        io.to(`event:${eventId}`).emit('system:turn', {
+          currentTurnOrder: systemState.current_turn_order,
+          currentTurnStartTime: systemState.current_turn_start_time,
+        });
+        io.to(`event:${eventId}`).emit('system:freeze', { isFrozen: false, reason: null });
+      }
+      io.to(`admin:event:${eventId}`).emit('admin:event_data', {
+        seats: layout?.seats || [],
+        layout: layout ? {
+          rows: layout.rows,
+          cols: layout.cols,
+          aisle_after_rows: layout.aisle_after_rows ? JSON.parse(layout.aisle_after_rows) : [],
+          aisle_after_cols: layout.aisle_after_cols ? JSON.parse(layout.aisle_after_cols) : [],
+        } : null,
+        participants,
+        systemState,
+        sessionColors: await prisma.sessionColor.findMany({ where: { event_id: eventId } }),
+        messages: [],
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: '이벤트 초기화에 실패했습니다.' });
+    }
+  });
+
+  // 이벤트 완전 삭제 (관련 데이터 전체 삭제)
+  app.delete('/api/admin/events/:eventId', requireAdmin, async (req, res) => {
+    const { eventId } = req.params;
+    try {
+      await prisma.$transaction(async (tx) => {
+        const layouts = await tx.venueLayout.findMany({ where: { event_id: eventId } });
+        for (const layout of layouts) {
+          await tx.seat.deleteMany({ where: { layout_id: layout.id } });
+        }
+        await tx.venueLayout.deleteMany({ where: { event_id: eventId } });
+        await tx.participant.deleteMany({ where: { event_id: eventId } });
+        await tx.chatMessage.deleteMany({ where: { event_id: eventId } });
+        await tx.adminLog.deleteMany({ where: { event_id: eventId } });
+        await tx.sessionColor.deleteMany({ where: { event_id: eventId } });
+        await tx.systemState.deleteMany({ where: { event_id: eventId } });
+        await tx.event.delete({ where: { id: eventId } });
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: '이벤트 삭제에 실패했습니다.' });
+    }
+  });
+
   app.post('/api/admin/upload', requireAdmin, upload.single('file'), async (req, res) => {
     try {
       const { name, rows, cols } = req.body;

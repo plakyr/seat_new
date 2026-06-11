@@ -180,6 +180,39 @@ const updateStoreWithEventData = (event: any) => {
     }
   };
 
+  const handleResetEvent = async () => {
+    if (!selectedEventId) return;
+    if (!confirm('이 이벤트의 모든 좌석 배정을 초기화하고 처음부터 다시 시작하시겠습니까?')) return;
+    try {
+      const res = await fetch(`/api/admin/events/${selectedEventId}/reset`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      if (!res.ok) throw new Error();
+      socket.emit('admin:request_event', { eventId: selectedEventId });
+      fetchEvents();
+    } catch {
+      alert('이벤트 초기화에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!selectedEventId) return;
+    const target = events.find(ev => ev.id === selectedEventId);
+    if (!confirm(`'${target?.name}' 이벤트를 완전히 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+    try {
+      const res = await fetch(`/api/admin/events/${selectedEventId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      if (!res.ok) throw new Error();
+      setSelectedEventId(null);
+      fetchEvents();
+    } catch {
+      alert('이벤트 삭제에 실패했습니다.');
+    }
+  };
+
   const handleSaveSession = async (session: any) => {
     try {
       const res = await fetch('/api/admin/sessions', {
@@ -431,6 +464,19 @@ const updateStoreWithEventData = (event: any) => {
                       className={`w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md ${isFrozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
                     >
                       {isFrozen ? '시스템 재개 (Unfreeze)' : '시스템 정지 (Freeze)'}
+                    </button>
+                    <button
+                      onClick={handleResetEvent}
+                      title="테스트용: 모든 좌석 배정을 초기화합니다 (완성본에서는 삭제 예정)"
+                      className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md bg-orange-500 hover:bg-orange-600"
+                    >
+                      이벤트 초기화 (테스트용)
+                    </button>
+                    <button
+                      onClick={handleDeleteEvent}
+                      className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md bg-gray-700 hover:bg-gray-800"
+                    >
+                      이벤트 삭제
                     </button>
                   </div>
                 )}
