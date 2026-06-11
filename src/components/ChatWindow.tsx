@@ -6,10 +6,11 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
   const { messages, user, isAdmin, adminUser, currentTurnOrder, isFrozen } = useStore();
   const socket = useSocket();
   const [inputValue, setInputValue] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
   }, [messages]);
 
   const canChat = isAdmin || (user && user.turn_order === currentTurnOrder && !isFrozen && !user.is_final);
@@ -31,7 +32,7 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
         <h3 className="text-sm font-bold text-gray-800">실시간 채팅</h3>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((msg) => {
           const isMe = isAdmin ? msg.sender_type === 'ADMIN' : (user && msg.sender_name === user.name && msg.sender_type === 'USER');
           return (
@@ -50,7 +51,6 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
             </div>
           );
         })}
-        <div ref={messagesEndRef} />
       </div>
 
       <div className="p-3 border-t border-gray-200 bg-gray-50">
