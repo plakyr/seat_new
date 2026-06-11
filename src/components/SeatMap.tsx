@@ -116,7 +116,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   };
 
   return (
-    <div className="w-full h-full min-h-[80vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
+    <div className="w-full h-full min-h-[55vh] md:min-h-[80vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
       {seats.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60">
           <p className="text-gray-500 font-bold animate-pulse">좌석 데이터를 불러오는 중입니다...</p>
