@@ -22,7 +22,7 @@ function SeatTooltip({ text, onClose }: { text: string; onClose: () => void }) {
 }
 
 export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }) {
-  const { seats, participants, user, isAdmin: storeIsAdmin, isFrozen, sessionColors, layout } = useStore();
+  const { seats, participants, user, isAdmin: storeIsAdmin, isFrozen, sessionColors, layout, timerPaused } = useStore();
   const isAdmin = forceAdmin || storeIsAdmin;
   const socket = useSocket();
 
@@ -51,6 +51,8 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
 
   const handleSeatClick = (seat: any) => {
     if (!socket) return;
+    // 자동배정 진행 중에는 참가자 좌석 선택 불가
+    if (!isAdmin && timerPaused) return;
 
     if (isAdmin) {
       // 관리자: 예약 좌석 클릭 → 팝업, 빈 좌석 클릭 → 확인 후 강제배정 패널
@@ -218,6 +220,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
 
                       const isDisabled =
                         (!isAdmin && isFrozen) ||
+                        (!isAdmin && timerPaused) || // 자동배정 진행 중 좌석 잠금
                         (!isAdmin && (user?.turn_status === 'COMPLETED' || user?.is_final) && !isMySeat);
 
                       return (

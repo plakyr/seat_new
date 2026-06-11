@@ -41,7 +41,8 @@ export default function AnnouncementBar({
       const now = Date.now() + offsetRef.current;
       const start = new Date(currentTurnStartTime).getTime();
       const end = start + 3 * 60 * 1000;
-      const diff = end - now;
+      // 시계 오차로 인해 3:00을 초과해 표시되지 않도록 상한 고정
+      const diff = Math.min(end - now, 3 * 60 * 1000);
       if (diff <= 0) {
         setTimeLeft('00:00');
         setTimeLeftMs(0);
@@ -95,7 +96,7 @@ export default function AnnouncementBar({
     <div
       className={`${bgColor} text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
     >
-      <span className="font-bold text-sm md:text-base truncate">{text}</span>
+      <span className="font-bold text-lg truncate">{text}</span>
       {showTimer && (
         <span className={`ml-4 font-mono font-bold text-lg shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}>
           {timeLeft}

@@ -962,8 +962,27 @@ app.post('/api/admin/login', async (req, res) => {
     });
   }
 
-  // ─── 자동 타이머 & 자동 배정 스케줄러 (5초마다 실행) ───────────────────
+  // 모든 클라이언트가 동일한 서버 시간을 사용하도록 주기적으로 동기화 (시계 오차 방지)
+  setInterval(() => {
+    io.emit('time:sync', { serverTime: new Date().toISOString() });
+  }, 10000);
+
+  // ─── 자동 타이머 & 자동 배정 스케줄러 (1초마다 실행) ───────────────────
   const TURN_DURATION_MS = 3 * 60 * 1000; // 3분
+  const AUTO_ASSIGN_NOTICE_MS = 700; // 자동배정 문구 표시 후 좌석 배정까지
+  const AUTO_ASSIGN_NEXT_MS = 800;   // 좌석 배정 후 다음 턴 전환까지 (총 1.5초)
+  const delay = (ms: number) => new Promise<void>(res => setTimeout(res, ms));
+  const autoAssignInProgress = new Set<string>(); // 진행 중인 이벤트 (재진입 방지)
+
+  function emitTurn(eventId: string, state: { current_turn_order: number; current_turn_start_time: Date }) {
+    const payload = {
+      currentTurnOrder: state.current_turn_order,
+      currentTurnStartTime: state.current_turn_start_time,
+    };
+    io.to(`event:${eventId}`).emit('system:turn', payload);
+    io.to(`admin:event:${eventId}`).emit('system:turn', payload);
+  }
+
 
   function sortSeatsForAutoAssign(seats: any[], totalCols: number) {
     return [...seats]
@@ -979,100 +998,92 @@ app.post('/api/admin/login', async (req, res) => {
   }
 
   async function runAutoAssignIfExpired(eventId: string) {
-    try {
-      const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
-      if (!systemState || systemState.is_frozen) return;
+    // 이미 자동배정 시퀀스가 진행 중이면 건너뜀 (중복 방지)
+    if (autoAssignInProgress.has(eventId)) return;
 
-      const now = new Date();
-      const turnStart = new Date(systemState.current_turn_start_time);
-      if (now.getTime() - turnStart.getTime() < TURN_DURATION_MS) return;
+    const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+    if (!systemState || systemState.is_frozen) return;
 
-      const currentParticipant = await prisma.participant.findFirst({
-        where: { event_id: eventId, turn_order: systemState.current_turn_order }
-      });
+    const now = Date.now();
+    const turnStart = new Date(systemState.current_turn_start_time).getTime();
+    // 제한시간(정확히 3분) 이전이면 아무것도 안 함
+    if (now - turnStart < TURN_DURATION_MS) return;
 
-      const maxTurnResult = await prisma.participant.aggregate({
+    const currentParticipant = await prisma.participant.findFirst({
+      where: { event_id: eventId, turn_order: systemState.current_turn_order }
+    });
+
+    const maxTurnResult = await prisma.participant.aggregate({
+      where: { event_id: eventId },
+      _max: { turn_order: true }
+    });
+    const maxTurn = maxTurnResult._max.turn_order || 0;
+    const nextTurnOrder = systemState.current_turn_order + 1;
+
+    // 이미 완료됐거나 참가자 없으면 (자동배정 문구 없이) 조용히 다음 턴으로
+    if (!currentParticipant || currentParticipant.is_final) {
+      if (nextTurnOrder > maxTurn) return;
+      const updated = await prisma.systemState.update({
         where: { event_id: eventId },
-        _max: { turn_order: true }
+        data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
       });
-      const maxTurn = maxTurnResult._max.turn_order || 0;
-      const nextTurnOrder = systemState.current_turn_order + 1;
+      emitTurn(eventId, updated);
+      return;
+    }
 
-      // 이미 완료됐거나 참가자 없으면 다음 턴으로
-      if (!currentParticipant || currentParticipant.is_final) {
-        if (nextTurnOrder > maxTurn) return;
-        await prisma.systemState.update({
-          where: { event_id: eventId },
-          data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
-        });
-        const now2 = new Date();
-        io.to(`event:${eventId}`).emit('system:turn', { currentTurnOrder: nextTurnOrder, currentTurnStartTime: now2 });
-        io.to(`admin:event:${eventId}`).emit('system:turn', { currentTurnOrder: nextTurnOrder, currentTurnStartTime: now2 });
-        return;
-      }
-
-      console.log(`[AutoAssign] 시간 초과 - ${currentParticipant.name} 자동 배정`);
+    // ── 자동배정 시퀀스 시작 (총 1.5초) ──
+    autoAssignInProgress.add(eventId);
+    try {
+      // 1) 즉시 자동배정 문구 표시 → 클라이언트 좌석 잠금 + 타이머 정지
+      console.log(`[AutoAssign] 시간 초과 - ${currentParticipant.name} 자동 배정 시작`);
       io.to(`event:${eventId}`).emit('system:auto_assign', { participantName: currentParticipant.name });
       io.to(`admin:event:${eventId}`).emit('system:auto_assign', { participantName: currentParticipant.name });
+
+      // 2) 0.7초 후 좌석 자동배정
+      await delay(AUTO_ASSIGN_NOTICE_MS);
 
       const layout = await prisma.venueLayout.findFirst({
         where: { event_id: eventId },
         include: { seats: true }
       });
-      if (!layout) return;
-
-      const sortedSeats = sortSeatsForAutoAssign(layout.seats, layout.cols);
+      const sortedSeats = layout ? sortSeatsForAutoAssign(layout.seats, layout.cols) : [];
 
       if (sortedSeats.length === 0) {
+        // 빈 좌석이 없으면 만료 처리만
         await prisma.participant.update({ where: { id: currentParticipant.id }, data: { turn_status: 'EXPIRED' } });
-        if (nextTurnOrder <= maxTurn) {
-          await prisma.systemState.update({
-            where: { event_id: eventId },
-            data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
+      } else {
+        const targetSeat = sortedSeats[0];
+        const result = await prisma.$transaction(async (tx) => {
+          const updatedSeat = await tx.seat.update({
+            where: { id: targetSeat.id },
+            data: { status: 'AUTO_ASSIGNED', assigned_to: currentParticipant.id, session_id: currentParticipant.session_id }
           });
-          const now3 = new Date();
-          io.to(`event:${eventId}`).emit('system:turn', { currentTurnOrder: nextTurnOrder, currentTurnStartTime: now3 });
-          io.to(`admin:event:${eventId}`).emit('system:turn', { currentTurnOrder: nextTurnOrder, currentTurnStartTime: now3 });
-        }
-        return;
+          const updatedParticipant = await tx.participant.update({
+            where: { id: currentParticipant.id },
+            data: { seat_id: targetSeat.id, is_final: true, turn_status: 'COMPLETED' }
+          });
+          return { updatedSeat, updatedParticipant };
+        });
+
+        io.to(`event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
+        io.to(`admin:event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
+        io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: result.updatedParticipant });
+        const userSocketId = activeSockets.get(currentParticipant.id);
+        if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: result.updatedParticipant });
+        console.log(`[AutoAssign] ${currentParticipant.name} → ${targetSeat.row}행 ${targetSeat.col}열 완료`);
       }
 
-      const targetSeat = sortedSeats[0];
-      const assignTime = new Date();
+      // 3) 0.8초 후 다음 턴으로 전환 (다음 사람 정확히 3:00 시작)
+      await delay(AUTO_ASSIGN_NEXT_MS);
 
-      const result = await prisma.$transaction(async (tx) => {
-        const updatedSeat = await tx.seat.update({
-          where: { id: targetSeat.id },
-          data: { status: 'AUTO_ASSIGNED', assigned_to: currentParticipant.id, session_id: currentParticipant.session_id }
-        });
-        const updatedParticipant = await tx.participant.update({
-          where: { id: currentParticipant.id },
-          data: { seat_id: targetSeat.id, is_final: true, turn_status: 'COMPLETED' }
-        });
-        const updatedState = await tx.systemState.update({
-          where: { event_id: eventId },
-          data: { current_turn_order: nextTurnOrder, current_turn_start_time: assignTime }
-        });
-        return { updatedSeat, updatedParticipant, updatedState };
-      });
-
-      io.to(`event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
-      io.to(`admin:event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
-      io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: result.updatedParticipant });
-      const userSocketId = activeSockets.get(currentParticipant.id);
-      if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: result.updatedParticipant });
-
-      io.to(`event:${eventId}`).emit('system:turn', {
-        currentTurnOrder: result.updatedState.current_turn_order,
-        currentTurnStartTime: result.updatedState.current_turn_start_time
-      });
-      io.to(`admin:event:${eventId}`).emit('system:turn', {
-        currentTurnOrder: result.updatedState.current_turn_order,
-        currentTurnStartTime: result.updatedState.current_turn_start_time
-      });
-
-      // 세션 전환 감지
       if (nextTurnOrder <= maxTurn) {
+        const updatedState = await prisma.systemState.update({
+          where: { event_id: eventId },
+          data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
+        });
+        emitTurn(eventId, updatedState);
+
+        // 그룹(세션) 전환 감지
         const nextParticipant = await prisma.participant.findFirst({
           where: { event_id: eventId, turn_order: nextTurnOrder }
         });
@@ -1080,35 +1091,37 @@ app.post('/api/admin/login', async (req, res) => {
           const nextSession = await prisma.sessionColor.findFirst({
             where: { event_id: eventId, session_id: nextParticipant.session_id }
           });
-          io.to(`event:${eventId}`).emit('system:session_change', {
+          const payload = {
             prevSession: currentParticipant.session_id,
             nextSession: nextParticipant.session_id,
             nextStartTime: nextSession?.start_time || null
-          });
-          io.to(`admin:event:${eventId}`).emit('system:session_change', {
-            prevSession: currentParticipant.session_id,
-            nextSession: nextParticipant.session_id,
-            nextStartTime: nextSession?.start_time || null
-          });
+          };
+          io.to(`event:${eventId}`).emit('system:session_change', payload);
+          io.to(`admin:event:${eventId}`).emit('system:session_change', payload);
         }
+      } else {
+        // 마지막 참가자까지 완료 → 자동배정 오버레이만 해제
+        const finalState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+        if (finalState) emitTurn(eventId, finalState);
       }
-
-      console.log(`[AutoAssign] ${currentParticipant.name} → ${targetSeat.row}행 ${targetSeat.col}열 완료`);
     } catch (err) {
       console.error('[AutoAssign] 오류:', err);
+    } finally {
+      autoAssignInProgress.delete(eventId);
     }
   }
 
   setInterval(async () => {
     try {
       const activeEvents = await prisma.event.findMany({ where: { is_active: true } });
+      // 각 이벤트를 비동기로 실행 (재진입 가드가 중복을 막아줌)
       for (const event of activeEvents) {
-        await runAutoAssignIfExpired(event.id);
+        runAutoAssignIfExpired(event.id);
       }
     } catch (err) {
       console.error('[Timer] 오류:', err);
     }
-  }, 5000);
+  }, 1000);
   // ────────────────────────────────────────────────────────────────────────
 
   httpServer.listen(PORT, '0.0.0.0', () => {

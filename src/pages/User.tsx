@@ -130,12 +130,19 @@ export default function User() {
     );
   }
 
+  // 같은 그룹(세션) 내에서의 순서 계산 (전체 turn_order가 아닌 그룹 내 순번)
+  const groupMembers = participants
+    .filter(p => p.session_id === user.session_id)
+    .sort((a, b) => a.turn_order - b.turn_order);
+  const groupIndex = groupMembers.findIndex(p => p.id === user.id);
+  const groupOrder = groupIndex >= 0 ? groupIndex + 1 : user.turn_order;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white shadow-sm p-4 sticky top-0 z-20 flex justify-between items-center">
         <div>
           <h1 className="text-lg font-bold">{user.name}님</h1>
-          <p className="text-sm text-gray-500">그룹: {user.session_id} | 순서: {user.turn_order}번째</p>
+          <p className="text-sm text-gray-500">그룹: {user.session_id} | 순서: {groupOrder}번째</p>
         </div>
       </header>
       <main className="flex-1 p-4 flex flex-col max-w-6xl mx-auto w-full">
