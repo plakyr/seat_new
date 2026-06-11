@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useStore, AnnouncementState, User as UserType } from '../store/useStore';
+import { useStore } from '../store/useStore';
 import SeatMap from '../components/SeatMap';
 import AnnouncementBar from '../components/AnnouncementBar';
 import { useSocket } from '../store/useSocket';
@@ -146,7 +146,7 @@ export default function User() {
           serverTime={serverTime}
           isFrozen={isFrozen}
           frozenReason={frozenReason}
-          participants={useStore.getState().participants}
+          participants={useStore(s => s.participants)}
         />
         <div className="flex-1 relative min-h-[400px]">
           <SeatMap />
