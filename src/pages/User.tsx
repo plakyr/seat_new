@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import SeatMap from '../components/SeatMap';
