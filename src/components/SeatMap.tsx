@@ -235,11 +235,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                             }}
                             className={cn(
                               'w-9 h-9 rounded-t-lg rounded-b-sm flex flex-col items-center justify-center',
-<<<<<<< HEAD
                               'font-bold leading-tight transition-all duration-150',
-=======
-                              'text-[9px] font-bold leading-tight transition-all duration-150',
->>>>>>> origin/main
                               'overflow-hidden shadow-sm select-none shrink-0',
                               seatClass,
                               !isAdmin && isFrozen && 'opacity-50 cursor-not-allowed',
