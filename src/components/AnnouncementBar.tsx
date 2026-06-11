@@ -72,8 +72,8 @@ export default function AnnouncementBar({
   } else if (announcement.type === 'SESSION_CHANGE') {
     bgColor = 'bg-purple-600';
     text = announcement.nextStartTime
-      ? `다음 세션 시작 시간은 ${announcement.nextStartTime} 입니다.`
-      : '다음 세션을 준비 중입니다.';
+      ? `다음 그룹 시작 시간은 ${announcement.nextStartTime} 입니다.`
+      : '다음 그룹을 준비 중입니다.';
   } else if (currentParticipant) {
     bgColor = 'bg-blue-600';
     text = `현재 순서 '${currentParticipant.name}'님`;

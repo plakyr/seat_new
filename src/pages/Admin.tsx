@@ -196,7 +196,7 @@ const updateStoreWithEventData = (event: any) => {
       if (!res.ok) throw new Error('Failed to save session');
       setEditingSessionId(null);
     } catch (err) {
-      alert('세션 시간 저장에 실패했습니다.');
+      alert('그룹 시간 저장에 실패했습니다.');
     }
   };
 
@@ -446,7 +446,7 @@ const updateStoreWithEventData = (event: any) => {
                   
                   {/* Session Info Panel */}
                   <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <h3 className="text-sm font-bold text-gray-700 mb-2">세션별 현황 및 시간 설정</h3>
+                    <h3 className="text-sm font-bold text-gray-700 mb-2">그룹별 현황 및 시간 설정</h3>
                     <div className="flex flex-col gap-3">
                       {sessionColors.map(sc => {
                         const sessionParticipants = participants.filter(p => p.session_id === sc.session_id);
@@ -458,7 +458,7 @@ const updateStoreWithEventData = (event: any) => {
                           <div key={sc.session_id} className="flex items-center justify-between bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
                             <div className="flex items-center gap-3">
                               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: sc.color }}></div>
-                              <span className="text-sm font-semibold text-gray-800">세션 {sc.session_id}</span>
+                              <span className="text-sm font-semibold text-gray-800">그룹 {sc.session_id}</span>
                               <span className="text-xs text-gray-500">({completedCount}/{totalCount}명 완료)</span>
                             </div>
                             

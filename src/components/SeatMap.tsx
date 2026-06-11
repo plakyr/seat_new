@@ -116,7 +116,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   };
 
   return (
-    <div className="w-full h-full min-h-[55vh] md:min-h-[80vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
+    <div className="w-full h-full min-h-[42vh] lg:min-h-[80vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
       {seats.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60">
           <p className="text-gray-500 font-bold animate-pulse">좌석 데이터를 불러오는 중입니다...</p>
@@ -168,11 +168,10 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
           wrapperStyle={{ width: '100%', flex: 1, overflow: 'hidden' }}
           contentStyle={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
         >
+        <div className="flex flex-col items-center">
           {/* STAGE */}
-          <div className="flex justify-center mb-5 w-full">
-            <div className="border-2 border-gray-800 rounded px-14 py-2 font-black text-lg tracking-widest text-gray-800 bg-white shadow-sm select-none">
-              STAGE
-            </div>
+          <div className="w-full h-20 mb-5 rounded-t-lg rounded-b-sm bg-gray-50 border border-gray-200 shadow-sm flex items-center justify-center font-black text-lg tracking-widest text-gray-700 select-none">
+            STAGE
           </div>
 
           {/* 좌석 그리드 */}
@@ -267,6 +266,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
               );
             })}
           </div>
+        </div>
         </TransformComponent>
       </TransformWrapper>
 
@@ -287,7 +287,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
           {selectedSeatInfo.participant ? (
             <>
               <div className="space-y-2 text-sm text-gray-700 mb-4">
-                <p><span className="font-medium text-gray-500">세션:</span> {selectedSeatInfo.participant.session_id}</p>
+                <p><span className="font-medium text-gray-500">그룹:</span> {selectedSeatInfo.participant.session_id}</p>
                 <p><span className="font-medium text-gray-500">이름:</span> {selectedSeatInfo.participant.name}</p>
                 <p><span className="font-medium text-gray-500">순번:</span> {selectedSeatInfo.participant.turn_order}</p>
               </div>
