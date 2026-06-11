@@ -116,7 +116,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   };
 
   return (
-    <div className="w-full h-full min-h-[60vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
+    <div className="w-full h-full min-h-[80vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
       {seats.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60">
           <p className="text-gray-500 font-bold animate-pulse">좌석 데이터를 불러오는 중입니다...</p>
@@ -162,6 +162,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         centerOnInit
         wheel={{ step: 0.08 }}
         doubleClick={{ step: 0.7 }}
+        panning={{ velocityDisabled: true }}
       >
         <TransformComponent
           wrapperStyle={{ width: '100%', flex: 1, overflow: 'hidden' }}
@@ -223,15 +224,24 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
 
                       return (
                         <React.Fragment key={seat.id}>
-                          <button
-                            onClick={() => handleSeatClick(seat)}
-                            disabled={isDisabled}
+                          <div
+                            role="button"
+                            tabIndex={isDisabled ? -1 : 0}
+                            aria-disabled={isDisabled}
+                            onClick={() => { if (!isDisabled) handleSeatClick(seat); }}
+                            onKeyDown={(e) => {
+                              if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                                e.preventDefault();
+                                handleSeatClick(seat);
+                              }
+                            }}
                             className={cn(
                               'w-11 h-11 rounded-t-lg rounded-b-sm flex flex-col items-center justify-center',
                               'text-[9px] font-bold leading-tight transition-all duration-150',
                               'overflow-hidden shadow-sm select-none shrink-0',
                               seatClass,
                               !isAdmin && isFrozen && 'opacity-50 cursor-not-allowed',
+                              isDisabled && 'pointer-events-none',
                             )}
                             style={customStyle}
                             title={displayName
@@ -245,7 +255,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                             ) : (
                               <span className="text-[8px] text-gray-500">{seat.row}-{seat.col}</span>
                             )}
-                          </button>
+                          </div>
                           {hasColAisle && <div className="w-5 shrink-0" />}
                         </React.Fragment>
                       );
@@ -263,7 +273,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       {/* 범례 */}
       <div className="shrink-0 flex justify-center gap-4 bg-white/95 py-2 px-4 border-t border-gray-200 text-xs font-medium">
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-200 shadow-sm" />선택 가능</div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-500 opacity-60 shadow-sm" />예약됨</div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-blue-600 shadow-sm" />선택 완료</div>
         {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-green-500 shadow-sm" />내 자리</div>}
       </div>
 
