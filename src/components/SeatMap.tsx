@@ -116,7 +116,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   };
 
   return (
-    <div className="w-full h-[50vh] lg:h-auto lg:min-h-[80vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
+    <div className="w-full h-[50vh] lg:h-[70vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
       {seats.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60">
           <p className="text-gray-500 font-bold animate-pulse">좌석 데이터를 불러오는 중입니다...</p>
@@ -235,7 +235,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                             }}
                             className={cn(
                               'w-9 h-9 rounded-t-lg rounded-b-sm flex flex-col items-center justify-center',
-                              'text-[9px] font-bold leading-tight transition-all duration-150',
+                              'font-bold leading-tight transition-all duration-150',
                               'overflow-hidden shadow-sm select-none shrink-0',
                               seatClass,
                               !isAdmin && isFrozen && 'opacity-50 cursor-not-allowed',
@@ -247,8 +247,11 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                               : `${seat.row}열 ${seat.col}번`}
                           >
                             {displayName ? (
-                              <span className="truncate w-full text-center px-0.5">
-                                {displayName.length > 4 ? displayName.slice(0, 4) : displayName}
+                              <span className={cn(
+                                'w-full text-center px-0.5 leading-none',
+                                displayName.length <= 4 ? 'text-[9px]' : 'text-[7px]',
+                              )}>
+                                {displayName}
                               </span>
                             ) : (
                               <span className="text-[8px] text-gray-500">{seat.row}-{seat.col}</span>
