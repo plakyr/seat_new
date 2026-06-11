@@ -48,12 +48,25 @@ async function startServer() {
     const password_hash = await bcrypt.hash('admin123', 10);
     await prisma.adminUser.createMany({
       data: [
-        { username: 'admin1', password_hash, role: 'admin' },
-        { username: 'admin2', password_hash, role: 'admin' },
-        { username: 'admin3', password_hash, role: 'admin' },
+        { username: '전초롱', password_hash, role: 'admin' },
+        { username: '송다빈', password_hash, role: 'admin' },
+        { username: '박은진', password_hash, role: 'admin' },
       ]
     });
-    console.log('Seeded 3 default admin users (admin1, admin2, admin3 / admin123)');
+    console.log('Seeded 3 default admin users (전초롱, 송다빈, 박은진 / admin123)');
+  } else {
+    // 기존 admin1/2/3 계정명을 새 이름으로 변경
+    const renames: [string, string][] = [
+      ['admin1', '전초롱'],
+      ['admin2', '송다빈'],
+      ['admin3', '박은진'],
+    ];
+    for (const [oldName, newName] of renames) {
+      await prisma.adminUser.updateMany({
+        where: { username: oldName },
+        data: { username: newName },
+      });
+    }
   }
 
   app.use(cors());
