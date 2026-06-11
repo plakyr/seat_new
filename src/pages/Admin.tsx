@@ -4,9 +4,10 @@ import { useStore } from '../store/useStore';
 import { useSocket } from '../store/useSocket';
 import SeatMap from '../components/SeatMap';
 import ChatWindow from '../components/ChatWindow';
+import AnnouncementBar from '../components/AnnouncementBar';
 
 export default function Admin() {
-  const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants } = useStore();
+  const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants, serverTime, announcement, timerPaused } = useStore();
   const socket = useSocket();
   
   // Login State
@@ -484,12 +485,18 @@ const updateStoreWithEventData = (event: any) => {
 
               {selectedEventId ? (
                 <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col relative min-h-[500px]">
-                  {isFrozen && (
-                    <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-10 bg-red-100 border border-red-400 text-red-700 px-6 py-2 rounded-full font-bold shadow-md">
-                      시스템 일시정지 중: {frozenReason || '사유 없음'}
-                    </div>
-                  )}
-                  
+                  {/* 현재 좌석지정자 및 남은 시간 표시 */}
+                  <AnnouncementBar
+                    announcement={announcement}
+                    currentTurnOrder={currentTurnOrder}
+                    currentTurnStartTime={currentTurnStartTime}
+                    serverTime={serverTime}
+                    isFrozen={isFrozen}
+                    frozenReason={frozenReason}
+                    participants={participants}
+                    timerPaused={timerPaused}
+                  />
+
                   {/* Session Info Panel */}
                   <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <h3 className="text-sm font-bold text-gray-700 mb-2">그룹별 현황 및 시간 설정</h3>
