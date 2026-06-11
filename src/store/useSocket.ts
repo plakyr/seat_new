@@ -1,166 +1,77 @@
-import { useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { useStore, Seat, User } from './useStore';
+import React, { useState, useEffect, useRef } from 'react';
+import { useStore } from '../store/useStore';
+import { useSocket } from '../store/useSocket';
 
-let socketInstance: Socket | null = null;
-
-export const useSocket = () => {
-  const [socket, setSocket] = useState<Socket | null>(socketInstance);
-
-  // useRef로 최신 값 유지 → 리스너 재등록 없이 항상 최신 상태 접근 가능
-  const storeRef = useRef(useStore.getState());
-  useEffect(() => {
-    return useStore.subscribe((state) => { storeRef.current = state; });
-  }, []);
+export default function ChatWindow({ eventId }: { eventId: string }) {
+  const { messages, user, isAdmin, adminUser, currentTurnOrder, isFrozen } = useStore();
+  const socket = useSocket();
+  const [inputValue, setInputValue] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (socketInstance) {
-      setSocket(socketInstance);
-      return;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-    socketInstance = io(window.location.origin);
+  const canChat = isAdmin || (user && user.turn_order === currentTurnOrder && !isFrozen && !user.is_final);
 
-    // ── 인증 불필요한 전역 이벤트 ──────────────────────────────────────
-    socketInstance.on('connect', () => {
-      console.log('Connected:', socketInstance?.id);
-      // 재연결 시 재인증
-      const { user, sessionToken, adminToken } = storeRef.current;
-      if (user && sessionToken) {
-        socketInstance!.emit('participant:auth', { participantId: user.id, sessionToken });
-        socketInstance!.emit('seat:request_init', { eventId: user.event_id });
-      }
-      if (adminToken) {
-        socketInstance!.emit('admin:auth', { token: adminToken });
-      }
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || !socket || !canChat) return;
+
+    socket.emit('chat:send', {
+      eventId,
+      content: inputValue.trim(),
     });
+    setInputValue('');
+  };
 
-    socketInstance.on('time:sync', (data: { serverTime: string }) => {
-      storeRef.current.setServerTime(data.serverTime);
-    });
+  return (
+    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+        <h3 className="text-sm font-bold text-gray-800">실시간 채팅</h3>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.map((msg) => {
+          const isMe = isAdmin ? msg.sender_type === 'ADMIN' : (user && msg.sender_name === user.name && msg.sender_type === 'USER');
+          return (
+            <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-xs font-semibold text-gray-700">
+                  {msg.sender_type === 'ADMIN' ? '👑 관리자' : msg.sender_name}
+                </span>
+                <span className="text-[10px] text-gray-400">
+                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div className={`px-3 py-2 rounded-lg text-sm max-w-[85%] ${isMe ? 'bg-gray-900 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
+                {msg.content}
+              </div>
+            </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
 
-    socketInstance.on('system:freeze', (data: { isFrozen: boolean; reason: string | null }) => {
-      storeRef.current.setSystemState(data.isFrozen, data.reason);
-    });
-
-    socketInstance.on('system:turn', (data: { currentTurnOrder: number; currentTurnStartTime: string }) => {
-      storeRef.current.setSystemTurn(data.currentTurnOrder, data.currentTurnStartTime);
-    });
-
-    socketInstance.on('session:colors', (data: { sessionColors: any[] }) => {
-      storeRef.current.setSessionColors(data.sessionColors);
-    });
-
-    socketInstance.on('seat:init', (data: { seats: Seat[]; layout?: any }) => {
-      storeRef.current.setSeats(data.seats);
-      if (data.layout) storeRef.current.setLayout(data.layout);
-    });
-
-    socketInstance.on('seat:update', (data: { seat: Seat }) => {
-      storeRef.current.updateSeat(data.seat);
-    });
-
-    // ── 인증 관련 이벤트 ────────────────────────────────────────────────
-    socketInstance.on('session:expired', (data: { reason: string }) => {
-      alert(data.reason);
-      storeRef.current.logoutUser();
-    });
-
-    // 팝업 중복 방지: 마지막으로 보낸 시각 추적
-    let lastSeatErrorAt = 0;
-    socketInstance.on('seat:error', (data: { error: string }) => {
-      const now = Date.now();
-      if (now - lastSeatErrorAt > 1000) { // 1초 내 중복 무시
-        lastSeatErrorAt = now;
-        alert(data.error);
-      }
-    });
-
-    socketInstance.on('participant:update', (data: { participant: User }) => {
-      const { sessionToken } = storeRef.current;
-      storeRef.current.setUser(data.participant, sessionToken);
-    });
-
-    socketInstance.on('admin:event_data', (data: {
-      seats: Seat[]; layout?: any; participants: User[];
-      systemState: any; sessionColors?: any[]; messages?: any[]
-    }) => {
-      storeRef.current.setSeats(data.seats);
-      if (data.layout) storeRef.current.setLayout(data.layout);
-      storeRef.current.setParticipants(data.participants);
-      if (data.systemState) {
-        storeRef.current.setSystemState(data.systemState.is_frozen, data.systemState.frozen_reason);
-        storeRef.current.setSystemTurn(data.systemState.current_turn_order, data.systemState.current_turn_start_time);
-      } else {
-        storeRef.current.setSystemState(false, null);
-      }
-      if (data.sessionColors) storeRef.current.setSessionColors(data.sessionColors);
-      if (data.messages) storeRef.current.setMessages(data.messages);
-    });
-
-    socketInstance.on('participant:update_admin', (data: { participant: User }) => {
-      storeRef.current.updateParticipant(data.participant);
-    });
-
-    socketInstance.on('admin:error', (data: { error: string }) => {
-      alert(`관리자 오류: ${data.error}`);
-    });
-
-    socketInstance.on('chat:history', (data: { messages: any[] }) => {
-      storeRef.current.setMessages(data.messages);
-    });
-
-    socketInstance.on('chat:message', (data: any) => {
-      storeRef.current.addMessage(data);
-    });
-
-    socketInstance.on('chat:error', (data: { error: string }) => {
-      alert(`채팅 오류: ${data.error}`);
-    });
-
-    socketInstance.on('system:auto_assign', (data: { participantName: string }) => {
-      storeRef.current.setAnnouncement({
-        type: 'AUTO_ASSIGN',
-        currentParticipantName: data.participantName,
-        nextSessionId: null,
-        nextStartTime: null,
-      });
-      setTimeout(() => {
-        storeRef.current.setAnnouncement({
-          type: 'IDLE', currentParticipantName: null, nextSessionId: null, nextStartTime: null,
-        });
-      }, 5000);
-    });
-
-    socketInstance.on('system:session_change', (data: { prevSession: string; nextSession: string; nextStartTime: string | null }) => {
-      storeRef.current.setAnnouncement({
-        type: 'SESSION_CHANGE',
-        currentParticipantName: null,
-        nextSessionId: data.nextSession,
-        nextStartTime: data.nextStartTime,
-      });
-    });
-
-    setSocket(socketInstance);
-  }, []); // 딱 한 번만 실행 → 리스너 중복 등록 원천 차단
-
-  // 로그인/로그아웃 시 인증 이벤트 전송
-  useEffect(() => {
-    if (!socketInstance) return;
-    const { user, sessionToken, adminToken } = useStore.getState();
-    if (user && sessionToken) {
-      socketInstance.emit('participant:auth', { participantId: user.id, sessionToken });
-      socketInstance.emit('seat:request_init', { eventId: user.event_id });
-    }
-    if (adminToken) {
-      socketInstance.emit('admin:auth', { token: adminToken });
-    }
-  }, [
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useStore.getState().user?.id,
-    useStore.getState().sessionToken,
-    useStore.getState().adminToken,
-  ]);
-
-  return socket;
-};
+      <div className="p-3 border-t border-gray-200 bg-gray-50">
+        <form onSubmit={handleSendMessage} className="flex gap-2">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            disabled={!canChat}
+            placeholder={canChat ? "메시지를 입력하세요..." : "현재 차례인 사용자만 채팅이 가능합니다."}
+            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-100 disabled:text-gray-500"
+          />
+          <button
+            type="submit"
+            disabled={!canChat || !inputValue.trim()}
+            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
+          >
+            전송
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
