@@ -495,21 +495,21 @@ const updateStoreWithEventData = (event: any) => {
                   <div className="w-full md:w-auto mt-4 md:mt-0 md:self-end flex flex-wrap gap-2">
                     <button
                       onClick={handleToggleLoginOpen}
-                      style={{ backgroundColor: selectedEvent?.login_open ? '#6b7590' : '#3d9e6a' }}
+                      style={{ backgroundColor: selectedEvent?.login_open ? '#6b7590' : '#17A85A' }}
                       className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       {selectedEvent?.login_open ? '입장 차단' : '입장 허용'}
                     </button>
                     <button
                       onClick={handleNextTurn}
-                      style={{ backgroundColor: '#e07b2a' }}
+                      style={{ backgroundColor: '#E8771A' }}
                       className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       자동배정
                     </button>
                     <button
                       onClick={handleToggleFreeze}
-                      style={{ backgroundColor: isFrozen ? '#3d9e6a' : '#d94f4f' }}
+                      style={{ backgroundColor: isFrozen ? '#3d9e6a' : '#E03535' }}
                       className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       {isFrozen ? '재개' : '일시정지'}
@@ -517,7 +517,7 @@ const updateStoreWithEventData = (event: any) => {
                     <button
                       onClick={handleResetEvent}
                       title="테스트용: 모든 좌석 배정을 초기화합니다"
-                      style={{ backgroundColor: '#4a6fa5' }}
+                      style={{ backgroundColor: '#1C71E8' }}
                       className="w-[96px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       초기화

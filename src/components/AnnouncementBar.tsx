@@ -66,15 +66,15 @@ export default function AnnouncementBar({
   let pulse = false;
 
   if (isFrozen) {
-    bgColor = '#d94f4f';
+    bgColor = '#E03535';
     text = `⏸ 일시정지 중${frozenReason ? ` — ${frozenReason}` : ''}`;
     pulse = true;
   } else if (announcement.type === 'AUTO_ASSIGN') {
-    bgColor = '#e07b2a';
+    bgColor = '#E8771A';
     text = '⚙️ 시스템 자동 배정 중...';
     pulse = true;
   } else if (announcement.type === 'SESSION_CHANGE') {
-    bgColor = '#7c5cbf';
+    bgColor = '#7253C4';
     if (announcement.prevSessionId) {
       text = announcement.nextStartTime
         ? `그룹 ${announcement.prevSessionId} 좌석지정 완료. 그룹 ${announcement.nextSessionId} 시작시간은 ${announcement.nextStartTime} 입니다.`
@@ -85,10 +85,10 @@ export default function AnnouncementBar({
         : '그룹 시작을 준비 중입니다.';
     }
   } else if (announcement.type === 'ALL_COMPLETE') {
-    bgColor = '#3d9e6a';
+    bgColor = '#17A85A';
     text = '모든 그룹 좌석 지정이 완료되었습니다.';
   } else if (currentParticipant) {
-    bgColor = '#4a6fa5';
+    bgColor = '#1C71E8';
     text = `현재 순서 '${currentParticipant.name}'님`;
   } else {
     bgColor = '#6b7590';
