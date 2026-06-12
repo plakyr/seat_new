@@ -457,26 +457,26 @@ const updateStoreWithEventData = (event: any) => {
                   <div className="w-full md:w-auto mt-4 md:mt-0 md:self-end flex flex-wrap gap-2">
                     <button
                       onClick={handleNextTurn}
-                      className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors shadow-sm bg-blue-600 hover:bg-blue-700"
+                      className="px-6 py-3 rounded-lg text-base font-bold text-white transition-colors shadow-sm bg-blue-600 hover:bg-blue-700"
                     >
                       자동배정
                     </button>
                     <button
                       onClick={handleToggleFreeze}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors shadow-sm ${isFrozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                      className={`px-6 py-3 rounded-lg text-base font-bold text-white transition-colors shadow-sm ${isFrozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
                     >
                       {isFrozen ? '재개' : '일시정지'}
                     </button>
                     <button
                       onClick={handleResetEvent}
                       title="테스트용: 모든 좌석 배정을 초기화합니다"
-                      className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors shadow-sm bg-orange-500 hover:bg-orange-600"
+                      className="px-6 py-3 rounded-lg text-base font-bold text-white transition-colors shadow-sm bg-orange-500 hover:bg-orange-600"
                     >
                       초기화
                     </button>
                     <button
                       onClick={handleDeleteEvent}
-                      className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors shadow-sm bg-gray-700 hover:bg-gray-800"
+                      className="px-6 py-3 rounded-lg text-base font-bold text-white transition-colors shadow-sm bg-gray-700 hover:bg-gray-800"
                     >
                       삭제
                     </button>
