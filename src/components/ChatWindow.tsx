@@ -60,7 +60,7 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             disabled={!canChat}
-            placeholder={canChat ? "메시지를 입력하세요..." : "현재 차례인 사용자만 채팅이 가능합니다."}
+            placeholder={canChat ? "메시지를 입력하세요..." : "내 차례에만 채팅이 가능합니다."}
             className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-100 disabled:text-gray-500"
           />
           <button
