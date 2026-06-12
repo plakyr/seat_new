@@ -115,7 +115,7 @@ export default function User() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen min-h-dvh bg-gray-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
           <h1 className="text-2xl font-bold text-center mb-8">참가자 로그인</h1>
           <form onSubmit={handleLogin} className="space-y-5">
@@ -138,7 +138,7 @@ export default function User() {
   const groupOrder = groupIndex >= 0 ? groupIndex + 1 : user.turn_order;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen min-h-dvh bg-gray-50 flex flex-col">
       <header className="bg-white shadow-sm p-4 sticky top-0 z-20 flex justify-between items-center">
         <div>
           <h1 className="text-lg font-bold">{user.name}님</h1>
