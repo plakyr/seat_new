@@ -478,7 +478,7 @@ const updateStoreWithEventData = (event: any) => {
               
               <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex-1 w-full">
-                  <label className="block text-lg font-semibold text-gray-700 mb-2">이벤트 선택</label>
+                  <label className="block text-base font-semibold text-gray-700 mb-2">이벤트 선택</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:ring-2 focus:ring-gray-900"
                     value={selectedEventId || ''}
@@ -553,7 +553,7 @@ const updateStoreWithEventData = (event: any) => {
   <SeatMap forceAdmin={true} />
 </div>
                       <p className="text-sm text-gray-500 mt-4 text-center font-medium">
-                        예약된 좌석을 클릭하면 참가자 정보를 확인하고 강제 취소할 수 있습니다.
+                        선택된 좌석을 클릭하면 참가자 정보를 확인하고 강제 취소할 수 있습니다.
                       </p>
                     </div>
                     <div className="flex-1 flex flex-col min-h-[400px]">
@@ -565,7 +565,7 @@ const updateStoreWithEventData = (event: any) => {
                   <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <button
                       onClick={() => setIsSessionPanelOpen(prev => !prev)}
-                      className="w-full flex items-center justify-between text-sm font-bold text-gray-700"
+                      className="w-full flex items-center justify-between text-base font-bold text-gray-700"
                     >
                       <span>그룹별 현황 및 시간 설정</span>
                       <span className="text-gray-400">{isSessionPanelOpen ? '▲ 접기' : '▼ 펼치기'}</span>
@@ -582,12 +582,12 @@ const updateStoreWithEventData = (event: any) => {
                           <div key={sc.session_id} className="relative group flex items-center justify-between bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
                             <div className="flex items-center gap-3">
                               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: sc.color }}></div>
-                              <span className="text-sm font-semibold text-gray-800">그룹 {sc.session_id}</span>
-                              <span className="text-xs text-gray-500">({completedCount}/{totalCount}명 완료)</span>
+                              <span className="text-base font-semibold text-gray-800">그룹 {sc.session_id}</span>
+                              <span className="text-sm text-gray-500">({completedCount}/{totalCount}명 완료)</span>
                             </div>
                             {/* 마우스 오버 시 그룹 참가자 명단 (순서대로) */}
                             {totalCount > 0 && (
-                              <div className="absolute left-4 bottom-full mb-2 z-30 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg shadow-xl p-3 min-w-[200px] max-h-[300px] overflow-y-auto">
+                              <div className="absolute left-4 bottom-full mb-2 z-30 hidden group-hover:block bg-gray-900 text-white text-sm rounded-lg shadow-xl p-3 min-w-[200px] max-h-[300px] overflow-y-auto">
                                 <p className="font-bold mb-2 text-gray-300">그룹 {sc.session_id} 참가자 순서</p>
                                 {[...sessionParticipants]
                                   .sort((a, b) => a.turn_order - b.turn_order)

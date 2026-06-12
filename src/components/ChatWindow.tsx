@@ -29,7 +29,7 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
   return (
     <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
-        <h3 className="text-lg font-bold text-gray-800">실시간 채팅</h3>
+        <h3 className="text-base font-bold text-gray-800">실시간 채팅</h3>
       </div>
       
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -38,10 +38,10 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
           return (
             <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
               <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-xs font-semibold text-gray-700">
+                <span className="text-sm font-semibold text-gray-700">
                   {msg.sender_type === 'ADMIN' ? '👑 관리자' : msg.sender_name}
                 </span>
-                <span className="text-[10px] text-gray-400">
+                <span className="text-xs text-gray-400">
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
