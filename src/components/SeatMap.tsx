@@ -26,7 +26,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   const isAdmin = forceAdmin || storeIsAdmin;
   const socket = useSocket();
 
-  const [selectedSeatInfo, setSelectedSeatInfo] = useState<{ seatId: string; participant: any } | null>(null);
+  const [selectedSeatInfo, setSelectedSeatInfo] = useState<{ seatId: string; participant: any; isPrivate?: boolean } | null>(null);
   // 모바일 툴팁 (예약된 좌석 터치 시)
   const [tooltipText, setTooltipText] = useState<string | null>(null);
   // 좌석 선택 확인 팝업
@@ -45,6 +45,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   const getSeatColor = (seat: any) => {
     if (seat.status === 'EMPTY') return '#FFFFFF';
     if (seat.status === 'LOCKED') return '#E5E7EB';
+    if (seat.status === 'PRIVATE') return '#4B5563';
     const colorObj = sessionColors.find((sc: any) => sc.session_id === seat.session_id);
     return colorObj ? colorObj.color : '#4374D9';
   };
@@ -61,6 +62,8 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         if (participant) setSelectedSeatInfo({ seatId: seat.id, participant });
       } else if (seat.status === 'EMPTY') {
         setSelectedSeatInfo({ seatId: seat.id, participant: null });
+      } else if (seat.status === 'PRIVATE') {
+        setSelectedSeatInfo({ seatId: seat.id, participant: null, isPrivate: true });
       }
     } else if (user) {
       if (user.turn_status === 'COMPLETED' || user.is_final) {
@@ -101,6 +104,14 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       });
       setSelectedSeatInfo(null);
     }
+  };
+
+  const handleSetSeatPrivate = (isPrivate: boolean) => {
+    if (!socket || !selectedSeatInfo) return;
+    const eventId = user?.event_id || (participants.length > 0 ? participants[0].event_id : null);
+    if (!eventId) { alert('이벤트 ID를 찾을 수 없습니다.'); return; }
+    socket.emit('admin:set_seat_private', { eventId, seatId: selectedSeatInfo.seatId, isPrivate });
+    setSelectedSeatInfo(null);
   };
 
   const handleForceAssign = (participantId: string) => {
@@ -158,7 +169,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
 
       {/* pinch-to-zoom 지원 */}
       <TransformWrapper
-        initialScale={0.6}
+        initialScale={1}
         minScale={0.3}
         maxScale={5}
         wheel={{ step: 0.08 }}
@@ -216,11 +227,15 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                         }
                       } else if (seat.status === 'FROZEN') {
                         seatClass = 'bg-red-100 border-2 border-red-300 cursor-not-allowed text-red-800';
+                      } else if (seat.status === 'PRIVATE') {
+                        customStyle = { backgroundColor: '#4B5563' };
+                        seatClass = isAdmin ? 'cursor-pointer hover:opacity-80 active:opacity-60' : 'cursor-not-allowed';
                       }
 
                       const isDisabled =
                         (!isAdmin && isFrozen) ||
                         (!isAdmin && timerPaused) || // 자동배정 진행 중 좌석 잠금
+                        (!isAdmin && seat.status === 'PRIVATE') ||
                         (!isAdmin && (user?.turn_status === 'COMPLETED' || user?.is_final) && !isMySeat);
 
                       return (
@@ -249,7 +264,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                               ? `${displayName} (${seat.row}열 ${seat.col}번)`
                               : `${seat.row}열 ${seat.col}번`}
                           >
-                            {displayName ? (
+                            {seat.status === 'PRIVATE' ? null : displayName ? (
                               <span className={cn(
                                 'w-full text-center px-0.5 leading-none',
                                 displayName.length <= 4 ? 'text-[9px]' : 'text-[7px]',
@@ -279,6 +294,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       <div className="shrink-0 flex justify-center gap-4 bg-white/95 py-2 px-4 border-t border-gray-200 text-xs font-medium">
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-200 shadow-sm" />선택 가능</div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-blue-600 shadow-sm" />선택 완료</div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#4B5563' }} />선택 불가</div>
         {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-green-500 shadow-sm" />내 자리</div>}
       </div>
 
@@ -300,11 +316,23 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                 강제 취소
               </button>
             </>
+          ) : selectedSeatInfo.isPrivate ? (
+            <div className="space-y-3 text-sm text-gray-700">
+              <p className="font-medium text-gray-500">
+                사석 ({seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.row}열 {seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.col}번)
+              </p>
+              <button onClick={() => handleSetSeatPrivate(false)} className="w-full py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-bold transition-colors">
+                선택 가능으로 되돌리기
+              </button>
+            </div>
           ) : (
             <div className="space-y-2 text-sm text-gray-700">
               <p className="font-medium text-gray-500">
                 빈 좌석 ({seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.row}열 {seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.col}번)
               </p>
+              <button onClick={() => handleSetSeatPrivate(true)} className="w-full py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-bold transition-colors text-sm">
+                사석으로 지정
+              </button>
               <div className="mt-2 space-y-1 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-1">
                 {participants.filter((p: any) => !p.seat_id).length === 0 ? (
                   <p className="text-xs text-gray-400 text-center py-2">미배정 참가자가 없습니다.</p>

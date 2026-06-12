@@ -642,6 +642,29 @@ app.post('/api/admin/login', async (req, res) => {
     });
 
     // Admin force assign seat
+    // 관리자: 좌석을 '사석'으로 지정하거나 다시 선택 가능 상태로 되돌리기
+    socket.on('admin:set_seat_private', async (data: { seatId: string, eventId: string, isPrivate: boolean }) => {
+      if (!socket.data.isAdmin) return;
+
+      try {
+        const seat = await prisma.seat.findUnique({ where: { id: data.seatId } });
+        if (!seat) throw new Error('좌석을 찾을 수 없습니다.');
+        if (seat.status !== 'EMPTY' && seat.status !== 'PRIVATE') {
+          throw new Error('이미 배정된 좌석은 변경할 수 없습니다.');
+        }
+
+        const updatedSeat = await prisma.seat.update({
+          where: { id: data.seatId },
+          data: { status: data.isPrivate ? 'PRIVATE' : 'EMPTY' }
+        });
+
+        io.to(`event:${data.eventId}`).emit('seat:update', { seat: updatedSeat });
+        io.to(`admin:event:${data.eventId}`).emit('seat:update', { seat: updatedSeat });
+      } catch (error: any) {
+        socket.emit('admin:error', { error: error.message });
+      }
+    });
+
     socket.on('admin:force_assign', async (data: { seatId: string, participantId: string, eventId: string }) => {
       if (!socket.data.isAdmin) return;
 
