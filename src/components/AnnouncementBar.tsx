@@ -109,7 +109,7 @@ export default function AnnouncementBar({
     >
       <span className="font-bold text-lg truncate">{text}</span>
       {showTimer && (
-        <span className={`ml-4 font-mono font-bold text-lg shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}>
+        <span className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}>
           {timeLeft}
         </span>
       )}
