@@ -123,7 +123,7 @@ export default function User() {
             <input type="text" maxLength={4} value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-3 rounded-xl border" placeholder="비밀번호" required />
             {requiresCode && <input type="text" value={uniqueCode} onChange={(e) => setUniqueCode(e.target.value)} className="w-full px-4 py-3 rounded-xl border" placeholder="고유 코드" required />}
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <button type="submit" style={{ backgroundColor: '#4a6fa5' }} className="w-full py-4 text-white rounded-xl font-bold hover:opacity-90">입장하기</button>
+            <button type="submit" style={{ backgroundColor: '#1C71E8' }} className="w-full py-4 text-white rounded-xl font-bold text-lg hover:opacity-90">입장하기</button>
           </form>
         </div>
       </div>
