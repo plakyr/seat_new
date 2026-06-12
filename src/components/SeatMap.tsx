@@ -218,7 +218,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                         customStyle = { backgroundColor: getSeatColor(seat) };
                         if (isMySeat) {
                           // 내 자리: 밝은 노랑-초록 계열로 가독성 좋게
-                          customStyle = { backgroundColor: '#8578F0' };
+                          customStyle = { backgroundColor: '#2ecc71' };
                           seatClass = 'text-white shadow-lg ring-2 ring-green-300 scale-110 z-10 cursor-default font-extrabold';
                         } else if (isAdmin) {
                           seatClass = 'text-white cursor-pointer hover:opacity-80 active:opacity-60';
@@ -293,9 +293,9 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       {/* 범례 */}
       <div className="shrink-0 flex justify-center gap-4 bg-white/95 py-2 px-4 border-t border-gray-200 text-xs font-medium">
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-200 shadow-sm" />선택 가능</div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-blue-600 shadow-sm" />선택 완료</div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#1D4EAD' }} />선택 완료</div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#BFBFBF' }} />선택 불가</div>
-        {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#8578F0' }} />내 자리</div>}
+        {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#2ecc71' }} />내 자리</div>}
       </div>
 
       {/* 관리자용 좌석 팝업 */}

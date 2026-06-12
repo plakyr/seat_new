@@ -495,21 +495,21 @@ const updateStoreWithEventData = (event: any) => {
                   <div className="w-full md:w-auto mt-4 md:mt-0 md:self-end flex flex-wrap gap-2">
                     <button
                       onClick={handleToggleLoginOpen}
-                      style={{ backgroundColor: selectedEvent?.login_open ? '#838B9E' : '#7ACC96' }}
+                      style={{ backgroundColor: selectedEvent?.login_open ? '#6b7590' : '#3d9e6a' }}
                       className="px-6 py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       {selectedEvent?.login_open ? '입장 차단' : '입장 허용'}
                     </button>
                     <button
                       onClick={handleNextTurn}
-                      style={{ backgroundColor: '#FF9C59' }}
+                      style={{ backgroundColor: '#e07b2a' }}
                       className="px-6 py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       자동배정
                     </button>
                     <button
                       onClick={handleToggleFreeze}
-                      style={{ backgroundColor: isFrozen ? '#7ACC96' : '#ED6161' }}
+                      style={{ backgroundColor: isFrozen ? '#3d9e6a' : '#d94f4f' }}
                       className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       {isFrozen ? '재개' : '일시정지'}
@@ -517,14 +517,15 @@ const updateStoreWithEventData = (event: any) => {
                     <button
                       onClick={handleResetEvent}
                       title="테스트용: 모든 좌석 배정을 초기화합니다"
-                      style={{ backgroundColor: '#FF9C59' }}
+                      style={{ backgroundColor: '#4a6fa5' }}
                       className="px-6 py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       초기화
                     </button>
                     <button
                       onClick={handleDeleteEvent}
-                      className="px-6 py-3 rounded-lg text-base font-bold text-white transition-colors shadow-sm bg-gray-700 hover:bg-gray-800"
+                      style={{ backgroundColor: '#2d3142' }}
+                      className="px-6 py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       삭제
                     </button>
