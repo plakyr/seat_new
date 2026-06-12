@@ -45,7 +45,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   const getSeatColor = (seat: any) => {
     if (seat.status === 'EMPTY') return '#FFFFFF';
     if (seat.status === 'LOCKED') return '#E5E7EB';
-    if (seat.status === 'PRIVATE') return '#4B5563';
+    if (seat.status === 'PRIVATE') return '#A8A8A8';
     const colorObj = sessionColors.find((sc: any) => sc.session_id === seat.session_id);
     return colorObj ? colorObj.color : '#4374D9';
   };
@@ -228,7 +228,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                       } else if (seat.status === 'FROZEN') {
                         seatClass = 'bg-red-100 border-2 border-red-300 cursor-not-allowed text-red-800';
                       } else if (seat.status === 'PRIVATE') {
-                        customStyle = { backgroundColor: '#4B5563' };
+                        customStyle = { backgroundColor: '#A8A8A8' };
                         seatClass = isAdmin ? 'cursor-pointer hover:opacity-80 active:opacity-60' : 'cursor-not-allowed';
                       }
 
@@ -294,7 +294,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       <div className="shrink-0 flex justify-center gap-4 bg-white/95 py-2 px-4 border-t border-gray-200 text-xs font-medium">
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-200 shadow-sm" />선택 가능</div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-blue-600 shadow-sm" />선택 완료</div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#4B5563' }} />선택 불가</div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#A8A8A8' }} />선택 불가</div>
         {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-green-500 shadow-sm" />내 자리</div>}
       </div>
 
