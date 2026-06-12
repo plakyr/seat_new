@@ -47,9 +47,10 @@ model Seat {
   layout        VenueLayout @relation(fields: [layout_id], references: [id])
   row           Int
   col           Int
-  status        String   // "EMPTY", "RESERVED", "AUTO_ASSIGNED", "LOCKED"
+  status        String   // "EMPTY", "RESERVED", "AUTO_ASSIGNED", "LOCKED", "MANUAL"
   assigned_to   String?  // Participant ID
   session_id    String?  // The session this seat was reserved in
+  manual_label  String?  // 관리자 수동 배정 시 표시할 이름
   updated_at    DateTime @updatedAt
   
   @@unique([layout_id, row, col])

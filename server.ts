@@ -691,6 +691,32 @@ app.post('/api/admin/login', async (req, res) => {
       }
     });
 
+    // Admin: 수동 배정 (참가자 계정 없이 좌석에 이름만 표기)
+    socket.on('admin:set_manual_seat', async (data: { seatId: string, eventId: string, label: string | null }) => {
+      if (!socket.data.isAdmin) return;
+
+      try {
+        const seat = await prisma.seat.findUnique({ where: { id: data.seatId } });
+        if (!seat) throw new Error('좌석을 찾을 수 없습니다.');
+        if (seat.status !== 'EMPTY' && seat.status !== 'MANUAL') {
+          throw new Error('빈 좌석 또는 수동 배정 좌석만 변경할 수 있습니다.');
+        }
+
+        const label = (data.label || '').trim();
+        const updatedSeat = await prisma.seat.update({
+          where: { id: data.seatId },
+          data: label
+            ? { status: 'MANUAL', manual_label: label, assigned_to: null, session_id: null }
+            : { status: 'EMPTY', manual_label: null }
+        });
+
+        io.to(`event:${data.eventId}`).emit('seat:update', { seat: updatedSeat });
+        io.to(`admin:event:${data.eventId}`).emit('seat:update', { seat: updatedSeat });
+      } catch (error: any) {
+        socket.emit('admin:error', { error: error.message });
+      }
+    });
+
     socket.on('admin:force_assign', async (data: { seatId: string, participantId: string, eventId: string }) => {
       if (!socket.data.isAdmin) return;
 

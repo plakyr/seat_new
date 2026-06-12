@@ -26,11 +26,13 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   const isAdmin = forceAdmin || storeIsAdmin;
   const socket = useSocket();
 
-  const [selectedSeatInfo, setSelectedSeatInfo] = useState<{ seatId: string; participant: any; isPrivate?: boolean } | null>(null);
+  const [selectedSeatInfo, setSelectedSeatInfo] = useState<{ seatId: string; participant: any; isPrivate?: boolean; isManual?: boolean } | null>(null);
   // 모바일 툴팁 (예약된 좌석 터치 시)
   const [tooltipText, setTooltipText] = useState<string | null>(null);
   // 좌석 선택 확인 팝업
   const [confirmSeat, setConfirmSeat] = useState<{ seatId: string; label: string } | null>(null);
+  // 수동 배정 이름 입력값
+  const [manualName, setManualName] = useState('');
 
   const maxRow = seats.length > 0 ? Math.max(...seats.map(s => s.row)) : 0;
   const maxCol = seats.length > 0 ? Math.max(...seats.map(s => s.col)) : 0;
@@ -46,6 +48,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
     if (seat.status === 'EMPTY') return '#FFFFFF';
     if (seat.status === 'LOCKED') return '#E5E7EB';
     if (seat.status === 'PRIVATE') return '#BFBFBF';
+    if (seat.status === 'MANUAL') return '#14B8A6';
     const colorObj = sessionColors.find((sc: any) => sc.session_id === seat.session_id);
     return colorObj ? colorObj.color : '#1D4EAD';
   };
@@ -61,7 +64,11 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         const participant = participants.find((p: any) => p.id === seat.assigned_to);
         if (participant) setSelectedSeatInfo({ seatId: seat.id, participant });
       } else if (seat.status === 'EMPTY') {
+        setManualName('');
         setSelectedSeatInfo({ seatId: seat.id, participant: null });
+      } else if (seat.status === 'MANUAL') {
+        setManualName(seat.manual_label || '');
+        setSelectedSeatInfo({ seatId: seat.id, participant: null, isManual: true });
       } else if (seat.status === 'PRIVATE') {
         setSelectedSeatInfo({ seatId: seat.id, participant: null, isPrivate: true });
       }
@@ -76,8 +83,9 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       if (seat.status !== 'EMPTY') {
         // 다른 사람 자리 터치 → 좌석 정보 툴팁
         const assignedParticipant = participants.find((p: any) => p.id === seat.assigned_to);
-        if (assignedParticipant) {
-          setTooltipText(`${seat.row}열 ${seat.col}번 — ${assignedParticipant.name}`);
+        const seatName = seat.status === 'MANUAL' ? seat.manual_label : assignedParticipant?.name;
+        if (seatName) {
+          setTooltipText(`${seat.row}열 ${seat.col}번 — ${seatName}`);
         } else {
           setTooltipText(`${seat.row}열 ${seat.col}번`);
         }
@@ -111,6 +119,14 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
     const eventId = user?.event_id || (participants.length > 0 ? participants[0].event_id : null);
     if (!eventId) { alert('이벤트 ID를 찾을 수 없습니다.'); return; }
     socket.emit('admin:set_seat_private', { eventId, seatId: selectedSeatInfo.seatId, isPrivate });
+    setSelectedSeatInfo(null);
+  };
+
+  const handleSetManual = (label: string | null) => {
+    if (!socket || !selectedSeatInfo) return;
+    const eventId = user?.event_id || (participants.length > 0 ? participants[0].event_id : null);
+    if (!eventId) { alert('이벤트 ID를 찾을 수 없습니다.'); return; }
+    socket.emit('admin:set_manual_seat', { eventId, seatId: selectedSeatInfo.seatId, label });
     setSelectedSeatInfo(null);
   };
 
@@ -210,7 +226,9 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                       const assignedParticipant = seat.assigned_to
                         ? participants.find((p: any) => p.id === seat.assigned_to)
                         : null;
-                      const displayName = assignedParticipant?.name ?? '';
+                      const displayName = seat.status === 'MANUAL'
+                        ? (seat.manual_label ?? '')
+                        : (assignedParticipant?.name ?? '');
 
                       let seatClass = 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 cursor-pointer text-gray-700';
                       let customStyle: React.CSSProperties = {};
@@ -226,6 +244,11 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                         } else {
                           seatClass = 'text-white opacity-80 cursor-pointer';
                         }
+                      } else if (seat.status === 'MANUAL') {
+                        customStyle = { backgroundColor: '#14B8A6' };
+                        seatClass = isAdmin
+                          ? 'text-white cursor-pointer hover:opacity-80 active:opacity-60'
+                          : 'text-white opacity-90 cursor-default';
                       } else if (seat.status === 'FROZEN') {
                         seatClass = 'bg-red-100 border-2 border-red-300 cursor-not-allowed text-red-800';
                       } else if (seat.status === 'PRIVATE') {
@@ -326,11 +349,50 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                 선택 가능으로 되돌리기
               </button>
             </div>
+          ) : selectedSeatInfo.isManual ? (
+            <div className="space-y-2 text-sm text-gray-700">
+              <p className="font-medium text-gray-500">
+                수동 배정 ({seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.row}열 {seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.col}번)
+              </p>
+              <input
+                type="text"
+                value={manualName}
+                onChange={(e) => setManualName(e.target.value)}
+                placeholder="이름 입력"
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-gray-900"
+              />
+              <button
+                onClick={() => handleSetManual(manualName.trim() || null)}
+                disabled={!manualName.trim()}
+                style={{ backgroundColor: '#14B8A6' }}
+                className="w-full py-2 text-white rounded-lg font-bold transition-opacity text-sm hover:opacity-90 disabled:opacity-40"
+              >
+                이름 수정
+              </button>
+              <button onClick={() => handleSetManual(null)} className="w-full py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-bold transition-colors text-sm">
+                배정 삭제 (빈 좌석으로)
+              </button>
+            </div>
           ) : (
             <div className="space-y-2 text-sm text-gray-700">
               <p className="font-medium text-gray-500">
                 빈 좌석 ({seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.row}열 {seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.col}번)
               </p>
+              <input
+                type="text"
+                value={manualName}
+                onChange={(e) => setManualName(e.target.value)}
+                placeholder="이름 입력 (수동 배정)"
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-gray-900"
+              />
+              <button
+                onClick={() => handleSetManual(manualName.trim() || null)}
+                disabled={!manualName.trim()}
+                style={{ backgroundColor: '#14B8A6' }}
+                className="w-full py-2 text-white rounded-lg font-bold transition-opacity text-sm hover:opacity-90 disabled:opacity-40"
+              >
+                수동 배정
+              </button>
               <button onClick={() => handleSetSeatPrivate(true)} className="w-full py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-bold transition-colors text-sm">
                 사석으로 지정
               </button>
