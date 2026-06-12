@@ -35,6 +35,11 @@ export default function Admin() {
   const [editEndTime, setEditEndTime] = useState('');
   const [isSessionPanelOpen, setIsSessionPanelOpen] = useState(false);
 
+  // 관리자 화면 진입 시 참가자 상태 초기화 (같은 브라우저에서 참가자 → 관리자 전환 시 상태 잔존 방지)
+  useEffect(() => {
+    useStore.getState().setUser(null, null);
+  }, []);
+
   useEffect(() => {
     if (adminToken && activeTab === 'MONITOR') {
       fetchEvents();

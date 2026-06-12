@@ -18,6 +18,11 @@ export default function User() {
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const [timerStatus, setTimerStatus] = useState<'WAITING' | 'ACTIVE' | 'EXPIRED' | 'COMPLETED'>('WAITING');
 
+  // 참가자 화면 진입 시 관리자 상태 초기화 (같은 브라우저에서 관리자 → 참가자 전환 시 권한 UI 잔존 방지)
+  useEffect(() => {
+    useStore.getState().setAdminAuth(null, null);
+  }, []);
+
   // User.tsx 내부
   useEffect(() => {
     const fetchInitialData = async () => {
