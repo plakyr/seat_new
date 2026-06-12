@@ -10,7 +10,7 @@ export default function Home() {
         <div className="space-y-4">
           <button
             onClick={() => navigate('/user')}
-            style={{ backgroundColor: '#4257D9' }}
+            style={{ backgroundColor: '#2572D9' }}
             className="w-full py-4 hover:opacity-90 text-white rounded-lg font-semibold text-lg transition-colors"
           >
             참가자 로그인
