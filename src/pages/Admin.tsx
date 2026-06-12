@@ -373,13 +373,13 @@ const updateStoreWithEventData = (event: any) => {
               <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                 <form onSubmit={handleUpload} className="space-y-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">회차(이벤트) 이름</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">모임명</label>
                     <input 
                       type="text" 
                       value={eventName}
                       onChange={(e) => setEventName(e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
-                      placeholder="예: 2026년 3월 정기 공연"
+                      placeholder="예: 2026년 공감 신년모임"
                       required
                     />
                   </div>
@@ -411,29 +411,29 @@ const updateStoreWithEventData = (event: any) => {
 
                   {/* 복도 설정 */}
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                    <p className="text-sm font-semibold text-gray-700">복도 위치 설정 <span className="font-normal text-gray-400">(선택사항)</span></p>
+                    <p className="text-sm font-semibold text-gray-700">통로 위치 설정 <span className="font-normal text-gray-400">(선택사항)</span></p>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        가로 복도 — 해당 행 <span className="text-gray-400">뒤</span>에 복도를 추가할 행 번호 (쉼표로 구분)
+                        가로 통로 — 해당 행 <span className="text-gray-400">뒤</span>에 통로를 추가할 행 번호 (쉼표로 구분)
                       </label>
                       <input
                         type="text"
                         value={aisleAfterRows}
                         onChange={(e) => setAisleAfterRows(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
-                        placeholder="예: 3, 6  →  3행과 4행 사이, 6행과 7행 사이에 복도"
+                        placeholder="예: 3, 6  →  3행과 4행 사이, 6행과 7행 사이에 통로"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        세로 복도 — 해당 열 <span className="text-gray-400">뒤</span>에 복도를 추가할 열 번호 (쉼표로 구분)
+                        세로 통로 — 해당 열 <span className="text-gray-400">뒤</span>에 통로를 추가할 열 번호 (쉼표로 구분)
                       </label>
                       <input
                         type="text"
                         value={aisleAfterCols}
                         onChange={(e) => setAisleAfterCols(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
-                        placeholder="예: 4, 8  →  4열과 5열 사이, 8열과 9열 사이에 복도"
+                        placeholder="예: 4, 8  →  4열과 5열 사이, 8열과 9열 사이에 통로"
                       />
                     </div>
                   </div>
