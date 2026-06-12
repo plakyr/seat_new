@@ -478,7 +478,7 @@ const updateStoreWithEventData = (event: any) => {
               
               <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex-1 w-full">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">이벤트 선택</label>
+                  <label className="block text-lg font-semibold text-gray-700 mb-2">이벤트 선택</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:ring-2 focus:ring-gray-900"
                     value={selectedEventId || ''}
