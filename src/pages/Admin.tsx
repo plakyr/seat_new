@@ -27,7 +27,7 @@ export default function Admin() {
   // Monitoring state
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'UPLOAD' | 'MONITOR'>('UPLOAD');
+  const [activeTab, setActiveTab] = useState<'UPLOAD' | 'MONITOR'>('MONITOR');
 
   // Session Edit State
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -175,6 +175,29 @@ const updateStoreWithEventData = (event: any) => {
     socket.emit('admin:toggle_freeze', { eventId: selectedEventId, isFrozen: newFreezeState, reason });
   };
 
+  const selectedEvent = events.find(ev => ev.id === selectedEventId);
+
+  const handleToggleLoginOpen = async () => {
+    if (!selectedEventId) return;
+    const open = !selectedEvent?.login_open;
+    if (!confirm(open ? '참가자 입장(로그인)을 허용하시겠습니까?' : '참가자 입장(로그인)을 차단하시겠습니까?')) return;
+    try {
+      const res = await fetch(`/api/admin/events/${selectedEventId}/login-open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({ open })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchEvents();
+      } else {
+        alert(data.error || '입장 허용 설정에 실패했습니다.');
+      }
+    } catch (err) {
+      alert('서버 오류가 발생했습니다.');
+    }
+  };
+
   const handleNextTurn = () => {
     if (!selectedEventId || !socket) return;
     if (confirm('현재 선택자의 좌석을 자동배정하고 다음 턴으로 넘기시겠습니까?')) {
@@ -306,17 +329,17 @@ const updateStoreWithEventData = (event: any) => {
           <p className="font-medium text-lg">{adminUser?.username}</p>
         </div>
         <nav className="space-y-2 flex-1">
-          <button 
-            onClick={() => setActiveTab('UPLOAD')}
-            className={`w-full text-left py-2.5 px-4 rounded-lg font-medium transition-colors ${activeTab === 'UPLOAD' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-          >
-            대시보드 / 업로드
-          </button>
-          <button 
+          <button
             onClick={() => setActiveTab('MONITOR')}
             className={`w-full text-left py-2.5 px-4 rounded-lg font-medium transition-colors ${activeTab === 'MONITOR' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
           >
             실시간 관제
+          </button>
+          <button
+            onClick={() => setActiveTab('UPLOAD')}
+            className={`w-full text-left py-2.5 px-4 rounded-lg font-medium transition-colors ${activeTab === 'UPLOAD' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            대시보드 / 업로드
           </button>
         </nav>
         <button 
@@ -329,6 +352,21 @@ const updateStoreWithEventData = (event: any) => {
       
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-5xl mx-auto h-full flex flex-col">
+          {/* 모바일 전용 탭 전환 바 (사이드바가 숨겨지므로) */}
+          <div className="flex md:hidden gap-2 mb-6">
+            <button
+              onClick={() => setActiveTab('MONITOR')}
+              className={`flex-1 py-2.5 rounded-lg font-bold text-sm ${activeTab === 'MONITOR' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
+            >
+              실시간 관제
+            </button>
+            <button
+              onClick={() => setActiveTab('UPLOAD')}
+              className={`flex-1 py-2.5 rounded-lg font-bold text-sm ${activeTab === 'UPLOAD' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
+            >
+              대시보드 / 업로드
+            </button>
+          </div>
           {activeTab === 'UPLOAD' && (
             <>
               <h2 className="text-3xl font-bold mb-8 text-gray-900">회차 및 참가자 업로드</h2>
@@ -456,6 +494,12 @@ const updateStoreWithEventData = (event: any) => {
                 {selectedEventId && (
                   <div className="w-full md:w-auto mt-4 md:mt-0 md:self-end flex flex-wrap gap-2">
                     <button
+                      onClick={handleToggleLoginOpen}
+                      className={`px-6 py-3 rounded-lg text-base font-bold text-white transition-colors shadow-sm ${selectedEvent?.login_open ? 'bg-gray-500 hover:bg-gray-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                    >
+                      {selectedEvent?.login_open ? '입장 차단' : '입장 허용'}
+                    </button>
+                    <button
                       onClick={handleNextTurn}
                       className="px-6 py-3 rounded-lg text-base font-bold text-white transition-colors shadow-sm bg-blue-600 hover:bg-blue-700"
                     >
@@ -463,7 +507,7 @@ const updateStoreWithEventData = (event: any) => {
                     </button>
                     <button
                       onClick={handleToggleFreeze}
-                      className={`px-6 py-3 rounded-lg text-base font-bold text-white transition-colors shadow-sm ${isFrozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                      className={`w-[120px] py-3 rounded-lg text-base font-bold text-white transition-colors shadow-sm ${isFrozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
                     >
                       {isFrozen ? '재개' : '일시정지'}
                     </button>
@@ -530,12 +574,26 @@ const updateStoreWithEventData = (event: any) => {
                         const isEditing = editingSessionId === sc.id;
                         
                         return (
-                          <div key={sc.session_id} className="flex items-center justify-between bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
+                          <div key={sc.session_id} className="relative group flex items-center justify-between bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
                             <div className="flex items-center gap-3">
                               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: sc.color }}></div>
                               <span className="text-sm font-semibold text-gray-800">그룹 {sc.session_id}</span>
                               <span className="text-xs text-gray-500">({completedCount}/{totalCount}명 완료)</span>
                             </div>
+                            {/* 마우스 오버 시 그룹 참가자 명단 (순서대로) */}
+                            {totalCount > 0 && (
+                              <div className="absolute left-4 bottom-full mb-2 z-30 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg shadow-xl p-3 min-w-[200px] max-h-[300px] overflow-y-auto">
+                                <p className="font-bold mb-2 text-gray-300">그룹 {sc.session_id} 참가자 순서</p>
+                                {[...sessionParticipants]
+                                  .sort((a, b) => a.turn_order - b.turn_order)
+                                  .map((p, i) => (
+                                    <div key={p.id} className="flex justify-between gap-4 py-0.5">
+                                      <span>{i + 1}. {p.name}</span>
+                                      <span className={p.seat_id ? 'text-green-400' : 'text-gray-400'}>{p.seat_id ? '완료' : '대기'}</span>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
                             
                             <div className="flex items-center gap-2">
                               {isEditing ? (

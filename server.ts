@@ -123,6 +123,21 @@ app.post('/api/admin/login', async (req, res) => {
     }
   });
 
+  // 참가자 입장(로그인) 허용/차단 토글
+  app.post('/api/admin/events/:eventId/login-open', requireAdmin, async (req, res) => {
+    const { eventId } = req.params;
+    const { open } = req.body;
+    try {
+      const event = await prisma.event.update({
+        where: { id: eventId },
+        data: { login_open: !!open }
+      });
+      res.json({ success: true, login_open: event.login_open });
+    } catch (error) {
+      res.status(500).json({ error: '입장 허용 설정에 실패했습니다.' });
+    }
+  });
+
   // 테스트용: 이벤트의 모든 좌석/참가자 상태를 초기화
   app.post('/api/admin/events/:eventId/reset', requireAdmin, async (req, res) => {
     const { eventId } = req.params;
@@ -142,6 +157,10 @@ app.post('/api/admin/login', async (req, res) => {
           create: { event_id: eventId, current_turn_order: 1, current_turn_start_time: new Date() }
         });
       });
+
+      // 진행 흐름 상태 초기화 (시작 대기/공지 캐시)
+      waitingForStart.delete(eventId);
+      flowAnnounced.delete(eventId);
 
       const layout = await prisma.venueLayout.findFirst({ where: { event_id: eventId }, include: { seats: true } });
       const participants = await prisma.participant.findMany({ where: { event_id: eventId } });
@@ -403,6 +422,10 @@ app.post('/api/admin/login', async (req, res) => {
         return res.status(400).json({ error: '현재 진행 중인 이벤트가 없습니다.' });
       }
 
+      if (!activeEvent.login_open) {
+        return res.status(403).json({ error: '아직 입장이 허용되지 않았습니다. 관리자의 안내를 기다려주세요.' });
+      }
+
       const participants = await prisma.participant.findMany({
         where: { name, phone_last4: String(phone_last4), event_id: activeEvent.id }
       });
@@ -574,8 +597,8 @@ app.post('/api/admin/login', async (req, res) => {
         messages
       });
 
-      const gap = await checkSessionGap(data.eventId);
-      if (gap) socket.emit('system:session_change', gap);
+      const flow = await getFlowAnnouncement(data.eventId);
+      if (flow) socket.emit(flow.event, flow.payload);
     });
 
     // Admin freeze/unfreeze system
@@ -765,8 +788,8 @@ app.post('/api/admin/login', async (req, res) => {
         });
       }
 
-      const gap = await checkSessionGap(data.eventId);
-      if (gap) socket.emit('system:session_change', gap);
+      const flow = await getFlowAnnouncement(data.eventId);
+      if (flow) socket.emit(flow.event, flow.payload);
 
       const sessionColors = await prisma.sessionColor.findMany({
         where: { event_id: data.eventId }
@@ -806,6 +829,14 @@ app.post('/api/admin/login', async (req, res) => {
           // Dynamic turn check
           if (!systemState || participant.turn_order !== systemState.current_turn_order) {
             throw new Error('아직 좌석 선택 차례가 아닙니다.');
+          }
+
+          // 그룹 시작 시간 전에는 차례여도 선택 불가
+          const sess = await tx.sessionColor.findFirst({
+            where: { event_id: socket.data.eventId, session_id: participant.session_id }
+          });
+          if (sess?.start_time && !isSessionStartTimeReached(sess.start_time)) {
+            throw new Error(`아직 그룹 시작 시간이 아닙니다. (시작: ${sess.start_time})`);
           }
 
           const now = new Date();
@@ -898,6 +929,15 @@ app.post('/api/admin/login', async (req, res) => {
             socket.emit('chat:error', { error: '채팅 권한이 없습니다.' });
             return;
           }
+
+          // 그룹 시작 시간 전에는 채팅 불가
+          const chatSession = await prisma.sessionColor.findFirst({
+            where: { event_id: eventId, session_id: participant.session_id }
+          });
+          if (chatSession?.start_time && !isSessionStartTimeReached(chatSession.start_time)) {
+            socket.emit('chat:error', { error: `아직 그룹 시작 시간이 아닙니다. (시작: ${chatSession.start_time})` });
+            return;
+          }
           
           senderType = 'USER';
           senderName = participant.name;
@@ -968,14 +1008,53 @@ app.post('/api/admin/login', async (req, res) => {
   }
 
 
-  // "HH:MM" 형식의 시작 시간이 현재 시각에 도달했는지 확인
-  function isSessionStartTimeReached(startTime: string | null | undefined, now: number): boolean {
+  // "HH:MM" 형식의 시작 시간이 현재 시각(한국 시간 기준)에 도달했는지 확인
+  // 서버가 UTC 등 다른 시간대에서 돌아도 항상 Asia/Seoul 기준으로 비교
+  function isSessionStartTimeReached(startTime: string | null | undefined): boolean {
     if (!startTime) return true;
     const m = startTime.match(/^(\d{1,2}):(\d{2})$/);
     if (!m) return true;
-    const target = new Date(now);
-    target.setHours(Number(m[1]), Number(m[2]), 0, 0);
-    return now >= target.getTime();
+    const seoulNow = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(new Date());
+    const [nowH, nowM] = seoulNow.split(':').map(Number);
+    return nowH * 60 + nowM >= Number(m[1]) * 60 + Number(m[2]);
+  }
+
+  // 이벤트별 진행 흐름 상태 추적 (시작 대기 / 공지 중복 방지)
+  const waitingForStart = new Map<string, string>(); // eventId → 시작 대기 중인 그룹
+  const flowAnnounced = new Map<string, string>();   // eventId → 마지막 공지 키
+
+  // 현재 이벤트의 진행 흐름 공지 상태 계산
+  // - 현재 그룹 시작 시간 전: 시작 시간 안내 (prevSession: null)
+  // - 그룹 사이 대기: 이전 그룹 완료 + 다음 그룹 시작 시간 안내
+  // - 전원 배정 완료: 완료 공지
+  // - 정상 진행 중: null
+  async function getFlowAnnouncement(eventId: string): Promise<{ event: string; payload: any } | null> {
+    const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+    if (!systemState) return null;
+    const total = await prisma.participant.count({ where: { event_id: eventId } });
+    if (total === 0) return null;
+    const remaining = await prisma.participant.count({ where: { event_id: eventId, is_final: false } });
+    if (remaining === 0) return { event: 'system:all_complete', payload: {} };
+    const cur = await prisma.participant.findFirst({
+      where: { event_id: eventId, turn_order: systemState.current_turn_order }
+    });
+    if (cur && !cur.is_final) {
+      const sess = await prisma.sessionColor.findFirst({
+        where: { event_id: eventId, session_id: cur.session_id }
+      });
+      if (sess?.start_time && !isSessionStartTimeReached(sess.start_time)) {
+        return {
+          event: 'system:session_change',
+          payload: { prevSession: null, nextSession: cur.session_id, nextStartTime: sess.start_time }
+        };
+      }
+      return null;
+    }
+    const gap = await checkSessionGap(eventId);
+    if (gap) return { event: 'system:session_change', payload: gap };
+    return null;
   }
 
   // 현재 턴이 그룹의 마지막 참가자이고, 다음 그룹의 시작 시간이 아직 안 됐는지 확인
@@ -993,7 +1072,7 @@ app.post('/api/admin/login', async (req, res) => {
     const nextSession = await prisma.sessionColor.findFirst({
       where: { event_id: eventId, session_id: nextParticipant.session_id }
     });
-    if (!nextSession?.start_time || isSessionStartTimeReached(nextSession.start_time, Date.now())) return null;
+    if (!nextSession?.start_time || isSessionStartTimeReached(nextSession.start_time)) return null;
     return {
       prevSession: currentParticipant.session_id,
       nextSession: nextParticipant.session_id,
@@ -1018,6 +1097,13 @@ app.post('/api/admin/login', async (req, res) => {
   async function forceAssignAndAdvanceTurn(eventId: string) {
     const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
     if (!systemState) throw new Error('시스템 상태를 찾을 수 없습니다.');
+
+    // 그룹 시작 전 / 그룹 간 대기 / 전원 완료 상태에서는 수동 진행 불가 (시작 시간 엄수)
+    const flow = await getFlowAnnouncement(eventId);
+    if (flow) {
+      if (flow.event === 'system:all_complete') throw new Error('모든 그룹 좌석 지정이 완료되었습니다.');
+      throw new Error(`아직 그룹 시작 시간이 아닙니다. (그룹 ${flow.payload.nextSession} 시작: ${flow.payload.nextStartTime})`);
+    }
 
     const currentParticipant = await prisma.participant.findFirst({
       where: { event_id: eventId, turn_order: systemState.current_turn_order }
@@ -1078,6 +1164,34 @@ app.post('/api/admin/login', async (req, res) => {
     const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
     if (!systemState || systemState.is_frozen) return;
 
+    // 진행 흐름 상태 확인: 그룹 시작 대기 / 그룹 간 대기 / 전원 완료 시 턴 진행 보류
+    const flow = await getFlowAnnouncement(eventId);
+    if (flow) {
+      const key = flow.event + JSON.stringify(flow.payload);
+      if (flowAnnounced.get(eventId) !== key) {
+        flowAnnounced.set(eventId, key);
+        io.to(`event:${eventId}`).emit(flow.event, flow.payload);
+        io.to(`admin:event:${eventId}`).emit(flow.event, flow.payload);
+      }
+      // 현재 차례 참가자의 그룹 시작 대기 중이면 표시 (시작 시 타이머 리셋용)
+      if (flow.event === 'system:session_change' && !flow.payload.prevSession) {
+        waitingForStart.set(eventId, flow.payload.nextSession);
+      }
+      return;
+    }
+    flowAnnounced.delete(eventId);
+
+    // 그룹 시작 시간이 막 도래한 경우: 타이머를 지금부터 새로 시작
+    if (waitingForStart.has(eventId)) {
+      waitingForStart.delete(eventId);
+      const updated = await prisma.systemState.update({
+        where: { event_id: eventId },
+        data: { current_turn_start_time: new Date() }
+      });
+      emitTurn(eventId, updated);
+      return;
+    }
+
     const now = Date.now();
     const turnStart = new Date(systemState.current_turn_start_time).getTime();
     // 제한시간(정확히 3분) 이전이면 아무것도 안 함
@@ -1097,12 +1211,6 @@ app.post('/api/admin/login', async (req, res) => {
     // 이미 완료됐거나 참가자 없으면 (자동배정 문구 없이) 조용히 다음 턴으로
     if (!currentParticipant || currentParticipant.is_final) {
       if (nextTurnOrder > maxTurn) return;
-      const gap = await checkSessionGap(eventId);
-      if (gap) {
-        io.to(`event:${eventId}`).emit('system:session_change', gap);
-        io.to(`admin:event:${eventId}`).emit('system:session_change', gap);
-        return;
-      }
       const updated = await prisma.systemState.update({
         where: { event_id: eventId },
         data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
