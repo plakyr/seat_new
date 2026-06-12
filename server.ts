@@ -300,7 +300,7 @@ app.post('/api/admin/login', async (req, res) => {
       const sessions = Array.from(new Set(records.map((r: any) => r.session_id))).filter(Boolean).sort() as string[];
       
       // Generate colors for sessions
-      const defaultColors = ['#4374D9', '#6799FF', '#B2CCFF', '#DDEEFF', '#E6F2FF'];
+      const defaultColors = ['#1D4EAD', '#4374D9', '#6799FF', '#B2D5FF', '#D4E9FF', '#E6F2FF'];
       const sessionColorsData = sessions.map((session_id, index) => {
         let color;
         if (index < defaultColors.length) {
@@ -308,7 +308,7 @@ app.post('/api/admin/login', async (req, res) => {
         } else {
           // Generate a lighter blue shade for sessions 6+
           // HSL: Hue ~215 (blue), Saturation ~100%, Lightness increasing from 95%
-          const lightness = Math.min(98, 95 + (index - 4)); 
+          const lightness = Math.min(98, 95 + (index - 5));
           color = `hsl(215, 100%, ${lightness}%)`;
         }
         return {
