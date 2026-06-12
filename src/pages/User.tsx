@@ -142,7 +142,7 @@ export default function User() {
       <header className="bg-white shadow-sm p-4 sticky top-0 z-20 flex justify-between items-center">
         <div>
           <h1 className="text-lg font-bold">{user.name}님</h1>
-          <p className="text-sm text-gray-500">그룹: {user.session_id} | 순서: {groupOrder}번째</p>
+          <p className="text-sm text-gray-500">{user.session_id}그룹 {groupOrder}번째</p>
         </div>
       </header>
       <main className="flex-1 p-4 flex flex-col max-w-6xl mx-auto w-full">
