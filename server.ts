@@ -1211,6 +1211,12 @@ app.post('/api/admin/login', async (req, res) => {
     // 이미 완료됐거나 참가자 없으면 (자동배정 문구 없이) 조용히 다음 턴으로
     if (!currentParticipant || currentParticipant.is_final) {
       if (nextTurnOrder > maxTurn) return;
+      const gap = await checkSessionGap(eventId);
+      if (gap) {
+        io.to(`event:${eventId}`).emit('system:session_change', gap);
+        io.to(`admin:event:${eventId}`).emit('system:session_change', gap);
+        return;
+      }
       const updated = await prisma.systemState.update({
         where: { event_id: eventId },
         data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
