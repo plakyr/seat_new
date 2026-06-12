@@ -323,7 +323,7 @@ const updateStoreWithEventData = (event: any) => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="w-64 bg-gray-900 text-white p-6 hidden md:flex flex-col">
-        <h1 className="text-2xl font-bold mb-8 tracking-tight">Admin Panel</h1>
+        <h1 className="text-2xl font-bold mb-8 tracking-tight">관리자 메뉴</h1>
         <div className="mb-6 pb-6 border-b border-gray-800">
           <p className="text-sm text-gray-400">접속 계정</p>
           <p className="font-medium text-lg">{adminUser?.username}</p>
@@ -473,7 +473,7 @@ const updateStoreWithEventData = (event: any) => {
           )}
 
           {activeTab === 'MONITOR' && (
-            <div className="flex flex-col h-full space-y-6">
+            <div className="flex flex-col h-full space-y-3">
               <h2 className="text-3xl font-bold text-gray-900">실시간 관제</h2>
               
               <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -496,14 +496,14 @@ const updateStoreWithEventData = (event: any) => {
                     <button
                       onClick={handleToggleLoginOpen}
                       style={{ backgroundColor: selectedEvent?.login_open ? '#6b7590' : '#3d9e6a' }}
-                      className="px-6 py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       {selectedEvent?.login_open ? '입장 차단' : '입장 허용'}
                     </button>
                     <button
                       onClick={handleNextTurn}
                       style={{ backgroundColor: '#e07b2a' }}
-                      className="px-6 py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       자동배정
                     </button>
@@ -518,14 +518,14 @@ const updateStoreWithEventData = (event: any) => {
                       onClick={handleResetEvent}
                       title="테스트용: 모든 좌석 배정을 초기화합니다"
                       style={{ backgroundColor: '#4a6fa5' }}
-                      className="px-6 py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      className="w-[96px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       초기화
                     </button>
                     <button
                       onClick={handleDeleteEvent}
                       style={{ backgroundColor: '#2d3142' }}
-                      className="px-6 py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      className="w-[96px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       삭제
                     </button>

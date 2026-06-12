@@ -153,7 +153,8 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
               </button>
               <button
                 onClick={handleConfirmSelect}
-                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 active:bg-blue-800"
+                style={{ backgroundColor: '#4a6fa5' }}
+                className="flex-1 py-3 rounded-xl text-white font-bold hover:opacity-90"
               >
                 확인
               </button>
@@ -292,9 +293,9 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
 
       {/* 범례 */}
       <div className="shrink-0 flex justify-center gap-4 bg-white/95 py-2 px-4 border-t border-gray-200 text-xs font-medium">
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-200 shadow-sm" />선택 가능</div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#1D4EAD' }} />선택 완료</div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#BFBFBF' }} />선택 불가</div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-200 shadow-sm" />선택 가능</div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#4374D9' }} />선택 완료</div>
         {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#2ecc71' }} />내 자리</div>}
       </div>
 
