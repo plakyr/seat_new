@@ -75,9 +75,18 @@ export default function AnnouncementBar({
     pulse = true;
   } else if (announcement.type === 'SESSION_CHANGE') {
     bgColor = 'bg-purple-600';
-    text = announcement.nextStartTime
-      ? `다음 그룹 시작 시간은 ${announcement.nextStartTime} 입니다.`
-      : '다음 그룹을 준비 중입니다.';
+    if (announcement.prevSessionId) {
+      text = announcement.nextStartTime
+        ? `그룹 ${announcement.prevSessionId} 좌석지정 완료. 그룹 ${announcement.nextSessionId} 시작시간은 ${announcement.nextStartTime} 입니다.`
+        : `그룹 ${announcement.prevSessionId} 좌석지정 완료. 다음 그룹을 준비 중입니다.`;
+    } else {
+      text = announcement.nextStartTime
+        ? `그룹 ${announcement.nextSessionId} 시작시간은 ${announcement.nextStartTime} 입니다.`
+        : '그룹 시작을 준비 중입니다.';
+    }
+  } else if (announcement.type === 'ALL_COMPLETE') {
+    bgColor = 'bg-green-600';
+    text = '모든 그룹 좌석 지정이 완료되었습니다.';
   } else if (currentParticipant) {
     bgColor = 'bg-blue-600';
     text = `현재 순서 '${currentParticipant.name}'님`;
@@ -90,7 +99,8 @@ export default function AnnouncementBar({
     !isFrozen &&
     !timerPaused &&
     announcement.type !== 'SESSION_CHANGE' &&
-    announcement.type !== 'AUTO_ASSIGN';
+    announcement.type !== 'AUTO_ASSIGN' &&
+    announcement.type !== 'ALL_COMPLETE';
 
   return (
     <div

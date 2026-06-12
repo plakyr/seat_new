@@ -47,7 +47,7 @@ export const useSocket = () => {
       // 새 차례 공지 뜨는 순간 타이머 재개 + 시작 시간 갱신
       storeRef.current.setTimerPaused(false);
       storeRef.current.setAnnouncement({
-        type: 'IDLE', currentParticipantName: null, nextSessionId: null, nextStartTime: null,
+        type: 'IDLE', currentParticipantName: null, prevSessionId: null, nextSessionId: null, nextStartTime: null,
       });
       storeRef.current.setSystemTurn(data.currentTurnOrder, data.currentTurnStartTime);
     });
@@ -129,18 +129,30 @@ export const useSocket = () => {
       storeRef.current.setAnnouncement({
         type: 'AUTO_ASSIGN',
         currentParticipantName: data.participantName,
+        prevSessionId: null,
         nextSessionId: null,
         nextStartTime: null,
       });
       // system:turn 이벤트에서 타이머 재개되므로 setTimeout 제거
     });
 
-    socketInstance.on('system:session_change', (data: { prevSession: string; nextSession: string; nextStartTime: string | null }) => {
+    socketInstance.on('system:session_change', (data: { prevSession: string | null; nextSession: string; nextStartTime: string | null }) => {
       storeRef.current.setAnnouncement({
         type: 'SESSION_CHANGE',
         currentParticipantName: null,
+        prevSessionId: data.prevSession,
         nextSessionId: data.nextSession,
         nextStartTime: data.nextStartTime,
+      });
+    });
+
+    socketInstance.on('system:all_complete', () => {
+      storeRef.current.setAnnouncement({
+        type: 'ALL_COMPLETE',
+        currentParticipantName: null,
+        prevSessionId: null,
+        nextSessionId: null,
+        nextStartTime: null,
       });
     });
 

@@ -21,6 +21,7 @@ model Event {
   name          String
   date          DateTime
   is_active     Boolean  @default(true)
+  login_open    Boolean  @default(false)
   layouts       VenueLayout[]
   participants  Participant[]
   systemState   SystemState?

@@ -40,11 +40,12 @@ export interface ChatMessage {
 }
 
 // 공지 바 상태
-export type AnnouncementType = 'IDLE' | 'ACTIVE' | 'AUTO_ASSIGN' | 'SESSION_CHANGE';
+export type AnnouncementType = 'IDLE' | 'ACTIVE' | 'AUTO_ASSIGN' | 'SESSION_CHANGE' | 'ALL_COMPLETE';
 
 export interface AnnouncementState {
   type: AnnouncementType;
   currentParticipantName: string | null;
+  prevSessionId: string | null;
   nextSessionId: string | null;
   nextStartTime: string | null;
 }
@@ -108,7 +109,7 @@ export const useStore = create<AppState>((set) => ({
   participants: [],
   sessionColors: [],
   messages: [],
-  announcement: { type: 'IDLE', currentParticipantName: null, nextSessionId: null, nextStartTime: null },
+  announcement: { type: 'IDLE', currentParticipantName: null, prevSessionId: null, nextSessionId: null, nextStartTime: null },
   timerPaused: false,
   rows: 10,
   cols: 10,

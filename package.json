@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "prisma generate --schema=./prisma/schema.prisma && vite build",
+    "build": "prisma generate --schema=./prisma/schema.prisma && prisma db push --schema=./prisma/schema.prisma --skip-generate && vite build",
     "start": "tsx server.ts",
     "preview": "vite preview",
     "postinstall": ""
