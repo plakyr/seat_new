@@ -573,6 +573,9 @@ app.post('/api/admin/login', async (req, res) => {
         sessionColors,
         messages
       });
+
+      const gap = await checkSessionGap(data.eventId);
+      if (gap) socket.emit('system:session_change', gap);
     });
 
     // Admin freeze/unfreeze system
@@ -761,6 +764,9 @@ app.post('/api/admin/login', async (req, res) => {
           currentTurnStartTime: systemState.current_turn_start_time
         });
       }
+
+      const gap = await checkSessionGap(data.eventId);
+      if (gap) socket.emit('system:session_change', gap);
 
       const sessionColors = await prisma.sessionColor.findMany({
         where: { event_id: data.eventId }
@@ -962,6 +968,39 @@ app.post('/api/admin/login', async (req, res) => {
   }
 
 
+  // "HH:MM" 형식의 시작 시간이 현재 시각에 도달했는지 확인
+  function isSessionStartTimeReached(startTime: string | null | undefined, now: number): boolean {
+    if (!startTime) return true;
+    const m = startTime.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return true;
+    const target = new Date(now);
+    target.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    return now >= target.getTime();
+  }
+
+  // 현재 턴이 그룹의 마지막 참가자이고, 다음 그룹의 시작 시간이 아직 안 됐는지 확인
+  async function checkSessionGap(eventId: string) {
+    const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+    if (!systemState) return null;
+    const currentParticipant = await prisma.participant.findFirst({
+      where: { event_id: eventId, turn_order: systemState.current_turn_order }
+    });
+    if (!currentParticipant || !currentParticipant.is_final) return null;
+    const nextParticipant = await prisma.participant.findFirst({
+      where: { event_id: eventId, turn_order: systemState.current_turn_order + 1 }
+    });
+    if (!nextParticipant || nextParticipant.session_id === currentParticipant.session_id) return null;
+    const nextSession = await prisma.sessionColor.findFirst({
+      where: { event_id: eventId, session_id: nextParticipant.session_id }
+    });
+    if (!nextSession?.start_time || isSessionStartTimeReached(nextSession.start_time, Date.now())) return null;
+    return {
+      prevSession: currentParticipant.session_id,
+      nextSession: nextParticipant.session_id,
+      nextStartTime: nextSession.start_time
+    };
+  }
+
   function sortSeatsForAutoAssign(seats: any[], totalCols: number) {
     return [...seats]
       .filter(s => s.status === 'EMPTY')
@@ -1017,6 +1056,13 @@ app.post('/api/admin/login', async (req, res) => {
       if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: updatedParticipant });
     }
 
+    const gap = await checkSessionGap(eventId);
+    if (gap) {
+      io.to(`event:${eventId}`).emit('system:session_change', gap);
+      io.to(`admin:event:${eventId}`).emit('system:session_change', gap);
+      return;
+    }
+
     const nextTurnOrder = systemState.current_turn_order + 1;
     const updatedState = await prisma.systemState.update({
       where: { event_id: eventId },
@@ -1051,6 +1097,12 @@ app.post('/api/admin/login', async (req, res) => {
     // 이미 완료됐거나 참가자 없으면 (자동배정 문구 없이) 조용히 다음 턴으로
     if (!currentParticipant || currentParticipant.is_final) {
       if (nextTurnOrder > maxTurn) return;
+      const gap = await checkSessionGap(eventId);
+      if (gap) {
+        io.to(`event:${eventId}`).emit('system:session_change', gap);
+        io.to(`admin:event:${eventId}`).emit('system:session_change', gap);
+        return;
+      }
       const updated = await prisma.systemState.update({
         where: { event_id: eventId },
         data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
@@ -1105,27 +1157,16 @@ app.post('/api/admin/login', async (req, res) => {
       await delay(AUTO_ASSIGN_NEXT_MS);
 
       if (nextTurnOrder <= maxTurn) {
-        const updatedState = await prisma.systemState.update({
-          where: { event_id: eventId },
-          data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
-        });
-        emitTurn(eventId, updatedState);
-
-        // 그룹(세션) 전환 감지
-        const nextParticipant = await prisma.participant.findFirst({
-          where: { event_id: eventId, turn_order: nextTurnOrder }
-        });
-        if (nextParticipant && nextParticipant.session_id !== currentParticipant.session_id) {
-          const nextSession = await prisma.sessionColor.findFirst({
-            where: { event_id: eventId, session_id: nextParticipant.session_id }
+        const gap = await checkSessionGap(eventId);
+        if (gap) {
+          io.to(`event:${eventId}`).emit('system:session_change', gap);
+          io.to(`admin:event:${eventId}`).emit('system:session_change', gap);
+        } else {
+          const updatedState = await prisma.systemState.update({
+            where: { event_id: eventId },
+            data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
           });
-          const payload = {
-            prevSession: currentParticipant.session_id,
-            nextSession: nextParticipant.session_id,
-            nextStartTime: nextSession?.start_time || null
-          };
-          io.to(`event:${eventId}`).emit('system:session_change', payload);
-          io.to(`admin:event:${eventId}`).emit('system:session_change', payload);
+          emitTurn(eventId, updatedState);
         }
       } else {
         // 마지막 참가자까지 완료 → 자동배정 오버레이만 해제
