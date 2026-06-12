@@ -153,7 +153,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
               </button>
               <button
                 onClick={handleConfirmSelect}
-                style={{ backgroundColor: '#4a6fa5' }}
+                style={{ backgroundColor: '#1C71E8' }}
                 className="flex-1 py-3 rounded-xl text-white font-bold hover:opacity-90"
               >
                 확인
