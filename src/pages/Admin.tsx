@@ -177,7 +177,7 @@ const updateStoreWithEventData = (event: any) => {
 
   const handleNextTurn = () => {
     if (!selectedEventId || !socket) return;
-    if (confirm('현재 턴을 강제로 종료하고 다음 턴으로 넘기시겠습니까?')) {
+    if (confirm('현재 선택자의 좌석을 자동배정하고 다음 턴으로 넘기시겠습니까?')) {
       socket.emit('admin:next_turn', { eventId: selectedEventId });
     }
   };
@@ -457,54 +457,28 @@ const updateStoreWithEventData = (event: any) => {
                   <div className="w-full md:w-auto mt-4 md:mt-0 md:self-end flex flex-wrap gap-2">
                     <button
                       onClick={handleNextTurn}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors shadow-sm bg-blue-600 hover:bg-blue-700"
+                      className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors shadow-sm bg-blue-600 hover:bg-blue-700"
                     >
-                      다음 턴으로 넘기기
+                      자동배정
                     </button>
                     <button
                       onClick={handleToggleFreeze}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors shadow-sm ${isFrozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors shadow-sm ${isFrozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
                     >
-                      {isFrozen ? '시스템 재개' : '시스템 정지'}
+                      {isFrozen ? '재개' : '일시정지'}
                     </button>
                     <button
                       onClick={handleResetEvent}
-                      title="테스트용: 모든 좌석 배정을 초기화합니다 (완성본에서는 삭제 예정)"
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors shadow-sm bg-orange-500 hover:bg-orange-600"
+                      title="테스트용: 모든 좌석 배정을 초기화합니다"
+                      className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors shadow-sm bg-orange-500 hover:bg-orange-600"
                     >
-                      이벤트 초기화
+                      초기화
                     </button>
                     <button
                       onClick={handleDeleteEvent}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors shadow-sm bg-gray-700 hover:bg-gray-800"
+                      className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-colors shadow-sm bg-gray-700 hover:bg-gray-800"
                     >
-                      이벤트 삭제
-                    </button>
-                    <button
-                      onClick={handleResetEvent}
-                      title="테스트용: 모든 좌석 배정을 초기화합니다 (완성본에서는 삭제 예정)"
-                      className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md bg-orange-500 hover:bg-orange-600"
-                    >
-                      이벤트 초기화 (테스트용)
-                    </button>
-                    <button
-                      onClick={handleDeleteEvent}
-                      className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md bg-gray-700 hover:bg-gray-800"
-                    >
-                      이벤트 삭제
-                    </button>
-                    <button
-                      onClick={handleResetEvent}
-                      title="테스트용: 모든 좌석 배정을 초기화합니다 (완성본에서는 삭제 예정)"
-                      className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md bg-orange-500 hover:bg-orange-600"
-                    >
-                      이벤트 초기화 (테스트용)
-                    </button>
-                    <button
-                      onClick={handleDeleteEvent}
-                      className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white transition-colors shadow-md bg-gray-700 hover:bg-gray-800"
-                    >
-                      이벤트 삭제
+                      삭제
                     </button>
                   </div>
                 )}
