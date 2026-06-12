@@ -442,8 +442,8 @@ const updateStoreWithEventData = (event: any) => {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">참가자 명단 (CSV)</label>
                     <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-3">
                       <p className="text-xs text-gray-600 font-mono">
-                        필수 컬럼: event_id, session_id, participant_name, phone_last4, order_in_session<br/>
-                        <span className="text-gray-400 mt-1 block">예시: event_1, session_1, 홍길동, 1234, 1</span>
+                        필수 컬럼: group_id, participant_name, password_4, order_in_group<br/>
+                        <span className="text-gray-400 mt-1 block">예시: 1, 이충주, 0827, 1</span>
                       </p>
                     </div>
                     <input 
