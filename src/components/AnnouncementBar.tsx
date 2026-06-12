@@ -61,20 +61,20 @@ export default function AnnouncementBar({
 
   const currentParticipant = participants.find(p => p.turn_order === currentTurnOrder);
 
-  let bgColor = 'bg-blue-600';
+  let bgColor = '#5982E3';
   let text = '';
   let pulse = false;
 
   if (isFrozen) {
-    bgColor = 'bg-red-600';
+    bgColor = '#ED6161';
     text = `⏸ 일시정지 중${frozenReason ? ` — ${frozenReason}` : ''}`;
     pulse = true;
   } else if (announcement.type === 'AUTO_ASSIGN') {
-    bgColor = 'bg-orange-500';
+    bgColor = '#FF9C59';
     text = '⚙️ 시스템 자동 배정 중...';
     pulse = true;
   } else if (announcement.type === 'SESSION_CHANGE') {
-    bgColor = 'bg-purple-600';
+    bgColor = '#B372F2';
     if (announcement.prevSessionId) {
       text = announcement.nextStartTime
         ? `그룹 ${announcement.prevSessionId} 좌석지정 완료. 그룹 ${announcement.nextSessionId} 시작시간은 ${announcement.nextStartTime} 입니다.`
@@ -85,13 +85,13 @@ export default function AnnouncementBar({
         : '그룹 시작을 준비 중입니다.';
     }
   } else if (announcement.type === 'ALL_COMPLETE') {
-    bgColor = 'bg-green-600';
+    bgColor = '#7ACC96';
     text = '모든 그룹 좌석 지정이 완료되었습니다.';
   } else if (currentParticipant) {
-    bgColor = 'bg-blue-600';
+    bgColor = '#5982E3';
     text = `현재 순서 '${currentParticipant.name}'님`;
   } else {
-    bgColor = 'bg-gray-500';
+    bgColor = '#838B9E';
     text = '대기 중';
   }
 
@@ -104,7 +104,8 @@ export default function AnnouncementBar({
 
   return (
     <div
-      className={`${bgColor} text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
+      style={{ backgroundColor: bgColor }}
+      className={`text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
     >
       <span className="font-bold text-lg truncate">{text}</span>
       {showTimer && (

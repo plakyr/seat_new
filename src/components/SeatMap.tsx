@@ -45,9 +45,9 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   const getSeatColor = (seat: any) => {
     if (seat.status === 'EMPTY') return '#FFFFFF';
     if (seat.status === 'LOCKED') return '#E5E7EB';
-    if (seat.status === 'PRIVATE') return '#A8A8A8';
+    if (seat.status === 'PRIVATE') return '#BFBFBF';
     const colorObj = sessionColors.find((sc: any) => sc.session_id === seat.session_id);
-    return colorObj ? colorObj.color : '#4374D9';
+    return colorObj ? colorObj.color : '#1D4EAD';
   };
 
   const handleSeatClick = (seat: any) => {
@@ -218,7 +218,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                         customStyle = { backgroundColor: getSeatColor(seat) };
                         if (isMySeat) {
                           // 내 자리: 밝은 노랑-초록 계열로 가독성 좋게
-                          customStyle = { backgroundColor: '#22c55e' }; // green-500
+                          customStyle = { backgroundColor: '#8578F0' };
                           seatClass = 'text-white shadow-lg ring-2 ring-green-300 scale-110 z-10 cursor-default font-extrabold';
                         } else if (isAdmin) {
                           seatClass = 'text-white cursor-pointer hover:opacity-80 active:opacity-60';
@@ -228,7 +228,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                       } else if (seat.status === 'FROZEN') {
                         seatClass = 'bg-red-100 border-2 border-red-300 cursor-not-allowed text-red-800';
                       } else if (seat.status === 'PRIVATE') {
-                        customStyle = { backgroundColor: '#A8A8A8' };
+                        customStyle = { backgroundColor: '#BFBFBF' };
                         seatClass = isAdmin ? 'cursor-pointer hover:opacity-80 active:opacity-60' : 'cursor-not-allowed';
                       }
 
@@ -294,8 +294,8 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       <div className="shrink-0 flex justify-center gap-4 bg-white/95 py-2 px-4 border-t border-gray-200 text-xs font-medium">
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-gray-200 shadow-sm" />선택 가능</div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-blue-600 shadow-sm" />선택 완료</div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#A8A8A8' }} />선택 불가</div>
-        {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded bg-green-500 shadow-sm" />내 자리</div>}
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#BFBFBF' }} />선택 불가</div>
+        {!isAdmin && <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded shadow-sm" style={{ backgroundColor: '#8578F0' }} />내 자리</div>}
       </div>
 
       {/* 관리자용 좌석 팝업 */}
