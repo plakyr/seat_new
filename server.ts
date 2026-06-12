@@ -292,12 +292,12 @@ app.post('/api/admin/login', async (req, res) => {
       // Process Participants
       const participantCounts = new Map<string, number>();
       records.forEach((r: any) => {
-        const key = `${r.participant_name}-${r.phone_last4}`;
+        const key = `${r.participant_name}-${r.password_4}`;
         participantCounts.set(key, (participantCounts.get(key) || 0) + 1);
       });
 
       // Extract unique sessions
-      const sessions = Array.from(new Set(records.map((r: any) => r.session_id))).filter(Boolean).sort() as string[];
+      const sessions = Array.from(new Set(records.map((r: any) => r.group_id))).filter(Boolean).sort() as string[];
       
       // Generate colors for sessions
       const defaultColors = ['#1D4EAD', '#4374D9', '#6799FF', '#B2D5FF', '#D4E9FF', '#E6F2FF'];
@@ -322,7 +322,7 @@ app.post('/api/admin/login', async (req, res) => {
       // Calculate global turn_order
       const turnGroups = new Set<string>();
       records.forEach((r: any) => {
-        turnGroups.add(`${r.session_id}|${r.order_in_session}`);
+        turnGroups.add(`${r.group_id}|${r.order_in_group}`);
       });
       
       const sortedTurnGroups = Array.from(turnGroups).sort((a, b) => {
@@ -346,18 +346,18 @@ app.post('/api/admin/login', async (req, res) => {
       });
 
       const participantsData = records.map((r: any, index: number) => {
-        if (!r.session_id || !r.participant_name || !r.phone_last4) {
+        if (!r.group_id || !r.participant_name || !r.password_4) {
           const availableKeys = Object.keys(r).join(', ');
           throw new Error(`CSV 파일 ${index + 1}번째 행에 필수 데이터가 누락되었습니다. (발견된 컬럼: ${availableKeys})`);
         }
-        const key = `${r.participant_name}-${r.phone_last4}`;
+        const key = `${r.participant_name}-${r.password_4}`;
         const isDuplicate = (participantCounts.get(key) || 0) > 1;
-        const globalTurnOrder = turnOrderMap.get(`${r.session_id}|${r.order_in_session}`) || 1;
+        const globalTurnOrder = turnOrderMap.get(`${r.group_id}|${r.order_in_group}`) || 1;
         return {
           event_id: event.id,
-          session_id: String(r.session_id),
+          session_id: String(r.group_id),
           name: String(r.participant_name),
-          phone_last4: String(r.phone_last4),
+          phone_last4: String(r.password_4),
           unique_code: isDuplicate ? Math.random().toString(36).substring(2, 6).toUpperCase() : null,
           turn_order: globalTurnOrder,
         };
