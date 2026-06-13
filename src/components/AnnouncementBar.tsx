@@ -26,10 +26,16 @@ export default function AnnouncementBar({
   const [timeLeftMs, setTimeLeftMs] = useState<number>(3 * 60 * 1000);
   // 클라이언트 기준 시작 시각 보정값 (서버 시간 - 클라이언트 시간)
   const offsetRef = useRef<number>(0);
+  const offsetInitialized = useRef<boolean>(false);
 
   useEffect(() => {
-    if (serverTime) {
-      offsetRef.current = new Date(serverTime).getTime() - Date.now();
+    if (!serverTime) return;
+    const candidate = new Date(serverTime).getTime() - Date.now();
+    // 최초 동기화는 즉시 반영. 이후에는 네트워크 지터로 인한 잦은 점프를 막기 위해
+    // 보정값이 크게(1.5초 초과) 어긋났을 때만 갱신한다. (실제 시계 드리프트만 보정)
+    if (!offsetInitialized.current || Math.abs(candidate - offsetRef.current) > 1500) {
+      offsetRef.current = candidate;
+      offsetInitialized.current = true;
     }
   }, [serverTime]);
 

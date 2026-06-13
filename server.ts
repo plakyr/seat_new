@@ -1028,7 +1028,7 @@ app.post('/api/admin/login', async (req, res) => {
   // 모든 클라이언트가 동일한 서버 시간을 사용하도록 주기적으로 동기화 (시계 오차 방지)
   setInterval(() => {
     io.emit('time:sync', { serverTime: new Date().toISOString() });
-  }, 10000);
+  }, 3000);
 
   // ─── 자동 타이머 & 자동 배정 스케줄러 (1초마다 실행) ───────────────────
   const TURN_DURATION_MS = 3 * 60 * 1000; // 3분
