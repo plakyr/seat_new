@@ -15,8 +15,6 @@ export default function User() {
   const [requiresCode, setRequiresCode] = useState(false);
   const [error, setError] = useState('');
   const [sessionExpiredMsg, setSessionExpiredMsg] = useState('');
-  const [timeLeft, setTimeLeft] = useState<string | null>(null);
-  const [timerStatus, setTimerStatus] = useState<'WAITING' | 'ACTIVE' | 'EXPIRED' | 'COMPLETED'>('WAITING');
 
   // 참가자 화면 진입 시 관리자 상태 초기화 (같은 브라우저에서 관리자 → 참가자 전환 시 권한 UI 잔존 방지)
   useEffect(() => {
@@ -48,54 +46,6 @@ export default function User() {
     fetchInitialData(); // 의존성 없이 무조건 실행
   }, []); // 페이지 로드 시 최초 1회 실행
   
-  // 2. 타이머 로직
-  useEffect(() => {
-    if (!user || !serverTime || !currentTurnStartTime) return;
-
-    if (user.turn_status === 'COMPLETED' || user.is_final) {
-      setTimerStatus('COMPLETED');
-      setTimeLeft('00:00');
-      return;
-    }
-
-    const updateTimer = () => {
-      const now = new Date(serverTime).getTime();
-      const turnStart = new Date(currentTurnStartTime).getTime();
-      const turnEnd = turnStart + 3 * 60000;
-
-      if (user.turn_order > currentTurnOrder) {
-        setTimerStatus('WAITING');
-        setTimeLeft(null);
-      } else if (user.turn_order === currentTurnOrder) {
-        if (now >= turnStart && now <= turnEnd) {
-          setTimerStatus('ACTIVE');
-          const diff = turnEnd - now;
-          setTimeLeft(formatTimeDiff(diff));
-        } else if (now > turnEnd) {
-          setTimerStatus('EXPIRED');
-          setTimeLeft('00:00');
-        } else {
-          setTimerStatus('WAITING');
-          setTimeLeft(null);
-        }
-      } else {
-        setTimerStatus('EXPIRED');
-        setTimeLeft('00:00');
-      }
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [user, serverTime, currentTurnOrder, currentTurnStartTime]);
-
-  const formatTimeDiff = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
