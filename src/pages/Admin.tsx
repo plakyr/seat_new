@@ -374,11 +374,11 @@ const updateStoreWithEventData = (event: any) => {
           </div>
           {activeTab === 'UPLOAD' && (
             <>
-              <h2 className="text-3xl font-bold mb-8 text-gray-900">모임 및 참가자 정보 업로드</h2>
+              <h2 className="text-3xl font-bold mb-8 text-gray-900">이벤트 및 참가자 정보 업로드</h2>
               <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                 <form onSubmit={handleUpload} className="space-y-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">모임명</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">이벤트명</label>
                     <input 
                       type="text" 
                       value={eventName}
@@ -483,13 +483,13 @@ const updateStoreWithEventData = (event: any) => {
               
               <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex-1 w-full">
-                  <label className="block text-base font-semibold text-gray-700 mb-2">모임 선택</label>
+                  <label className="block text-base font-semibold text-gray-700 mb-2">이벤트 선택</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:ring-2 focus:ring-gray-900"
                     value={selectedEventId || ''}
                     onChange={(e) => setSelectedEventId(e.target.value)}
                   >
-                    <option value="">-- 모임을 선택하세요 --</option>
+                    <option value="">-- 이벤트를 선택하세요 --</option>
                     {events.map(ev => (
                       <option key={ev.id} value={ev.id}>{ev.name} (참가자 {ev._count?.participants || 0}명)</option>
                     ))}
