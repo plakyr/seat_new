@@ -64,6 +64,7 @@ interface AppState {
   seats: Seat[];
   layout: LayoutInfo | null;
   participants: User[];
+  onlineParticipantIds: string[];
   sessionColors: { id: string; session_id: string; color: string; start_time?: string | null; end_time?: string | null }[];
   messages: ChatMessage[];
   announcement: AnnouncementState;
@@ -79,6 +80,7 @@ interface AppState {
   setLayout: (layout: LayoutInfo | null) => void;
   updateSeat: (seat: Seat) => void;
   setParticipants: (participants: User[]) => void;
+  setOnlineParticipantIds: (ids: string[]) => void;
   updateParticipant: (participant: User) => void;
   setSessionColors: (colors: { id: string; session_id: string; color: string; start_time?: string | null; end_time?: string | null }[]) => void;
   setMessages: (messages: ChatMessage[]) => void;
@@ -107,6 +109,7 @@ export const useStore = create<AppState>((set) => ({
   seats: [],
   layout: null,
   participants: [],
+  onlineParticipantIds: [],
   sessionColors: [],
   messages: [],
   announcement: { type: 'IDLE', currentParticipantName: null, prevSessionId: null, nextSessionId: null, nextStartTime: null },
@@ -132,6 +135,7 @@ export const useStore = create<AppState>((set) => ({
     seats: state.seats.map(seat => seat.id === updatedSeat.id ? updatedSeat : seat)
   })),
   setParticipants: (participants) => set({ participants }),
+  setOnlineParticipantIds: (ids) => set({ onlineParticipantIds: ids }),
   updateParticipant: (updatedParticipant) => set((state) => ({
     participants: state.participants.map(p => p.id === updatedParticipant.id ? updatedParticipant : p)
   })),

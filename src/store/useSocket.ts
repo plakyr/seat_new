@@ -111,6 +111,10 @@ export const useSocket = () => {
       alert(`관리자 오류: ${data.error}`);
     });
 
+    socketInstance.on('presence:update', (data: { online: string[] }) => {
+      storeRef.current.setOnlineParticipantIds(data.online);
+    });
+
     socketInstance.on('chat:history', (data: { messages: any[] }) => {
       storeRef.current.setMessages(data.messages);
     });
