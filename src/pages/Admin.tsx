@@ -212,7 +212,16 @@ const updateStoreWithEventData = (event: any) => {
 
   const handleResetEvent = async () => {
     if (!selectedEventId) return;
-    if (!confirm('이 이벤트의 모든 좌석 배정을 초기화하고 처음부터 다시 시작하시겠습니까?')) return;
+    const target = events.find(ev => ev.id === selectedEventId);
+    const eventName = target?.name ?? '';
+    const input = window.prompt(
+      `[초기화 확인]\n이 이벤트의 모든 좌석 배정이 초기화되어 처음부터 다시 시작됩니다. 이 작업은 되돌릴 수 없습니다.\n\n계속하려면 아래에 이벤트 이름을 정확히 입력하세요:\n${eventName}`
+    );
+    if (input === null) return; // 취소
+    if (input.trim() !== eventName) {
+      alert('이벤트 이름이 일치하지 않아 초기화를 취소했습니다.');
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/events/${selectedEventId}/reset`, {
         method: 'POST',
@@ -229,7 +238,15 @@ const updateStoreWithEventData = (event: any) => {
   const handleDeleteEvent = async () => {
     if (!selectedEventId) return;
     const target = events.find(ev => ev.id === selectedEventId);
-    if (!confirm(`'${target?.name}' 이벤트를 완전히 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+    const eventName = target?.name ?? '';
+    const input = window.prompt(
+      `[삭제 확인]\n이 이벤트와 모든 참가자·좌석·채팅·로그가 완전히 삭제됩니다. 이 작업은 되돌릴 수 없습니다.\n\n계속하려면 아래에 이벤트 이름을 정확히 입력하세요:\n${eventName}`
+    );
+    if (input === null) return; // 취소
+    if (input.trim() !== eventName) {
+      alert('이벤트 이름이 일치하지 않아 삭제를 취소했습니다.');
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/events/${selectedEventId}`, {
         method: 'DELETE',
