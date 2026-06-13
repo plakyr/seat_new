@@ -7,7 +7,7 @@ import ChatWindow from '../components/ChatWindow';
 import AnnouncementBar from '../components/AnnouncementBar';
 
 export default function Admin() {
-  const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants, serverTime, announcement, timerPaused } = useStore();
+  const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants, serverTime, announcement, timerPaused, onlineParticipantIds } = useStore();
   const socket = useSocket();
   
   // Login State
@@ -581,6 +581,7 @@ const updateStoreWithEventData = (event: any) => {
                         const sessionParticipants = participants.filter(p => p.session_id === sc.session_id);
                         const completedCount = sessionParticipants.filter(p => p.seat_id).length;
                         const totalCount = sessionParticipants.length;
+                        const onlineCount = sessionParticipants.filter(p => onlineParticipantIds.includes(p.id)).length;
                         const isEditing = editingSessionId === sc.id;
                         
                         return (
@@ -589,6 +590,10 @@ const updateStoreWithEventData = (event: any) => {
                               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: sc.color }}></div>
                               <span className="text-base font-semibold text-gray-800">그룹 {sc.session_id}</span>
                               <span className="text-sm text-gray-500">({completedCount}/{totalCount}명 완료)</span>
+                              <span className="flex items-center gap-1 text-sm text-green-600">
+                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                {onlineCount}명 접속
+                              </span>
                             </div>
                             {/* 마우스 오버 시 그룹 참가자 명단 (순서대로) */}
                             {totalCount > 0 && (
@@ -598,7 +603,10 @@ const updateStoreWithEventData = (event: any) => {
                                   .sort((a, b) => a.turn_order - b.turn_order)
                                   .map((p, i) => (
                                     <div key={p.id} className="flex justify-between gap-4 py-0.5">
-                                      <span>{i + 1}. {p.name}</span>
+                                      <span className="flex items-center gap-1.5">
+                                        <span className={`w-1.5 h-1.5 rounded-full ${onlineParticipantIds.includes(p.id) ? 'bg-green-400' : 'bg-gray-600'}`}></span>
+                                        {i + 1}. {p.name}
+                                      </span>
                                       <span className={p.seat_id ? 'text-green-400' : 'text-gray-400'}>{p.seat_id ? '완료' : '대기'}</span>
                                     </div>
                                   ))}

@@ -42,6 +42,14 @@ async function startServer() {
   });
   const PORT = Number(process.env.PORT) || 3000;
 
+  // 해당 이벤트의 현재 접속 중인 참가자 ID 목록을 관리자에게 실시간 전송
+  const broadcastOnlineParticipants = async (eventId: string) => {
+    if (!eventId) return;
+    const sockets = await io.in(`event:${eventId}`).fetchSockets();
+    const online = [...new Set(sockets.map(s => s.data.participantId).filter(Boolean))];
+    io.to(`admin:event:${eventId}`).emit('presence:update', { online });
+  };
+
   // Seed default admins if none exist
   const adminCount = await prisma.adminUser.count();
   if (adminCount === 0) {
@@ -537,6 +545,7 @@ app.post('/api/admin/login', async (req, res) => {
       socket.data.eventId = participant.event_id;
       socket.join(`event:${participant.event_id}`);
       console.log(`Participant ${participant.name} authenticated on socket ${socket.id}`);
+      broadcastOnlineParticipants(participant.event_id);
     });
 
     // Authenticate admin socket
@@ -599,6 +608,9 @@ app.post('/api/admin/login', async (req, res) => {
 
       const flow = await getFlowAnnouncement(data.eventId);
       if (flow) socket.emit(flow.event, flow.payload);
+
+      // 관리자 입장 시 현재 접속자 목록 즉시 전송
+      broadcastOnlineParticipants(data.eventId);
     });
 
     // Admin freeze/unfreeze system
@@ -993,6 +1005,7 @@ app.post('/api/admin/login', async (req, res) => {
         if (activeSockets.get(socket.data.participantId) === socket.id) {
           activeSockets.delete(socket.data.participantId);
         }
+        if (socket.data.eventId) broadcastOnlineParticipants(socket.data.eventId);
       }
     });
   });
