@@ -419,7 +419,7 @@ const updateStoreWithEventData = (event: any) => {
                     <p className="text-sm font-semibold text-gray-700">통로 위치 설정 <span className="font-normal text-gray-400">(선택사항)</span></p>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        가로 통로 — 해당 행 <span className="text-gray-400">뒤</span>에 통로를 추가할 행 번호 (쉼표로 구분)
+                        가로 통로 — 해당 행 <span className="text-gray-900 font-bold">뒤</span>에 통로를 추가할 행 번호 (쉼표로 구분)
                       </label>
                       <input
                         type="text"
@@ -431,7 +431,7 @@ const updateStoreWithEventData = (event: any) => {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        세로 통로 — 해당 열 <span className="text-gray-400">뒤</span>에 통로를 추가할 열 번호 (쉼표로 구분)
+                        세로 통로 — 해당 열 <span className="text-gray-900 font-bold">뒤</span>에 통로를 추가할 열 번호 (쉼표로 구분)
                       </label>
                       <input
                         type="text"
