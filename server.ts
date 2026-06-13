@@ -1134,6 +1134,13 @@ app.post('/api/admin/login', async (req, res) => {
 
   // 관리자가 "다음 턴으로 넘기기"를 누르면, 현재 선택자의 좌석을 자동배정 기준에 맞춰 즉시 배정한 뒤 다음 턴으로 전환
   async function forceAssignAndAdvanceTurn(eventId: string) {
+    // 자동배정 타이머 및 다른 관리자의 동시 클릭과의 경합 방지:
+    // 자동 경로(runAutoAssignIfExpired)와 동일한 잠금을 공유하여 직렬화한다.
+    if (autoAssignInProgress.has(eventId)) {
+      throw new Error('이미 자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.');
+    }
+    autoAssignInProgress.add(eventId);
+    try {
     const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
     if (!systemState) throw new Error('시스템 상태를 찾을 수 없습니다.');
 
@@ -1188,18 +1195,28 @@ app.post('/api/admin/login', async (req, res) => {
       return;
     }
 
+    // 조건부 턴 증가: 읽어둔 current_turn_order가 그대로일 때만 다음으로 넘긴다.
+    // (만에 하나 잠금 밖에서 상태가 바뀌었다면 중복 증가를 막는 안전장치)
     const nextTurnOrder = systemState.current_turn_order + 1;
-    const updatedState = await prisma.systemState.update({
-      where: { event_id: eventId },
+    const advanced = await prisma.systemState.updateMany({
+      where: { event_id: eventId, current_turn_order: systemState.current_turn_order },
       data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
     });
-    emitTurn(eventId, updatedState);
+    if (advanced.count > 0) {
+      const updatedState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+      if (updatedState) emitTurn(eventId, updatedState);
+    }
+    } finally {
+      autoAssignInProgress.delete(eventId);
+    }
   }
 
   async function runAutoAssignIfExpired(eventId: string) {
-    // 이미 자동배정 시퀀스가 진행 중이면 건너뜀 (중복 방지)
+    // 이미 자동배정 시퀀스가 진행 중이거나 수동 진행 중이면 건너뜀 (중복 방지)
     if (autoAssignInProgress.has(eventId)) return;
-
+    // 평가 단계부터 잠금을 보유하여 수동([자동배정]) 경로와 완전히 직렬화한다.
+    autoAssignInProgress.add(eventId);
+    try {
     const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
     if (!systemState || systemState.is_frozen) return;
 
@@ -1265,7 +1282,6 @@ app.post('/api/admin/login', async (req, res) => {
     }
 
     // ── 자동배정 시퀀스 시작 (총 1.5초) ──
-    autoAssignInProgress.add(eventId);
     try {
       // 1) 즉시 자동배정 문구 표시 → 클라이언트 좌석 잠금 + 타이머 정지
       console.log(`[AutoAssign] 시간 초과 - ${currentParticipant.name} 자동 배정 시작`);
@@ -1328,6 +1344,7 @@ app.post('/api/admin/login', async (req, res) => {
       }
     } catch (err) {
       console.error('[AutoAssign] 오류:', err);
+    }
     } finally {
       autoAssignInProgress.delete(eventId);
     }
