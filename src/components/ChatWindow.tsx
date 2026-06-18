@@ -66,7 +66,7 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
           <button
             type="submit"
             disabled={!canChat || !inputValue.trim()}
-            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
+            className="flex-shrink-0 whitespace-nowrap px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
           >
             전송
           </button>
