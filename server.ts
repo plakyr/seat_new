@@ -849,6 +849,13 @@ app.post('/api/admin/login', async (req, res) => {
         return socket.emit('seat:error', { error: '로그인이 필요합니다.' });
       }
 
+      const eventId = socket.data.eventId;
+      // 자동배정/관리자 강제배정과 동일한 잠금을 공유하여, 타이머 만료 직전 클릭과의 경합을 막는다.
+      if (autoAssignInProgress.has(eventId)) {
+        return socket.emit('seat:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
+      }
+      autoAssignInProgress.add(eventId);
+
       try {
         // Use a transaction to ensure concurrency safety
         const result = await prisma.$transaction(async (tx) => {
@@ -942,6 +949,8 @@ app.post('/api/admin/login', async (req, res) => {
 
       } catch (error: any) {
         socket.emit('seat:error', { error: error.message || '좌석 선택 중 오류가 발생했습니다.' });
+      } finally {
+        autoAssignInProgress.delete(eventId);
       }
     });
 
@@ -1345,6 +1354,8 @@ app.post('/api/admin/login', async (req, res) => {
     } catch (err) {
       console.error('[AutoAssign] 오류:', err);
     }
+    } catch (err) {
+      console.error('[AutoAssign] 평가 단계 오류:', err);
     } finally {
       autoAssignInProgress.delete(eventId);
     }
@@ -1355,7 +1366,7 @@ app.post('/api/admin/login', async (req, res) => {
       const activeEvents = await prisma.event.findMany({ where: { is_active: true } });
       // 각 이벤트를 비동기로 실행 (재진입 가드가 중복을 막아줌)
       for (const event of activeEvents) {
-        runAutoAssignIfExpired(event.id);
+        runAutoAssignIfExpired(event.id).catch(err => console.error('[AutoAssign] 처리 실패:', err));
       }
     } catch (err) {
       console.error('[Timer] 오류:', err);
