@@ -663,7 +663,7 @@ const updateStoreWithEventData = (event: any) => {
                         선택된 좌석을 클릭하면 참가자 정보를 확인하고 강제 취소할 수 있습니다.
                       </p>
                     </div>
-                    <div className="flex-1 flex flex-col min-w-0 h-[50vh] lg:h-[70vh]">
+                    <div className="flex-1 lg:flex-none lg:w-[370px] lg:shrink-0 flex flex-col min-w-0 h-[50vh] lg:h-[70vh]">
                       <ChatWindow eventId={selectedEventId} />
                     </div>
                   </div>

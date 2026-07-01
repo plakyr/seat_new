@@ -123,7 +123,7 @@ export default function User() {
           <div className="flex-1 relative min-h-[300px] min-w-0">
             <SeatMap />
           </div>
-          <div className="h-[260px] lg:h-[70vh] lg:w-80 lg:shrink-0">
+          <div className="h-[260px] lg:h-[70vh] lg:w-[370px] lg:shrink-0">
             <ChatWindow eventId={user.event_id} />
           </div>
         </div>
