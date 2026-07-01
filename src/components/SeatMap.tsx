@@ -257,9 +257,9 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                       if (seat.status === 'RESERVED' || seat.status === 'AUTO_ASSIGNED') {
                         customStyle = { backgroundColor: getSeatColor(seat) };
                         if (isMySeat) {
-                          // 내 자리: 밝은 노랑-초록 계열로 가독성 좋게
-                          customStyle = { backgroundColor: '#2ecc71' };
-                          seatClass = 'text-white shadow-lg ring-2 ring-green-300 scale-110 z-10 cursor-default font-extrabold';
+                          // 내 자리 강조 색상
+                          customStyle = { backgroundColor: '#00C2D1' };
+                          seatClass = 'text-white shadow-lg ring-2 ring-cyan-200 scale-110 z-10 cursor-default font-extrabold';
                         } else if (isAdmin) {
                           seatClass = 'text-white cursor-pointer hover:opacity-80 active:opacity-60';
                         } else {
@@ -345,7 +345,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#BFBFBF' }} />선택 불가</div>
         <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-gray-200 shadow-sm shrink-0" />선택 가능</div>
         <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#4374D9' }} />선택 완료</div>
-        {!isAdmin && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#2ecc71' }} />내 자리</div>}
+        {!isAdmin && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#00C2D1' }} />내 자리</div>}
       </div>
 
       {/* 관리자용 좌석 팝업 */}

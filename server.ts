@@ -358,7 +358,7 @@ app.post('/api/admin/login', async (req, res) => {
       const sessions = Array.from(new Set(records.map((r: any) => r.group_id))).filter(Boolean).sort() as string[];
       
       // Generate colors for sessions
-      const defaultColors = ['#e95887', '#f7b300', '#f7c8d6', '#00479c', '#00903d'];
+      const defaultColors = ['#8B2942', '#6B3FA0', '#D2691E', '#C43D8E', '#2A5C8A', '#1F6F5C'];
       const sessionColorsData = sessions.map((session_id, index) => {
         let color;
         if (index < defaultColors.length) {
