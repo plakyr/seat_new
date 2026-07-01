@@ -37,9 +37,10 @@ export default function Admin() {
   const [editEndTime, setEditEndTime] = useState('');
   const [isSessionPanelOpen, setIsSessionPanelOpen] = useState(false);
 
-  // 관리자 화면 진입 시 참가자 상태 초기화 (같은 브라우저에서 참가자 → 관리자 전환 시 상태 잔존 방지)
+  // 관리자 화면 진입 시 참가자 상태(메모리)만 초기화. 저장된 참가자 세션은 건드리지 않는다
+  // (localStorage는 탭 간 공유되므로, 여기서 지우면 다른 탭의 참가자가 로그아웃됨)
   useEffect(() => {
-    useStore.getState().setUser(null, null);
+    useStore.getState().clearParticipantMemory();
   }, []);
 
   useEffect(() => {

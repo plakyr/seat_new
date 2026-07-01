@@ -16,9 +16,10 @@ export default function User() {
   const [error, setError] = useState('');
   const [sessionExpiredMsg, setSessionExpiredMsg] = useState('');
 
-  // 참가자 화면 진입 시 관리자 상태 초기화 (같은 브라우저에서 관리자 → 참가자 전환 시 권한 UI 잔존 방지)
+  // 참가자 화면 진입 시 관리자 상태(메모리)만 초기화. 저장된 관리자 세션은 건드리지 않는다
+  // (sessionStorage도 탭 간 공유되므로, 여기서 지우면 다른 탭의 관리자가 로그아웃됨)
   useEffect(() => {
-    useStore.getState().setAdminAuth(null, null);
+    useStore.getState().clearAdminMemory();
   }, []);
 
   // User.tsx 내부

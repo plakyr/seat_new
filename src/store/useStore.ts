@@ -74,6 +74,8 @@ interface AppState {
 
   setUser: (user: User | null, sessionToken: string | null) => void;
   logoutUser: () => void;
+  clearParticipantMemory: () => void;
+  clearAdminMemory: () => void;
   setAdminAuth: (token: string | null, user: { username: string; role: string } | null) => void;
   setServerTime: (time: string) => void;
   setSystemState: (isFrozen: boolean, reason: string | null) => void;
@@ -163,6 +165,9 @@ export const useStore = create<AppState>((set) => ({
     try { localStorage.removeItem(PARTICIPANT_SESSION_KEY); } catch { /* 무시 */ }
     set({ user: null, sessionToken: null });
   },
+  // 메모리 상태만 초기화 (저장된 세션은 유지 → 다른 탭의 세션에 영향 없음)
+  clearParticipantMemory: () => set({ user: null, sessionToken: null }),
+  clearAdminMemory: () => set({ adminToken: null, adminUser: null, isAdmin: false }),
   setAdminAuth: (token, user) => {
     try {
       if (token) {
