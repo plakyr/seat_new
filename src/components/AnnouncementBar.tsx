@@ -113,9 +113,17 @@ export default function AnnouncementBar({
       style={{ backgroundColor: bgColor }}
       className={`text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
     >
-      <span className="font-bold text-lg truncate">{text}</span>
+      {/* key로 문구가 바뀔 때마다 엘리먼트를 완전히 새로 그린다.
+          (같은 노드를 재사용하면 모바일 브라우저에서 animate-pulse 등
+          CSS 애니메이션 상태가 즉시 리셋되지 않아 이전 문구와 겹쳐 보이는 경우가 있다) */}
+      <span key={text} className="font-bold text-lg truncate">{text}</span>
       {showTimer && (
-        <span className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}>
+        // key로 턴이 바뀔 때마다(currentTurnStartTime 변경) 타이머 엘리먼트를 새로 그려,
+        // 직전 턴의 빨간 임박 표시(animate-pulse)가 새 타이머와 겹쳐 보이지 않도록 한다.
+        <span
+          key={currentTurnStartTime ?? 'no-timer'}
+          className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}
+        >
           {timeLeft}
         </span>
       )}
