@@ -242,7 +242,8 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                         </React.Fragment>
                       );
 
-                      const isMySeat = seat.assigned_to === user?.id;
+                      // 관리자 화면에서는 "내 자리"(초록색) 개념을 적용하지 않는다
+                      const isMySeat = !isAdmin && seat.assigned_to === user?.id;
                       const assignedParticipant = seat.assigned_to
                         ? participants.find((p: any) => p.id === seat.assigned_to)
                         : null;

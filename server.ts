@@ -1039,8 +1039,9 @@ app.post('/api/admin/login', async (req, res) => {
           
           if (!participant || !systemState) return;
           
-          // Check if user is allowed to chat (it's their turn and they haven't finished)
-          if (systemState.is_frozen || participant.turn_order !== systemState.current_turn_order || participant.is_final) {
+          // 채팅 권한: 자기 차례이고 아직 선택 완료 전이면 가능.
+          // 일시정지(is_frozen) 중에도 현재 차례였던 참가자는 채팅 가능하게 허용.
+          if (participant.turn_order !== systemState.current_turn_order || participant.is_final) {
             socket.emit('chat:error', { error: '채팅 권한이 없습니다.' });
             return;
           }
