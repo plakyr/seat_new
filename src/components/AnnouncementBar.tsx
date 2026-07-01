@@ -108,9 +108,10 @@ export default function AnnouncementBar({
     announcement.type !== 'AUTO_ASSIGN' &&
     announcement.type !== 'ALL_COMPLETE';
 
-  // 이 컴포넌트는 사용하는 쪽(User.tsx/Admin.tsx)에서 턴/공지 상태를 key로 걸어
-  // 상태가 바뀔 때마다 통째로 새로 마운트한다 — 그래서 여기서는 별도 key 없이
-  // 안전하게 렌더링만 하면 된다 (내부 타이머 상태까지 항상 깨끗하게 초기화됨).
+  // 임박(10초 이하) 여부. 같은 턴 안에서 흰색→빨간 깜빡임으로 바뀌는 이 경계가
+  // 겹침/잔상이 보고된 지점이므로, 아래에서 이 값을 key로 걸어 강제로 새로 그린다.
+  const isUrgent = timeLeftMs <= 10000;
+
   return (
     <div
       style={{ backgroundColor: bgColor }}
@@ -119,7 +120,12 @@ export default function AnnouncementBar({
       {/* 모바일에서 그룹 안내처럼 긴 문구가 잘리지 않도록, 자르는 대신 2줄까지 줄바꿈되게 한다 */}
       <span className="font-bold text-base sm:text-lg leading-snug line-clamp-2 flex-1 min-w-0">{text}</span>
       {showTimer && (
-        <span className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}>
+        // key로 일반↔임박 전환마다 엘리먼트를 완전히 새로 그려, 이전 상태(흰 숫자)가
+        // 남은 채로 새 상태(빨간 깜빡임)와 겹쳐 보이는 것을 막는다.
+        <span
+          key={isUrgent ? 'urgent-timer' : 'normal-timer'}
+          className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums inline-block w-[5ch] text-right ${isUrgent ? 'text-red-300 animate-pulse' : 'text-white'}`}
+        >
           {timeLeft}
         </span>
       )}
