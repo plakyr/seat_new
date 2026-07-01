@@ -227,8 +227,7 @@ app.post('/api/admin/login', async (req, res) => {
         });
       });
 
-      // 진행 흐름 상태 초기화 (시작 대기/공지 캐시)
-      waitingForStart.delete(eventId);
+      // 진행 흐름 상태 초기화 (공지 캐시)
       flowAnnounced.delete(eventId);
 
       const layout = await prisma.venueLayout.findFirst({ where: { event_id: eventId }, include: { seats: true } });
@@ -1296,8 +1295,24 @@ app.post('/api/admin/login', async (req, res) => {
     return nowH * 60 + nowM >= Number(m[1]) * 60 + Number(m[2]);
   }
 
-  // 이벤트별 진행 흐름 상태 추적 (시작 대기 / 공지 중복 방지)
-  const waitingForStart = new Map<string, string>(); // eventId → 시작 대기 중인 그룹
+  // "HH:MM"(Asia/Seoul) 시작 시간을 "오늘" 날짜의 실제 UTC 순간(Date)으로 변환한다.
+  // 타이머가 그룹 시작 이전 시각으로 설정돼 있는지 판단하는 데 사용한다. (서울은 UTC+9, DST 없음)
+  function sessionStartMomentToday(startTime: string | null | undefined): Date | null {
+    if (!startTime) return null;
+    const m = startTime.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const y = Number(parts.find(p => p.type === 'year')?.value);
+    const mo = Number(parts.find(p => p.type === 'month')?.value);
+    const d = Number(parts.find(p => p.type === 'day')?.value);
+    if (!y || !mo || !d) return null;
+    // 서울(UTC+9) 기준 시각을 UTC instant로 변환 (hh-9가 음수여도 Date.UTC가 롤오버 처리)
+    return new Date(Date.UTC(y, mo - 1, d, Number(m[1]) - 9, Number(m[2]), 0, 0));
+  }
+
+  // 이벤트별 마지막 공지 키 (동일 공지 중복 emit 방지)
   const flowAnnounced = new Map<string, string>();   // eventId → 마지막 공지 키
 
   // 현재 이벤트의 진행 흐름 공지 상태 계산
@@ -1364,9 +1379,6 @@ app.post('/api/admin/login', async (req, res) => {
       flowAnnounced.set(eventId, flow.event + JSON.stringify(flow.payload));
       io.to(`event:${eventId}`).emit(flow.event, flow.payload);
       io.to(`admin:event:${eventId}`).emit(flow.event, flow.payload);
-      if (flow.event === 'system:session_change' && !flow.payload.prevSession) {
-        waitingForStart.set(eventId, flow.payload.nextSession);
-      }
       return;
     }
     flowAnnounced.delete(eventId);
@@ -1542,23 +1554,32 @@ app.post('/api/admin/login', async (req, res) => {
         io.to(`event:${eventId}`).emit(flow.event, flow.payload);
         io.to(`admin:event:${eventId}`).emit(flow.event, flow.payload);
       }
-      // 현재 차례 참가자의 그룹 시작 대기 중이면 표시 (시작 시 타이머 리셋용)
-      if (flow.event === 'system:session_change' && !flow.payload.prevSession) {
-        waitingForStart.set(eventId, flow.payload.nextSession);
-      }
       return;
     }
     flowAnnounced.delete(eventId);
 
-    // 그룹 시작 시간이 막 도래한 경우: 타이머를 지금부터 새로 시작
-    if (waitingForStart.has(eventId)) {
-      waitingForStart.delete(eventId);
-      const updated = await prisma.systemState.update({
-        where: { event_id: eventId },
-        data: { current_turn_start_time: new Date() }
+    // 그룹 시작 시각 기준으로 타이머 재정렬(rebase):
+    // current_turn_start_time이 현재 그룹의 시작 시각(오늘 HH:MM)보다 이전이면
+    // (업로드 시각, 이전 그룹 종료 시각 등) 아직 이 그룹의 3분 카운트다운이 시작되지 않은 것이므로
+    // 지금(new Date())으로 재설정한다. 이렇게 하면 참가자가 미리 입장해도 좌석 선택 시간이
+    // 줄어들지 않고, 그룹 시작 순간부터 정확히 3분이 시작된다. (in-memory 상태에 의존하지 않아
+    // 서버 재시작이나 그룹 간 대기에도 안전)
+    const curP = await prisma.participant.findFirst({
+      where: { event_id: eventId, turn_order: systemState.current_turn_order }
+    });
+    if (curP && !curP.is_final) {
+      const curSess = await prisma.sessionColor.findFirst({
+        where: { event_id: eventId, session_id: curP.session_id }
       });
-      emitTurn(eventId, updated);
-      return;
+      const startMoment = sessionStartMomentToday(curSess?.start_time);
+      if (startMoment && new Date(systemState.current_turn_start_time).getTime() < startMoment.getTime()) {
+        const updated = await prisma.systemState.update({
+          where: { event_id: eventId },
+          data: { current_turn_start_time: new Date() }
+        });
+        emitTurn(eventId, updated);
+        return;
+      }
     }
 
     const now = Date.now();
