@@ -175,6 +175,12 @@ export const useSocket = () => {
   }, []); // 딱 한 번만 실행 → 리스너 중복 등록 원천 차단
 
   // 로그인/로그아웃 시 인증 이벤트 전송
+  // useStore()로 직접 구독해야, 이 훅을 호출한 컴포넌트가 다른 이유로 리렌더링되길
+  // 기다리지 않고도 로그인/로그아웃 시점에 정확히 재실행된다.
+  const userId = useStore((state) => state.user?.id);
+  const sessionToken = useStore((state) => state.sessionToken);
+  const adminToken = useStore((state) => state.adminToken);
+
   useEffect(() => {
     if (!socketInstance) return;
     const { user, sessionToken, adminToken } = useStore.getState();
@@ -185,12 +191,7 @@ export const useSocket = () => {
     if (adminToken) {
       socketInstance.emit('admin:auth', { token: adminToken });
     }
-  }, [
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useStore.getState().user?.id,
-    useStore.getState().sessionToken,
-    useStore.getState().adminToken,
-  ]);
+  }, [userId, sessionToken, adminToken]);
 
   return socket;
 };

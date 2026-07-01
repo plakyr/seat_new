@@ -278,19 +278,7 @@ app.post('/api/admin/login', async (req, res) => {
       }
       
       console.log("First parsed record:", records[0]);
-      
-      // Deactivate all previous events so the new one becomes the active event
-      await prisma.event.updateMany({
-        where: { is_active: true },
-        data: { is_active: false }
-      });
 
-      // Create Event
-      const event = await prisma.event.create({
-        data: { name, date: new Date() }
-      });
-
-      // Create Layout & Seats
       // 복도 정보 파싱 (body에서 aisle_after_rows, aisle_after_cols 받음)
       const aisleAfterRows = req.body.aisle_after_rows ? JSON.stringify(
         String(req.body.aisle_after_rows).split(',').map((v: string) => parseInt(v.trim())).filter((n: number) => !isNaN(n))
@@ -299,20 +287,27 @@ app.post('/api/admin/login', async (req, res) => {
         String(req.body.aisle_after_cols).split(',').map((v: string) => parseInt(v.trim())).filter((n: number) => !isNaN(n))
       ) : null;
 
+      // ── 아래는 DB에 아무것도 쓰지 않는 순수 계산/검증 단계 ──────────────
+      // 여기서 던지는 에러는 DB 반영 전이므로 "반쪽짜리" 이벤트가 남지 않는다.
+
+      let parsedRows = 0;
+      let parsedCols = 0;
+      let gridSeatsData: { row: number; col: number; status: string; seat_label: string }[] = [];
+
       if (layoutMode === 'grid') {
         // ── 격자 CSV 방식: 각 칸이 좌석번호(있으면 좌석) 또는 빈칸(통로/여백) ──
         // 헤더 없이 원본 격자 그대로 파싱한다.
-        const gridRows: string[][] = parse(seatFile!.buffer, {
+        const gridRowsRaw: string[][] = parse(seatFile!.buffer, {
           columns: false, skip_empty_lines: false, relax_column_count: true, bom: true
         });
         // 완전히 빈 줄(모든 칸이 빈 값)은 무시
-        const cleanRows = gridRows.filter(row => row.some(cell => (cell ?? '').trim() !== ''));
+        const cleanRows = gridRowsRaw.filter(row => row.some(cell => (cell ?? '').trim() !== ''));
         if (cleanRows.length === 0) {
           throw new Error('좌석 배치 CSV에서 좌석을 찾을 수 없습니다.');
         }
-        const gridCols = Math.max(...cleanRows.map(r => r.length));
+        parsedRows = cleanRows.length;
+        parsedCols = Math.max(...cleanRows.map(r => r.length));
 
-        const seatsData: any[] = [];
         const seenLabels = new Set<string>();
         cleanRows.forEach((row, rIdx) => {
           row.forEach((cell, cIdx) => {
@@ -322,37 +317,16 @@ app.post('/api/admin/login', async (req, res) => {
               throw new Error(`좌석 배치 CSV에 중복된 좌석 번호가 있습니다: ${label}`);
             }
             seenLabels.add(label);
-            seatsData.push({
-              layout_id: '', // 아래에서 채움
-              row: rIdx + 1,
-              col: cIdx + 1,
-              status: 'EMPTY',
-              seat_label: label,
-            });
+            gridSeatsData.push({ row: rIdx + 1, col: cIdx + 1, status: 'EMPTY', seat_label: label });
           });
         });
-
-        const layout = await prisma.venueLayout.create({
-          data: {
-            event_id: event.id, rows: cleanRows.length, cols: gridCols,
-            aisle_after_rows: null, aisle_after_cols: null, layout_mode: 'grid'
-          }
-        });
-        seatsData.forEach(s => { s.layout_id = layout.id; });
-        await prisma.seat.createMany({ data: seatsData });
       } else {
         // ── 기존 방식: 행/열 전체를 꽉 찬 직사각형으로 생성 ──
-        const layout = await prisma.venueLayout.create({
-          data: { event_id: event.id, rows: parseInt(rows), cols: parseInt(cols), aisle_after_rows: aisleAfterRows, aisle_after_cols: aisleAfterCols, layout_mode: 'simple' }
-        });
-
-        const seatsData = [];
-        for (let r = 1; r <= parseInt(rows); r++) {
-          for (let c = 1; c <= parseInt(cols); c++) {
-            seatsData.push({ layout_id: layout.id, row: r, col: c, status: 'EMPTY' });
-          }
+        parsedRows = parseInt(rows);
+        parsedCols = parseInt(cols);
+        if (!Number.isInteger(parsedRows) || parsedRows <= 0 || !Number.isInteger(parsedCols) || parsedCols <= 0) {
+          throw new Error('좌석 행(Row)/열(Col) 수는 1 이상의 정수여야 합니다.');
         }
-        await prisma.seat.createMany({ data: seatsData });
       }
 
       // Process Participants
@@ -364,7 +338,7 @@ app.post('/api/admin/login', async (req, res) => {
 
       // Extract unique sessions
       const sessions = Array.from(new Set(records.map((r: any) => r.group_id))).filter(Boolean).sort() as string[];
-      
+
       // Generate colors for sessions
       const defaultColors = ['#8B2942', '#6B3FA0', '#D2691E', '#C43D8E', '#2A5C8A', '#1F6F5C'];
       const sessionColorsData = sessions.map((session_id, index) => {
@@ -377,20 +351,15 @@ app.post('/api/admin/login', async (req, res) => {
           const lightness = Math.min(98, 95 + (index - 5));
           color = `hsl(215, 100%, ${lightness}%)`;
         }
-        return {
-          event_id: event.id,
-          session_id: session_id,
-          color: color
-        };
+        return { session_id, color };
       });
-      await prisma.sessionColor.createMany({ data: sessionColorsData });
 
       // Calculate global turn_order
       const turnGroups = new Set<string>();
       records.forEach((r: any) => {
         turnGroups.add(`${r.group_id}|${r.order_in_group}`);
       });
-      
+
       const sortedTurnGroups = Array.from(turnGroups).sort((a, b) => {
         const [sA, oA] = a.split('|');
         const [sB, oB] = b.split('|');
@@ -420,7 +389,6 @@ app.post('/api/admin/login', async (req, res) => {
         const isDuplicate = (participantCounts.get(key) || 0) > 1;
         const globalTurnOrder = turnOrderMap.get(`${r.group_id}|${r.order_in_group}`) || 1;
         return {
-          event_id: event.id,
           session_id: String(r.group_id),
           name: String(r.participant_name),
           phone_last4: String(r.password_4),
@@ -429,15 +397,64 @@ app.post('/api/admin/login', async (req, res) => {
         };
       });
 
-      await prisma.participant.createMany({ data: participantsData });
+      // ── 여기부터 실제 DB 반영. 하나의 트랜잭션으로 묶어 중간에 실패해도
+      // "반쪽짜리" 이벤트가 남지 않도록 한다. ──────────────────────────
+      const event = await prisma.$transaction(async (tx) => {
+        // Deactivate all previous events so the new one becomes the active event
+        await tx.event.updateMany({
+          where: { is_active: true },
+          data: { is_active: false }
+        });
 
-      // Initialize System State
-      await prisma.systemState.create({
-        data: {
-          event_id: event.id,
-          current_turn_order: 1,
-          current_turn_start_time: new Date()
+        const event = await tx.event.create({
+          data: { name, date: new Date() }
+        });
+
+        const layout = layoutMode === 'grid'
+          ? await tx.venueLayout.create({
+              data: {
+                event_id: event.id, rows: parsedRows, cols: parsedCols,
+                aisle_after_rows: null, aisle_after_cols: null, layout_mode: 'grid'
+              }
+            })
+          : await tx.venueLayout.create({
+              data: {
+                event_id: event.id, rows: parsedRows, cols: parsedCols,
+                aisle_after_rows: aisleAfterRows, aisle_after_cols: aisleAfterCols, layout_mode: 'simple'
+              }
+            });
+
+        if (layoutMode === 'grid') {
+          await tx.seat.createMany({
+            data: gridSeatsData.map(s => ({ ...s, layout_id: layout.id }))
+          });
+        } else {
+          const seatsData = [];
+          for (let r = 1; r <= parsedRows; r++) {
+            for (let c = 1; c <= parsedCols; c++) {
+              seatsData.push({ layout_id: layout.id, row: r, col: c, status: 'EMPTY' });
+            }
+          }
+          await tx.seat.createMany({ data: seatsData });
         }
+
+        await tx.sessionColor.createMany({
+          data: sessionColorsData.map(s => ({ ...s, event_id: event.id }))
+        });
+
+        await tx.participant.createMany({
+          data: participantsData.map(p => ({ ...p, event_id: event.id }))
+        });
+
+        await tx.systemState.create({
+          data: {
+            event_id: event.id,
+            current_turn_order: 1,
+            current_turn_start_time: new Date()
+          }
+        });
+
+        return event;
       });
 
       res.json({ success: true, eventId: event.id });
@@ -717,6 +734,11 @@ app.post('/api/admin/login', async (req, res) => {
     // Admin force cancel seat
     socket.on('admin:cancel_seat', async (data: { seatId: string, eventId: string }) => {
       if (!socket.data.isAdmin) return;
+      // 자동배정 시퀀스와 동시에 같은 좌석/참가자를 건드리지 않도록 잠금을 공유한다.
+      if (autoAssignInProgress.has(data.eventId)) {
+        return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
+      }
+      autoAssignInProgress.add(data.eventId);
 
       try {
         const result = await prisma.$transaction(async (tx) => {
@@ -757,6 +779,8 @@ app.post('/api/admin/login', async (req, res) => {
 
       } catch (error: any) {
         socket.emit('admin:error', { error: error.message });
+      } finally {
+        autoAssignInProgress.delete(data.eventId);
       }
     });
 
@@ -764,6 +788,10 @@ app.post('/api/admin/login', async (req, res) => {
     // 관리자: 좌석을 '사석'으로 지정하거나 다시 선택 가능 상태로 되돌리기
     socket.on('admin:set_seat_private', async (data: { seatId: string, eventId: string, isPrivate: boolean }) => {
       if (!socket.data.isAdmin) return;
+      if (autoAssignInProgress.has(data.eventId)) {
+        return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
+      }
+      autoAssignInProgress.add(data.eventId);
 
       try {
         const seat = await prisma.seat.findUnique({ where: { id: data.seatId } });
@@ -773,7 +801,7 @@ app.post('/api/admin/login', async (req, res) => {
         }
 
         const updatedSeat = await prisma.seat.update({
-          where: { id: data.seatId },
+          where: { id: data.seatId, status: seat.status },
           data: { status: data.isPrivate ? 'PRIVATE' : 'EMPTY' }
         });
 
@@ -781,12 +809,18 @@ app.post('/api/admin/login', async (req, res) => {
         io.to(`admin:event:${data.eventId}`).emit('seat:update', { seat: updatedSeat });
       } catch (error: any) {
         socket.emit('admin:error', { error: error.message });
+      } finally {
+        autoAssignInProgress.delete(data.eventId);
       }
     });
 
     // Admin: 수동 배정 (참가자 계정 없이 좌석에 이름만 표기)
     socket.on('admin:set_manual_seat', async (data: { seatId: string, eventId: string, label: string | null }) => {
       if (!socket.data.isAdmin) return;
+      if (autoAssignInProgress.has(data.eventId)) {
+        return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
+      }
+      autoAssignInProgress.add(data.eventId);
 
       try {
         const seat = await prisma.seat.findUnique({ where: { id: data.seatId } });
@@ -797,7 +831,7 @@ app.post('/api/admin/login', async (req, res) => {
 
         const label = (data.label || '').trim();
         const updatedSeat = await prisma.seat.update({
-          where: { id: data.seatId },
+          where: { id: data.seatId, status: seat.status },
           data: label
             ? { status: 'MANUAL', manual_label: label, assigned_to: null, session_id: null }
             : { status: 'EMPTY', manual_label: null }
@@ -807,11 +841,17 @@ app.post('/api/admin/login', async (req, res) => {
         io.to(`admin:event:${data.eventId}`).emit('seat:update', { seat: updatedSeat });
       } catch (error: any) {
         socket.emit('admin:error', { error: error.message });
+      } finally {
+        autoAssignInProgress.delete(data.eventId);
       }
     });
 
     socket.on('admin:force_assign', async (data: { seatId: string, participantId: string, eventId: string }) => {
       if (!socket.data.isAdmin) return;
+      if (autoAssignInProgress.has(data.eventId)) {
+        return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
+      }
+      autoAssignInProgress.add(data.eventId);
 
       try {
         const result = await prisma.$transaction(async (tx) => {
@@ -835,13 +875,13 @@ app.post('/api/admin/login', async (req, res) => {
           }
 
           const updatedSeat = await tx.seat.update({
-            where: { id: data.seatId },
+            where: { id: data.seatId, status: 'EMPTY' },
             data: { status: 'RESERVED', assigned_to: data.participantId, session_id: participant.session_id }
           });
 
           const updatedParticipant = await tx.participant.update({
             where: { id: data.participantId },
-            data: { 
+            data: {
               seat_id: data.seatId,
               is_final: true,
               turn_status: 'COMPLETED'
@@ -869,6 +909,8 @@ app.post('/api/admin/login', async (req, res) => {
 
       } catch (error: any) {
         socket.emit('admin:error', { error: error.message });
+      } finally {
+        autoAssignInProgress.delete(data.eventId);
       }
     });
 
@@ -1277,7 +1319,7 @@ app.post('/api/admin/login', async (req, res) => {
         const targetSeat = sortedSeats[0];
         const result = await prisma.$transaction(async (tx) => {
           const updatedSeat = await tx.seat.update({
-            where: { id: targetSeat.id },
+            where: { id: targetSeat.id, status: 'EMPTY' },
             data: { status: 'AUTO_ASSIGNED', assigned_to: currentParticipant.id, session_id: currentParticipant.session_id }
           });
           const updatedParticipant = await tx.participant.update({
@@ -1478,24 +1520,39 @@ app.post('/api/admin/login', async (req, res) => {
         await prisma.participant.update({ where: { id: currentParticipant.id }, data: { turn_status: 'EXPIRED' } });
       } else {
         const targetSeat = sortedSeats[0];
-        const result = await prisma.$transaction(async (tx) => {
-          const updatedSeat = await tx.seat.update({
-            where: { id: targetSeat.id },
-            data: { status: 'AUTO_ASSIGNED', assigned_to: currentParticipant.id, session_id: currentParticipant.session_id }
+        try {
+          // where에 status: 'EMPTY'를 함께 걸어, 이 좌석이 그 사이 다른 경로로
+          // 이미 바뀌었다면(정상적으로는 잠금 때문에 발생하지 않지만, 방어적으로) 조용히 덮어쓰지 않고
+          // 업데이트 자체가 실패하도록 한다.
+          const result = await prisma.$transaction(async (tx) => {
+            const updatedSeat = await tx.seat.update({
+              where: { id: targetSeat.id, status: 'EMPTY' },
+              data: { status: 'AUTO_ASSIGNED', assigned_to: currentParticipant.id, session_id: currentParticipant.session_id }
+            });
+            const updatedParticipant = await tx.participant.update({
+              where: { id: currentParticipant.id },
+              data: { seat_id: targetSeat.id, is_final: true, turn_status: 'COMPLETED' }
+            });
+            return { updatedSeat, updatedParticipant };
           });
-          const updatedParticipant = await tx.participant.update({
-            where: { id: currentParticipant.id },
-            data: { seat_id: targetSeat.id, is_final: true, turn_status: 'COMPLETED' }
-          });
-          return { updatedSeat, updatedParticipant };
-        });
 
-        io.to(`event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
-        io.to(`admin:event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
-        io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: result.updatedParticipant });
-        const userSocketId = activeSockets.get(currentParticipant.id);
-        if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: result.updatedParticipant });
-        console.log(`[AutoAssign] ${currentParticipant.name} → ${targetSeat.row}행 ${targetSeat.col}열 완료`);
+          io.to(`event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
+          io.to(`admin:event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
+          io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: result.updatedParticipant });
+          const userSocketId = activeSockets.get(currentParticipant.id);
+          if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: result.updatedParticipant });
+          console.log(`[AutoAssign] ${currentParticipant.name} → ${targetSeat.row}행 ${targetSeat.col}열 완료`);
+        } catch (assignErr) {
+          // 좌석 배정이 충돌로 실패한 경우 참가자를 좌석 없이 방치하지 않고 만료 처리한다.
+          console.error(`[AutoAssign] 좌석 배정 충돌 - ${currentParticipant.name} 만료 처리:`, assignErr);
+          const expiredParticipant = await prisma.participant.update({
+            where: { id: currentParticipant.id },
+            data: { turn_status: 'EXPIRED' }
+          });
+          io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: expiredParticipant });
+          const userSocketId = activeSockets.get(currentParticipant.id);
+          if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: expiredParticipant });
+        }
       }
 
       // 3) 0.8초 후 다음 턴으로 전환 (다음 사람 정확히 3:00 시작)
