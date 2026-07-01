@@ -307,27 +307,6 @@ const updateStoreWithEventData = (event: any) => {
     }
   };
 
-  const handleSeatClick = (seat: any) => {
-  console.log("관리자가 클릭한 좌석:", seat);
-  
-  // 만약 좌석에 이미 참가자가 있다면 정보를 보여줍니다.
-  if (seat.participant) {
-    const confirmCancel = confirm(
-      `좌석: ${seat.label}\n참가자: ${seat.participant.participant_name}\n\n이 예약을 강제로 취소하시겠습니까?`
-    );
-    
-    if (confirmCancel && socket && selectedEventId) {
-      // 서버에 예약 취소 이벤트를 보냅니다 (서버 측 구현 필요)
-      socket.emit('admin:cancel_reservation', { 
-        eventId: selectedEventId, 
-        seatId: seat.id 
-      });
-    }
-  } else {
-    alert(`좌석 ${seat.label}은 비어 있습니다.`);
-  }
-};
-
   if (!adminToken) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
