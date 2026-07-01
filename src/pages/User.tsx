@@ -110,6 +110,9 @@ export default function User() {
       <main className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col max-w-6xl lg:max-w-none mx-auto w-full">
         {/* 공지 바 */}
         <AnnouncementBar
+          // 턴/공지 상태가 바뀔 때마다 컴포넌트를 완전히 새로 마운트해,
+          // 내부 타이머 상태(timeLeft 등)까지 깨끗하게 초기화한다.
+          key={`${announcement.type}-${currentTurnStartTime}`}
           announcement={announcement}
           currentTurnOrder={currentTurnOrder}
           currentTurnStartTime={currentTurnStartTime}
