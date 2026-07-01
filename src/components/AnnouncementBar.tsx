@@ -109,14 +109,15 @@ export default function AnnouncementBar({
     announcement.type !== 'ALL_COMPLETE';
 
   return (
+    // key로 문구가 바뀔 때마다 바 전체(배경색 전환 애니메이션 포함)를 완전히 새로 그린다.
+    // transition-colors/animate-pulse가 걸린 채로 같은 노드를 재사용하면, 모바일
+    // 브라우저에서 직전 프레임의 배경/텍스트가 잔상처럼 새 내용과 겹쳐 보이는 경우가 있다.
     <div
+      key={`${announcement.type}|${text}`}
       style={{ backgroundColor: bgColor }}
       className={`text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
     >
-      {/* key로 문구가 바뀔 때마다 엘리먼트를 완전히 새로 그린다.
-          (같은 노드를 재사용하면 모바일 브라우저에서 animate-pulse 등
-          CSS 애니메이션 상태가 즉시 리셋되지 않아 이전 문구와 겹쳐 보이는 경우가 있다) */}
-      <span key={text} className="font-bold text-lg truncate">{text}</span>
+      <span className="font-bold text-lg truncate">{text}</span>
       {showTimer && (
         // key로 턴이 바뀔 때마다(currentTurnStartTime 변경) 타이머 엘리먼트를 새로 그려,
         // 직전 턴의 빨간 임박 표시(animate-pulse)가 새 타이머와 겹쳐 보이지 않도록 한다.
