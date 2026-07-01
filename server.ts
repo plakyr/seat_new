@@ -1387,9 +1387,11 @@ app.post('/api/admin/login', async (req, res) => {
         io.to(`admin:event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
         updatedParticipant = result.updatedParticipant;
       } else {
+        // 빈 좌석이 없어 배정 불가: 만료 처리하되 is_final도 true로 하여
+        // 전체 완료 판단(is_final: false 카운트)에서 미완료로 남지 않게 한다.
         updatedParticipant = await prisma.participant.update({
           where: { id: currentParticipant.id },
-          data: { turn_status: 'EXPIRED' }
+          data: { turn_status: 'EXPIRED', is_final: true }
         });
       }
 
@@ -1444,10 +1446,11 @@ app.post('/api/admin/login', async (req, res) => {
       });
 
       // 아직 좌석을 선택하지 않은 참가자만 만료 처리 (이미 완료된 경우는 건드리지 않음)
+      // is_final도 true로 하여 전체 완료 판단에서 미완료로 남지 않게 한다.
       if (currentParticipant && !currentParticipant.is_final) {
         const updatedParticipant = await prisma.participant.update({
           where: { id: currentParticipant.id },
-          data: { turn_status: 'EXPIRED' }
+          data: { turn_status: 'EXPIRED', is_final: true }
         });
         io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: updatedParticipant });
         const userSocketId = activeSockets.get(currentParticipant.id);
@@ -1571,8 +1574,8 @@ app.post('/api/admin/login', async (req, res) => {
       const sortedSeats = layout ? sortSeatsForAutoAssign(layout.seats, layout.cols) : [];
 
       if (sortedSeats.length === 0) {
-        // 빈 좌석이 없으면 만료 처리만
-        await prisma.participant.update({ where: { id: currentParticipant.id }, data: { turn_status: 'EXPIRED' } });
+        // 빈 좌석이 없으면 만료 처리만 (is_final도 true로 하여 미완료로 남지 않게 함)
+        await prisma.participant.update({ where: { id: currentParticipant.id }, data: { turn_status: 'EXPIRED', is_final: true } });
       } else {
         const targetSeat = sortedSeats[0];
         try {
@@ -1599,10 +1602,11 @@ app.post('/api/admin/login', async (req, res) => {
           console.log(`[AutoAssign] ${currentParticipant.name} → ${targetSeat.row}행 ${targetSeat.col}열 완료`);
         } catch (assignErr) {
           // 좌석 배정이 충돌로 실패한 경우 참가자를 좌석 없이 방치하지 않고 만료 처리한다.
+          // (is_final도 true로 하여 전체 완료 판단에서 미완료로 남지 않게 함)
           console.error(`[AutoAssign] 좌석 배정 충돌 - ${currentParticipant.name} 만료 처리:`, assignErr);
           const expiredParticipant = await prisma.participant.update({
             where: { id: currentParticipant.id },
-            data: { turn_status: 'EXPIRED' }
+            data: { turn_status: 'EXPIRED', is_final: true }
           });
           io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: expiredParticipant });
           const userSocketId = activeSockets.get(currentParticipant.id);
