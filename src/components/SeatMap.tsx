@@ -40,7 +40,7 @@ function SeatTooltip({ text, onClose }: { text: string; onClose: () => void }) {
 }
 
 export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }) {
-  const { seats, participants, user, isAdmin: storeIsAdmin, isFrozen, sessionColors, layout, timerPaused } = useStore();
+  const { seats, participants, user, isAdmin: storeIsAdmin, isFrozen, sessionColors, layout, timerPaused, currentTurnOrder } = useStore();
   const isAdmin = forceAdmin || storeIsAdmin;
   const socket = useSocket();
 
@@ -281,7 +281,9 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                         (!isAdmin && isFrozen) ||
                         (!isAdmin && timerPaused) || // 자동배정 진행 중 좌석 잠금
                         (!isAdmin && seat.status === 'PRIVATE') ||
-                        (!isAdmin && (user?.turn_status === 'COMPLETED' || user?.is_final) && !isMySeat);
+                        (!isAdmin && (user?.turn_status === 'COMPLETED' || user?.is_final) && !isMySeat) ||
+                        // 현재 순서가 아닌 참가자는 좌석 클릭 불가 (내 자리 툴팁은 예외)
+                        (!isAdmin && user?.turn_order !== currentTurnOrder && !isMySeat);
 
                       return (
                         <React.Fragment key={seat.id}>
