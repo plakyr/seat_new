@@ -667,20 +667,43 @@ app.post('/api/admin/login', async (req, res) => {
     socket.on('admin:toggle_freeze', async (data: { eventId: string, isFrozen: boolean, reason?: string }) => {
       if (!socket.data.isAdmin) return;
 
+      const now = new Date();
+      const existing = await prisma.systemState.findUnique({ where: { event_id: data.eventId } });
+
+      let updateData: any;
+      let turnStartShifted = false;
+      if (data.isFrozen) {
+        // 일시정지: 정지 시각을 기록해 둔다 (재개 시 흐른 시간 계산용)
+        updateData = { is_frozen: true, frozen_reason: data.reason || null, frozen_at: now };
+      } else {
+        // 재개: 정지된 동안 흐른 시간만큼 턴 시작 시각을 뒤로 밀어 남은 시간을 보존한다
+        updateData = { is_frozen: false, frozen_reason: null, frozen_at: null };
+        if (existing?.frozen_at && existing?.current_turn_start_time) {
+          const pausedMs = now.getTime() - new Date(existing.frozen_at).getTime();
+          updateData.current_turn_start_time = new Date(new Date(existing.current_turn_start_time).getTime() + pausedMs);
+          turnStartShifted = true;
+        }
+      }
+
       const state = await prisma.systemState.upsert({
         where: { event_id: data.eventId },
-        update: { is_frozen: data.isFrozen, frozen_reason: data.reason || null },
-        create: { event_id: data.eventId, is_frozen: data.isFrozen, frozen_reason: data.reason || null }
+        update: updateData,
+        create: { event_id: data.eventId, is_frozen: data.isFrozen, frozen_reason: data.reason || null, frozen_at: data.isFrozen ? now : null }
       });
 
-      io.to(`event:${data.eventId}`).emit('system:freeze', { 
-        isFrozen: state.is_frozen, 
-        reason: state.frozen_reason 
+      io.to(`event:${data.eventId}`).emit('system:freeze', {
+        isFrozen: state.is_frozen,
+        reason: state.frozen_reason
       });
-      io.to(`admin:event:${data.eventId}`).emit('system:freeze', { 
-        isFrozen: state.is_frozen, 
-        reason: state.frozen_reason 
+      io.to(`admin:event:${data.eventId}`).emit('system:freeze', {
+        isFrozen: state.is_frozen,
+        reason: state.frozen_reason
       });
+
+      // 재개하면서 턴 시작 시각을 밀었으면 모든 클라이언트 타이머를 재동기화한다
+      if (!data.isFrozen && turnStartShifted) {
+        emitTurn(data.eventId, state);
+      }
     });
 
     // Admin force cancel seat
