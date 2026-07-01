@@ -14,6 +14,14 @@ import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
+
+// 프로덕션에서는 JWT_SECRET이 반드시 설정되어 있어야 한다.
+// 기본값(하드코딩된 시크릿)으로 토큰을 서명하면 누구나 관리자 토큰을 위조할 수 있으므로,
+// 미설정 시 조용히 기본값을 쓰지 말고 서버 시작 자체를 실패시킨다.
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('FATAL: 프로덕션 환경에서는 JWT_SECRET 환경변수가 반드시 필요합니다. 서버를 종료합니다.');
+  process.exit(1);
+}
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-in-prod';
 
 // Store active participant sockets: participantId -> socketId
@@ -48,6 +56,43 @@ async function startServer() {
     const sockets = await io.in(`event:${eventId}`).fetchSockets();
     const online = [...new Set(sockets.map(s => s.data.participantId).filter(Boolean))];
     io.to(`admin:event:${eventId}`).emit('presence:update', { online });
+  };
+
+  // 특정 소켓에 이벤트의 초기 상태(좌석/시스템/공지/색상/채팅 이력)를 전송한다.
+  // 인증 완료 시점(participant:auth)과 seat:request_init 양쪽에서 재사용한다.
+  const emitInitialStateToSocket = async (targetSocket: any, eventId: string) => {
+    const layout = await prisma.venueLayout.findFirst({
+      where: { event_id: eventId },
+      include: { seats: true }
+    });
+    if (layout) {
+      targetSocket.emit('seat:init', { seats: layout.seats });
+    }
+
+    const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+    if (systemState) {
+      targetSocket.emit('system:freeze', {
+        isFrozen: systemState.is_frozen,
+        reason: systemState.frozen_reason
+      });
+      targetSocket.emit('system:turn', {
+        currentTurnOrder: systemState.current_turn_order,
+        currentTurnStartTime: systemState.current_turn_start_time
+      });
+    }
+
+    const flow = await getFlowAnnouncement(eventId);
+    if (flow) targetSocket.emit(flow.event, flow.payload);
+
+    const sessionColors = await prisma.sessionColor.findMany({ where: { event_id: eventId } });
+    targetSocket.emit('session:colors', { sessionColors });
+
+    const messages = await prisma.chatMessage.findMany({
+      where: { event_id: eventId },
+      orderBy: { timestamp: 'asc' },
+      take: 100 // 성능을 위해 최근 100개로 제한
+    });
+    targetSocket.emit('chat:history', { messages });
   };
 
   // Seed default admins if none exist
@@ -621,6 +666,12 @@ app.post('/api/admin/login', async (req, res) => {
       socket.join(`event:${participant.event_id}`);
       console.log(`Participant ${participant.name} authenticated on socket ${socket.id}`);
       broadcastOnlineParticipants(participant.event_id);
+
+      // 인증 완료 시점에 초기 상태를 전송한다.
+      // (클라이언트가 접속 직후 participant:auth와 seat:request_init를 함께 보내는데,
+      //  auth가 비동기 처리되는 동안 seat:request_init가 먼저 도착하면 아직 인증 전이라
+      //  거절될 수 있으므로, 여기서 확실하게 한 번 보내 초기 로딩 누락을 방지한다)
+      await emitInitialStateToSocket(socket, participant.event_id);
     });
 
     // Authenticate admin socket
@@ -640,10 +691,19 @@ app.post('/api/admin/login', async (req, res) => {
     // Admin request event details (seats + participants)
     socket.on('admin:request_event', async (data: { eventId: string }) => {
       if (!socket.data.isAdmin) return;
-      
+
+      // 이벤트를 전환할 때 이전에 선택했던 이벤트의 방에서 나간다.
+      // (나가지 않으면 이전 이벤트의 좌석/턴 브로드캐스트가 계속 섞여 들어온다)
+      const prevEventId = socket.data.adminEventId;
+      if (prevEventId && prevEventId !== data.eventId) {
+        socket.leave(`admin:event:${prevEventId}`);
+        socket.leave(`event:${prevEventId}`);
+      }
+      socket.data.adminEventId = data.eventId;
+
       socket.join(`admin:event:${data.eventId}`);
       socket.join(`event:${data.eventId}`); // Join regular event room to receive seat updates
-      
+
       const layout = await prisma.venueLayout.findFirst({
         where: { event_id: data.eventId },
         include: { seats: true }
@@ -947,43 +1007,14 @@ app.post('/api/admin/login', async (req, res) => {
     });
 
     // Request initial seats
+    // 참가자 소켓 전용: 클라이언트가 보낸 eventId를 신뢰하지 않고 인증된 소켓의 eventId만 사용한다.
+    // 인증되지 않은 소켓이거나 다른 이벤트를 요청하면 조용히 무시한다.
     socket.on('seat:request_init', async (data: { eventId: string }) => {
-      const layout = await prisma.venueLayout.findFirst({
-        where: { event_id: data.eventId },
-        include: { seats: true }
-      });
-      if (layout) {
-        socket.emit('seat:init', { seats: layout.seats });
-      }
+      const eventId = socket.data.eventId;
+      if (!socket.data.participantId || !eventId) return; // 인증되지 않은 소켓 거절
+      if (data.eventId && data.eventId !== eventId) return; // 다른 이벤트 요청 거절
 
-      const systemState = await prisma.systemState.findUnique({
-        where: { event_id: data.eventId }
-      });
-      if (systemState) {
-        socket.emit('system:freeze', { 
-          isFrozen: systemState.is_frozen, 
-          reason: systemState.frozen_reason 
-        });
-        socket.emit('system:turn', {
-          currentTurnOrder: systemState.current_turn_order,
-          currentTurnStartTime: systemState.current_turn_start_time
-        });
-      }
-
-      const flow = await getFlowAnnouncement(data.eventId);
-      if (flow) socket.emit(flow.event, flow.payload);
-
-      const sessionColors = await prisma.sessionColor.findMany({
-        where: { event_id: data.eventId }
-      });
-      socket.emit('session:colors', { sessionColors });
-
-      const messages = await prisma.chatMessage.findMany({
-        where: { event_id: data.eventId },
-        orderBy: { timestamp: 'asc' },
-        take: 100 // Limit to last 100 messages for performance
-      });
-      socket.emit('chat:history', { messages });
+      await emitInitialStateToSocket(socket, eventId);
     });
 
     // Handle seat selection
@@ -1094,16 +1125,25 @@ app.post('/api/admin/login', async (req, res) => {
 
     socket.on('chat:send', async (data: { eventId: string, content: string }) => {
       try {
-        const { eventId, content } = data;
+        const { content } = data;
         if (!content || !content.trim()) return;
 
         let senderType = 'USER';
         let senderName = 'Unknown';
+        let eventId: string;
 
         if (socket.data.isAdmin) {
           senderType = 'ADMIN';
           senderName = '관리자';
-        } else if (socket.data.participantId) {
+          eventId = data.eventId;
+        } else if (socket.data.participantId && socket.data.eventId) {
+          // 참가자는 클라이언트가 보낸 eventId를 신뢰하지 않고, 인증된 소켓의 eventId만 사용한다.
+          // (타 이벤트 채팅방에 메시지를 주입하는 것을 방지)
+          eventId = socket.data.eventId;
+          if (data.eventId && data.eventId !== eventId) {
+            socket.emit('chat:error', { error: '잘못된 이벤트 요청입니다.' });
+            return;
+          }
           const participant = await prisma.participant.findUnique({ where: { id: socket.data.participantId } });
           const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
           
