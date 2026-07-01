@@ -21,6 +21,8 @@ export interface Seat {
   status: 'EMPTY' | 'RESERVED' | 'FROZEN' | 'AUTO_ASSIGNED' | 'LOCKED';
   assigned_to: string | null;
   session_id: string | null;
+  seat_label?: string | null;
+  manual_label?: string | null;
 }
 
 export interface LayoutInfo {
