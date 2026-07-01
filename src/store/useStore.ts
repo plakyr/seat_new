@@ -97,9 +97,24 @@ interface AppState {
   setCols: (cols: number) => void;
 }
 
+// 새로고침 시에도 로그인 유지되도록 참가자 세션을 localStorage에 보관
+const PARTICIPANT_SESSION_KEY = 'participant_session';
+function loadPersistedSession(): { user: User | null; sessionToken: string | null } {
+  try {
+    const raw = localStorage.getItem(PARTICIPANT_SESSION_KEY);
+    if (!raw) return { user: null, sessionToken: null };
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.user && parsed.sessionToken) {
+      return { user: parsed.user, sessionToken: parsed.sessionToken };
+    }
+  } catch { /* 무시 */ }
+  return { user: null, sessionToken: null };
+}
+const persisted = loadPersistedSession();
+
 export const useStore = create<AppState>((set) => ({
-  user: null,
-  sessionToken: null,
+  user: persisted.user,
+  sessionToken: persisted.sessionToken,
   isAdmin: false,
   adminToken: null,
   adminUser: null,
@@ -119,8 +134,20 @@ export const useStore = create<AppState>((set) => ({
   rows: 10,
   cols: 10,
 
-  setUser: (user, sessionToken) => set({ user, sessionToken }),
-  logoutUser: () => set({ user: null, sessionToken: null }),
+  setUser: (user, sessionToken) => {
+    try {
+      if (user && sessionToken) {
+        localStorage.setItem(PARTICIPANT_SESSION_KEY, JSON.stringify({ user, sessionToken }));
+      } else {
+        localStorage.removeItem(PARTICIPANT_SESSION_KEY);
+      }
+    } catch { /* 무시 */ }
+    set({ user, sessionToken });
+  },
+  logoutUser: () => {
+    try { localStorage.removeItem(PARTICIPANT_SESSION_KEY); } catch { /* 무시 */ }
+    set({ user: null, sessionToken: null });
+  },
   setAdminAuth: (token, user) => set({ adminToken: token, adminUser: user, isAdmin: !!token }),
   setServerTime: (time) => set({ serverTime: time }),
   setSystemState: (isFrozen, reason) => set({ isFrozen, frozenReason: reason }),

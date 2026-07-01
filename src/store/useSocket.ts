@@ -43,8 +43,10 @@ export const useSocket = () => {
       storeRef.current.setSystemState(data.isFrozen, data.reason);
     });
 
-    // 관리자의 강제 재동기화 신호 → 화면 새로고침 (화면 멈춤 복구용)
+    // 관리자의 강제 재동기화 신호 → 참가자 화면만 새로고침 (관리자는 무시)
+    // 참가자 세션은 localStorage에 저장돼 있어 새로고침해도 로그인이 유지된다.
     socketInstance.on('force_reload', () => {
+      if (storeRef.current.isAdmin) return;
       window.location.reload();
     });
 
