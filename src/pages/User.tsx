@@ -107,7 +107,7 @@ export default function User() {
           로그아웃
         </button>
       </header>
-      <main className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col max-w-6xl mx-auto w-full">
+      <main className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col max-w-6xl lg:max-w-none mx-auto w-full">
         {/* 공지 바 */}
         <AnnouncementBar
           announcement={announcement}
