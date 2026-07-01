@@ -69,19 +69,27 @@ async function startServer() {
       targetSocket.emit('seat:init', { seats: layout.seats });
     }
 
+    // 진행 흐름(그룹 대기/전원 완료 등)을 먼저 계산한다.
+    const flow = await getFlowAnnouncement(eventId);
+
     const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
     if (systemState) {
       targetSocket.emit('system:freeze', {
         isFrozen: systemState.is_frozen,
         reason: systemState.frozen_reason
       });
-      targetSocket.emit('system:turn', {
-        currentTurnOrder: systemState.current_turn_order,
-        currentTurnStartTime: systemState.current_turn_start_time
-      });
+      // flow가 있으면(그룹 시작 대기/그룹 간 대기/전원 완료 등) system:turn을 보내지 않는다.
+      // 클라이언트는 system:turn을 받으면 announcement를 IDLE로 초기화하므로, 여기서 보내면
+      // flow 이벤트가 도착하기 전까지 "현재 순서 000님"이 잠깐 잘못 표시된다.
+      if (!flow) {
+        targetSocket.emit('system:turn', {
+          currentTurnOrder: systemState.current_turn_order,
+          currentTurnStartTime: systemState.current_turn_start_time
+        });
+      }
     }
 
-    const flow = await getFlowAnnouncement(eventId);
+    // flow가 있으면 해당 공지(system:session_change / system:all_complete)를 전송한다.
     if (flow) targetSocket.emit(flow.event, flow.payload);
 
     const sessionColors = await prisma.sessionColor.findMany({ where: { event_id: eventId } });
