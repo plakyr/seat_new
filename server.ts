@@ -53,7 +53,10 @@ async function startServer() {
   // Seed default admins if none exist
   const adminCount = await prisma.adminUser.count();
   if (adminCount === 0) {
-    const password_hash = await bcrypt.hash('admin123', 10);
+    // 초기 비밀번호를 소스코드에 고정하지 않는다: 환경변수로 지정하거나,
+    // 없으면 무작위로 생성해 서버 시작 로그에만 1회 출력한다.
+    const seedPassword = process.env.ADMIN_SEED_PASSWORD || crypto.randomBytes(9).toString('base64url');
+    const password_hash = await bcrypt.hash(seedPassword, 10);
     await prisma.adminUser.createMany({
       data: [
         { username: '전초롱', password_hash, role: 'admin' },
@@ -61,7 +64,12 @@ async function startServer() {
         { username: '박은진', password_hash, role: 'admin' },
       ]
     });
-    console.log('Seeded 3 default admin users (전초롱, 송다빈, 박은진 / admin123)');
+    if (process.env.ADMIN_SEED_PASSWORD) {
+      console.log('Seeded 3 default admin users (전초롱, 송다빈, 박은진) using ADMIN_SEED_PASSWORD env var.');
+    } else {
+      console.log(`Seeded 3 default admin users (전초롱, 송다빈, 박은진) with random password: ${seedPassword}`);
+      console.log('이 비밀번호는 다시 표시되지 않습니다. 로그인 후 반드시 별도 계정 관리 절차로 교체하세요.');
+    }
   } else {
     // 기존 admin1/2/3 계정명을 새 이름으로 변경
     const renames: [string, string][] = [

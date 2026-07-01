@@ -12,3 +12,5 @@ services:
         sync: false # Render 대시보드에서 직접 입력 (Neon 연결 주소)
       - key: JWT_SECRET
         generateValue: true # Render가 자동으로 안전한 무작위 값 생성
+      - key: ADMIN_SEED_PASSWORD
+        sync: false # 최초 관리자 3계정의 초기 비밀번호. Render 대시보드에서 직접 입력 (미입력 시 서버 로그에 무작위 비밀번호가 1회 출력됨)
