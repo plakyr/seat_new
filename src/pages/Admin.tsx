@@ -587,26 +587,10 @@ const updateStoreWithEventData = (event: any) => {
                     <button
                       onClick={handleSkipTurn}
                       title="현재 참가자에게 좌석을 주지 않고 다음 턴으로 넘깁니다 (불참/오류 대응)"
-                      style={{ backgroundColor: '#B0752F' }}
+                      style={{ backgroundColor: '#E8771A' }}
                       className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
-                      건너뛰기
-                    </button>
-                    <button
-                      onClick={handleForceReload}
-                      title="전체 참가자 화면에 강제 새로고침 신호를 보냅니다 (화면 멈춤 복구용)"
-                      style={{ backgroundColor: '#4a6fa5' }}
-                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
-                    >
-                      화면 새로고침
-                    </button>
-                    <button
-                      onClick={handleReloadState}
-                      title="관리자 화면의 좌석·참가자·공지·채팅 상태만 서버에서 다시 받아옵니다 (참가자에게는 영향 없음)"
-                      style={{ backgroundColor: '#2f8f8f' }}
-                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
-                    >
-                      상태 다시 불러오기
+                      턴넘김
                     </button>
                     <button
                       onClick={handleToggleFreeze}
@@ -616,9 +600,25 @@ const updateStoreWithEventData = (event: any) => {
                       {isFrozen ? '재개' : '일시정지'}
                     </button>
                     <button
+                      onClick={handleForceReload}
+                      title="전체 참가자 화면에 강제 새로고침 신호를 보냅니다 (화면 멈춤 복구용)"
+                      style={{ backgroundColor: '#2f8f8f' }}
+                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                    >
+                      새로고침(참가자)
+                    </button>
+                    <button
+                      onClick={handleReloadState}
+                      title="관리자 화면의 좌석·참가자·공지·채팅 상태만 서버에서 다시 받아옵니다 (참가자에게는 영향 없음)"
+                      style={{ backgroundColor: '#2f8f8f' }}
+                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                    >
+                      새로고침(관리자)
+                    </button>
+                    <button
                       onClick={handleResetEvent}
                       title="테스트용: 모든 좌석 배정을 초기화합니다"
-                      style={{ backgroundColor: '#1C71E8' }}
+                      style={{ backgroundColor: '#2d3142' }}
                       className="w-[96px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       초기화
