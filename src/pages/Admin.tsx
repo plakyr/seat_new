@@ -679,7 +679,9 @@ const updateStoreWithEventData = (event: any) => {
                     </button>
                     {isSessionPanelOpen && (
                     <div className="flex flex-col gap-3 mt-3">
-                      {sessionColors.map(sc => {
+                      {[...sessionColors]
+                        .sort((a, b) => (Number(a.session_id) - Number(b.session_id)) || String(a.session_id).localeCompare(String(b.session_id)))
+                        .map(sc => {
                         const sessionParticipants = participants.filter(p => p.session_id === sc.session_id);
                         const completedCount = sessionParticipants.filter(p => p.seat_id).length;
                         const totalCount = sessionParticipants.length;
