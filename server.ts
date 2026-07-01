@@ -1078,15 +1078,9 @@ app.post('/api/admin/login', async (req, res) => {
         // Notify admins about the participant update
         io.to(`admin:event:${socket.data.eventId}`).emit('participant:update_admin', { participant: result.updatedParticipant });
 
-        // Broadcast turn update
-        io.to(`event:${socket.data.eventId}`).emit('system:turn', {
-          currentTurnOrder: result.updatedSystemState.current_turn_order,
-          currentTurnStartTime: result.updatedSystemState.current_turn_start_time
-        });
-        io.to(`admin:event:${socket.data.eventId}`).emit('system:turn', {
-          currentTurnOrder: result.updatedSystemState.current_turn_order,
-          currentTurnStartTime: result.updatedSystemState.current_turn_start_time
-        });
+        // 턴 전환 알림: 전원 완료/그룹 간 대기 여부를 먼저 확인한 뒤 emit한다
+        // (무조건 system:turn만 보내면 마지막 참가자가 선택한 순간 "대기 중"으로 잘못 보임)
+        await notifyTurnAdvance(socket.data.eventId, result.updatedSystemState);
 
       } catch (error: any) {
         socket.emit('seat:error', { error: error.message || '좌석 선택 중 오류가 발생했습니다.' });
@@ -1274,6 +1268,24 @@ app.post('/api/admin/login', async (req, res) => {
     };
   }
 
+  // 턴을 넘긴 직후 호출: 무조건 system:turn만 보내면 방금 막 전원이 완료되었거나
+  // 그룹 간 대기 상태로 넘어간 경우를 놓쳐서, 참가자 화면에 "대기 중"이 잘못 표시된 채로
+  // 다음 1초 스케줄러 틱까지 방치될 수 있다. 여기서 즉시 흐름을 재확인해 올바른 이벤트를 보낸다.
+  async function notifyTurnAdvance(eventId: string, updatedState: { current_turn_order: number; current_turn_start_time: Date }) {
+    const flow = await getFlowAnnouncement(eventId);
+    if (flow) {
+      flowAnnounced.set(eventId, flow.event + JSON.stringify(flow.payload));
+      io.to(`event:${eventId}`).emit(flow.event, flow.payload);
+      io.to(`admin:event:${eventId}`).emit(flow.event, flow.payload);
+      if (flow.event === 'system:session_change' && !flow.payload.prevSession) {
+        waitingForStart.set(eventId, flow.payload.nextSession);
+      }
+      return;
+    }
+    flowAnnounced.delete(eventId);
+    emitTurn(eventId, updatedState);
+  }
+
   function sortSeatsForAutoAssign(seats: any[], totalCols: number) {
     return [...seats]
       .filter(s => s.status === 'EMPTY')
@@ -1359,7 +1371,7 @@ app.post('/api/admin/login', async (req, res) => {
     });
     if (advanced.count > 0) {
       const updatedState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
-      if (updatedState) emitTurn(eventId, updatedState);
+      if (updatedState) await notifyTurnAdvance(eventId, updatedState);
     }
     } finally {
       autoAssignInProgress.delete(eventId);
@@ -1414,7 +1426,7 @@ app.post('/api/admin/login', async (req, res) => {
       });
       if (advanced.count > 0) {
         const updatedState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
-        if (updatedState) emitTurn(eventId, updatedState);
+        if (updatedState) await notifyTurnAdvance(eventId, updatedState);
       }
     } finally {
       autoAssignInProgress.delete(eventId);
@@ -1495,7 +1507,7 @@ app.post('/api/admin/login', async (req, res) => {
         where: { event_id: eventId },
         data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
       });
-      emitTurn(eventId, updated);
+      await notifyTurnAdvance(eventId, updated);
       return;
     }
 
@@ -1568,12 +1580,14 @@ app.post('/api/admin/login', async (req, res) => {
             where: { event_id: eventId },
             data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
           });
-          emitTurn(eventId, updatedState);
+          await notifyTurnAdvance(eventId, updatedState);
         }
       } else {
-        // 마지막 참가자까지 완료 → 자동배정 오버레이만 해제
+        // 마지막 참가자까지 완료 → 전원 완료 여부를 다시 확인해 정확한 상태를 알린다.
+        // (그냥 system:turn만 다시 보내면 방금 자동배정된 마지막 참가자가 여전히
+        // "현재 순서"인 것처럼 잘못 표시된다.)
         const finalState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
-        if (finalState) emitTurn(eventId, finalState);
+        if (finalState) await notifyTurnAdvance(eventId, finalState);
       }
     } catch (err) {
       console.error('[AutoAssign] 오류:', err);
