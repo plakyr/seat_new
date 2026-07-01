@@ -1094,12 +1094,14 @@ app.post('/api/admin/login', async (req, res) => {
             throw new Error('아직 좌석 선택 차례가 아닙니다.');
           }
 
-          // 그룹 시작 시간 전에는 차례여도 선택 불가
+          // 그룹이 시작되기 전(시작시간 미지정 또는 미도달)에는 차례여도 선택 불가
           const sess = await tx.sessionColor.findFirst({
             where: { event_id: socket.data.eventId, session_id: participant.session_id }
           });
-          if (sess?.start_time && !isSessionStartTimeReached(sess.start_time)) {
-            throw new Error(`아직 그룹 시작 시간이 아닙니다. (시작: ${sess.start_time})`);
+          if (!isGroupStarted(sess?.start_time)) {
+            throw new Error(sess?.start_time
+              ? `아직 그룹 시작 시간이 아닙니다. (시작: ${sess.start_time})`
+              : '아직 그룹 시작 시간이 지정되지 않았습니다.');
           }
 
           const now = new Date();
@@ -1199,12 +1201,14 @@ app.post('/api/admin/login', async (req, res) => {
             return;
           }
 
-          // 그룹 시작 시간 전에는 채팅 불가
+          // 그룹이 시작되기 전(시작시간 미지정 또는 미도달)에는 채팅 불가
           const chatSession = await prisma.sessionColor.findFirst({
             where: { event_id: eventId, session_id: participant.session_id }
           });
-          if (chatSession?.start_time && !isSessionStartTimeReached(chatSession.start_time)) {
-            socket.emit('chat:error', { error: `아직 그룹 시작 시간이 아닙니다. (시작: ${chatSession.start_time})` });
+          if (!isGroupStarted(chatSession?.start_time)) {
+            socket.emit('chat:error', { error: chatSession?.start_time
+              ? `아직 그룹 시작 시간이 아닙니다. (시작: ${chatSession.start_time})`
+              : '아직 그룹 시작 시간이 지정되지 않았습니다.' });
             return;
           }
           
@@ -1312,6 +1316,14 @@ app.post('/api/admin/login', async (req, res) => {
     return new Date(Date.UTC(y, mo - 1, d, Number(m[1]) - 9, Number(m[2]), 0, 0));
   }
 
+  // 진행 흐름 판단용: 그룹이 "시작되었는지" 여부.
+  // start_time이 설정되어 있고(비어있지 않고) 그 시각에 도달했을 때만 true.
+  // start_time이 지정되지 않은 그룹은 아직 시작하지 않은 것으로 보아 대기시킨다.
+  // (isSessionStartTimeReached는 null을 "제한 없음"으로 보지만, 흐름 제어에서는 반대로 취급)
+  function isGroupStarted(startTime: string | null | undefined): boolean {
+    return !!startTime && isSessionStartTimeReached(startTime);
+  }
+
   // 이벤트별 마지막 공지 키 (동일 공지 중복 emit 방지)
   const flowAnnounced = new Map<string, string>();   // eventId → 마지막 공지 키
 
@@ -1334,10 +1346,11 @@ app.post('/api/admin/login', async (req, res) => {
       const sess = await prisma.sessionColor.findFirst({
         where: { event_id: eventId, session_id: cur.session_id }
       });
-      if (sess?.start_time && !isSessionStartTimeReached(sess.start_time)) {
+      // 현재 그룹이 아직 시작되지 않았으면(시작시간 미지정 또는 미도달) 대기 상태로 유지한다.
+      if (!isGroupStarted(sess?.start_time)) {
         return {
           event: 'system:session_change',
-          payload: { prevSession: null, nextSession: cur.session_id, nextStartTime: sess.start_time }
+          payload: { prevSession: null, nextSession: cur.session_id, nextStartTime: sess?.start_time ?? null }
         };
       }
       return null;
@@ -1362,11 +1375,12 @@ app.post('/api/admin/login', async (req, res) => {
     const nextSession = await prisma.sessionColor.findFirst({
       where: { event_id: eventId, session_id: nextParticipant.session_id }
     });
-    if (!nextSession?.start_time || isSessionStartTimeReached(nextSession.start_time)) return null;
+    // 다음 그룹이 이미 시작되었으면 대기(gap) 없이 바로 진행. 아직 시작 전(미지정 포함)이면 대기.
+    if (isGroupStarted(nextSession?.start_time)) return null;
     return {
       prevSession: currentParticipant.session_id,
       nextSession: nextParticipant.session_id,
-      nextStartTime: nextSession.start_time
+      nextStartTime: nextSession?.start_time ?? null
     };
   }
 
@@ -1414,7 +1428,9 @@ app.post('/api/admin/login', async (req, res) => {
     const flow = await getFlowAnnouncement(eventId);
     if (flow) {
       if (flow.event === 'system:all_complete') throw new Error('모든 그룹 좌석 지정이 완료되었습니다.');
-      throw new Error(`아직 그룹 시작 시간이 아닙니다. (그룹 ${flow.payload.nextSession} 시작: ${flow.payload.nextStartTime})`);
+      throw new Error(flow.payload.nextStartTime
+        ? `아직 그룹 시작 시간이 아닙니다. (그룹 ${flow.payload.nextSession} 시작: ${flow.payload.nextStartTime})`
+        : `그룹 ${flow.payload.nextSession}의 시작 시간이 지정되지 않았습니다. 먼저 그룹 시작 시간을 설정해주세요.`);
     }
 
     const currentParticipant = await prisma.participant.findFirst({
