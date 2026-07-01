@@ -24,6 +24,10 @@ export default function AnnouncementBar({
 }: Props) {
   const [timeLeft, setTimeLeft] = useState<string>('03:00');
   const [timeLeftMs, setTimeLeftMs] = useState<number>(3 * 60 * 1000);
+  // 임박(10초 이하) 구간의 깜빡임을 CSS animate-pulse 대신 리액트 상태로 직접 제어한다.
+  // (일부 모바일 브라우저에서 텍스트가 자주 바뀌는 요소에 animate-pulse를 걸면
+  // GPU 합성 과정에서 이전 프레임이 잔상처럼 남는 렌더링 버그가 보고된 바 있다)
+  const [blinkOn, setBlinkOn] = useState(true);
   // 클라이언트 기준 시작 시각 보정값 (서버 시간 - 클라이언트 시간)
   const offsetRef = useRef<number>(0);
   const offsetInitialized = useRef<boolean>(false);
@@ -58,6 +62,8 @@ export default function AnnouncementBar({
         setTimeLeft(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
         setTimeLeftMs(diff);
       }
+      // 500ms마다 도는 이 틱에 맞춰 깜빡임 상태도 함께 토글한다 (임박 구간에서만)
+      setBlinkOn(prev => (diff <= 10000 ? !prev : true));
     };
 
     update();
@@ -119,7 +125,10 @@ export default function AnnouncementBar({
       {/* 모바일에서 그룹 안내처럼 긴 문구가 잘리지 않도록, 자르는 대신 2줄까지 줄바꿈되게 한다 */}
       <span className="font-bold text-base sm:text-lg leading-snug line-clamp-2 flex-1 min-w-0">{text}</span>
       {showTimer && (
-        <span className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}>
+        <span
+          style={{ opacity: timeLeftMs <= 10000 ? (blinkOn ? 1 : 0.4) : 1 }}
+          className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300' : ''}`}
+        >
           {timeLeft}
         </span>
       )}
