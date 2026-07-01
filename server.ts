@@ -407,6 +407,24 @@ app.post('/api/admin/login', async (req, res) => {
         return { session_id, color };
       });
 
+      // group_id + order_in_group 조합은 전역 순번(turn_order)을 결정하므로 유일해야 한다.
+      // 중복되면 두 명 이상이 같은 순번을 갖게 되어 진행이 꼬이므로 업로드를 거부한다.
+      const comboCounts = new Map<string, number>();
+      records.forEach((r: any) => {
+        const combo = `${r.group_id}|${r.order_in_group}`;
+        comboCounts.set(combo, (comboCounts.get(combo) || 0) + 1);
+      });
+      const duplicateCombos = [...comboCounts.entries()].filter(([, count]) => count > 1);
+      if (duplicateCombos.length > 0) {
+        const detail = duplicateCombos
+          .map(([combo, count]) => {
+            const [g, o] = combo.split('|');
+            return `그룹 ${g} 순번 ${o} (${count}명)`;
+          })
+          .join(', ');
+        throw new Error(`참가자 명단에 그룹/순번이 중복된 항목이 있습니다: ${detail}. group_id와 order_in_group 조합은 고유해야 합니다.`);
+      }
+
       // Calculate global turn_order
       const turnGroups = new Set<string>();
       records.forEach((r: any) => {
@@ -750,7 +768,16 @@ app.post('/api/admin/login', async (req, res) => {
       });
 
       const flow = await getFlowAnnouncement(data.eventId);
-      if (flow) socket.emit(flow.event, flow.payload);
+      if (flow) {
+        socket.emit(flow.event, flow.payload);
+      } else if (systemState) {
+        // flow가 없으면 system:turn을 보내 관리자 화면의 announcement를 IDLE로 초기화한다.
+        // (이벤트를 전환했을 때 이전 이벤트의 공지 상태가 그대로 남는 것을 방지)
+        socket.emit('system:turn', {
+          currentTurnOrder: systemState.current_turn_order,
+          currentTurnStartTime: systemState.current_turn_start_time,
+        });
+      }
 
       // 관리자 입장 시 현재 접속자 목록 즉시 전송
       broadcastOnlineParticipants(data.eventId);
@@ -1583,7 +1610,14 @@ app.post('/api/admin/login', async (req, res) => {
 
       if (sortedSeats.length === 0) {
         // 빈 좌석이 없으면 만료 처리만 (is_final도 true로 하여 미완료로 남지 않게 함)
-        await prisma.participant.update({ where: { id: currentParticipant.id }, data: { turn_status: 'EXPIRED', is_final: true } });
+        const expiredParticipant = await prisma.participant.update({
+          where: { id: currentParticipant.id },
+          data: { turn_status: 'EXPIRED', is_final: true }
+        });
+        // 관리자 화면과 해당 참가자 화면에 만료 상태를 반영한다.
+        io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: expiredParticipant });
+        const userSocketId = activeSockets.get(currentParticipant.id);
+        if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: expiredParticipant });
       } else {
         const targetSeat = sortedSeats[0];
         try {
