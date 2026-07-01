@@ -237,6 +237,13 @@ const updateStoreWithEventData = (event: any) => {
     }
   };
 
+  // 관리자 화면의 상태(좌석/참가자/공지/채팅)만 서버에서 다시 받아온다.
+  // 참가자에게는 아무 신호도 보내지 않으며(force_reload 미사용), 세션/토큰도 건드리지 않는다.
+  const handleReloadState = () => {
+    if (!selectedEventId || !socket) return;
+    socket.emit('admin:request_event', { eventId: selectedEventId });
+  };
+
   const handleResetEvent = async () => {
     if (!selectedEventId) return;
     const target = events.find(ev => ev.id === selectedEventId);
@@ -592,6 +599,14 @@ const updateStoreWithEventData = (event: any) => {
                       className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       화면 새로고침
+                    </button>
+                    <button
+                      onClick={handleReloadState}
+                      title="관리자 화면의 좌석·참가자·공지·채팅 상태만 서버에서 다시 받아옵니다 (참가자에게는 영향 없음)"
+                      style={{ backgroundColor: '#2f8f8f' }}
+                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                    >
+                      상태 다시 불러오기
                     </button>
                     <button
                       onClick={handleToggleFreeze}
