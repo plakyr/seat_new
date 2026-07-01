@@ -22,6 +22,8 @@ export default function Admin() {
   const [file, setFile] = useState<File | null>(null);
   const [aisleAfterRows, setAisleAfterRows] = useState('');
   const [aisleAfterCols, setAisleAfterCols] = useState('');
+  const [layoutMode, setLayoutMode] = useState<'simple' | 'grid'>('simple');
+  const [seatFile, setSeatFile] = useState<File | null>(null);
   const [status, setStatus] = useState('');
 
   // Monitoring state
@@ -140,13 +142,22 @@ const updateStoreWithEventData = (event: any) => {
     e.preventDefault();
     if (!file || !adminToken) return;
 
+    if (layoutMode === 'grid' && !seatFile) {
+      setStatus('격자 방식에서는 좌석 배치 CSV 파일을 선택해주세요.');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('name', eventName);
     formData.append('rows', rows);
     formData.append('cols', cols);
     formData.append('file', file);
-    if (aisleAfterRows.trim()) formData.append('aisle_after_rows', aisleAfterRows.trim());
-    if (aisleAfterCols.trim()) formData.append('aisle_after_cols', aisleAfterCols.trim());
+    formData.append('layout_mode', layoutMode);
+    if (layoutMode === 'grid' && seatFile) formData.append('seatFile', seatFile);
+    if (layoutMode === 'simple') {
+      if (aisleAfterRows.trim()) formData.append('aisle_after_rows', aisleAfterRows.trim());
+      if (aisleAfterCols.trim()) formData.append('aisle_after_cols', aisleAfterCols.trim());
+    }
 
     setStatus('업로드 중...');
     try {
@@ -162,6 +173,7 @@ const updateStoreWithEventData = (event: any) => {
         setStatus('업로드 성공! 이벤트 ID: ' + (data.eventId || data.event?.id));
         setEventName('');
         setFile(null);
+        setSeatFile(null);
         setAisleAfterRows('');
         setAisleAfterCols('');
         if (activeTab === 'MONITOR') fetchEvents();
@@ -406,59 +418,101 @@ const updateStoreWithEventData = (event: any) => {
                     />
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">좌석 행(Row) 수</label>
-                      <input 
-                        type="number" 
-                        value={rows}
-                        onChange={(e) => setRows(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
-                        required
-                        min="1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">좌석 열(Col) 수</label>
-                      <input 
-                        type="number" 
-                        value={cols}
-                        onChange={(e) => setCols(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
-                        required
-                        min="1"
-                      />
+                  {/* 좌석표 생성 방식 선택 */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">좌석표 생성 방식</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setLayoutMode('simple')}
+                        className={`px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${layoutMode === 'simple' ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}`}
+                      >
+                        기존 방식 (행/열 + 통로)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLayoutMode('grid')}
+                        className={`px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${layoutMode === 'grid' ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}`}
+                      >
+                        격자 CSV 업로드
+                      </button>
                     </div>
                   </div>
 
-                  {/* 복도 설정 */}
-                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                    <p className="text-sm font-semibold text-gray-700">통로 위치 설정 <span className="font-normal text-gray-400">(선택사항)</span></p>
+                  {layoutMode === 'simple' ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">좌석 행(Row) 수</label>
+                          <input
+                            type="number"
+                            value={rows}
+                            onChange={(e) => setRows(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
+                            required
+                            min="1"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">좌석 열(Col) 수</label>
+                          <input
+                            type="number"
+                            value={cols}
+                            onChange={(e) => setCols(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
+                            required
+                            min="1"
+                          />
+                        </div>
+                      </div>
+
+                      {/* 복도 설정 */}
+                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
+                        <p className="text-sm font-semibold text-gray-700">통로 위치 설정 <span className="font-normal text-gray-400">(선택사항)</span></p>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            가로 통로 — 해당 행 <span className="text-gray-900 font-bold">뒤</span>에 통로를 추가할 행 번호 (쉼표로 구분)
+                          </label>
+                          <input
+                            type="text"
+                            value={aisleAfterRows}
+                            onChange={(e) => setAisleAfterRows(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                            placeholder="예: 3, 6  →  3행과 4행 사이, 6행과 7행 사이에 통로"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            세로 통로 — 해당 열 <span className="text-gray-900 font-bold">뒤</span>에 통로를 추가할 열 번호 (쉼표로 구분)
+                          </label>
+                          <input
+                            type="text"
+                            value={aisleAfterCols}
+                            onChange={(e) => setAisleAfterCols(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                            placeholder="예: 4, 8  →  4열과 5열 사이, 8열과 9열 사이에 통로"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        가로 통로 — 해당 행 <span className="text-gray-900 font-bold">뒤</span>에 통로를 추가할 행 번호 (쉼표로 구분)
-                      </label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">좌석 배치 (격자 CSV)</label>
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-3">
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          엑셀 격자에 <span className="font-bold text-gray-900">좌석 번호</span>를 그대로 적고, <span className="font-bold text-gray-900">빈 칸</span>은 통로/여백으로 둡니다.<br/>
+                          한 칸 = 좌석 1개. 화면에는 적으신 번호가 그대로 표시됩니다.<br/>
+                          <span className="text-gray-400 mt-1 block font-mono">예: 1,2,3,,4,5  →  3번 뒤에 통로</span>
+                        </p>
+                      </div>
                       <input
-                        type="text"
-                        value={aisleAfterRows}
-                        onChange={(e) => setAisleAfterRows(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
-                        placeholder="예: 3, 6  →  3행과 4행 사이, 6행과 7행 사이에 통로"
+                        type="file"
+                        accept=".csv"
+                        onChange={(e) => setSeatFile(e.target.files?.[0] || null)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-900 file:text-white hover:file:bg-gray-800 cursor-pointer"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        세로 통로 — 해당 열 <span className="text-gray-900 font-bold">뒤</span>에 통로를 추가할 열 번호 (쉼표로 구분)
-                      </label>
-                      <input
-                        type="text"
-                        value={aisleAfterCols}
-                        onChange={(e) => setAisleAfterCols(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
-                        placeholder="예: 4, 8  →  4열과 5열 사이, 8열과 9열 사이에 통로"
-                      />
-                    </div>
-                  </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">참가자 명단 (CSV)</label>

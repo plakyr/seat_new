@@ -234,11 +234,17 @@ app.post('/api/admin/login', async (req, res) => {
     }
   });
 
-  app.post('/api/admin/upload', requireAdmin, upload.single('file'), async (req, res) => {
+  app.post('/api/admin/upload', requireAdmin, upload.fields([{ name: 'file', maxCount: 1 }, { name: 'seatFile', maxCount: 1 }]), async (req, res) => {
     try {
       const { name, rows, cols } = req.body;
-      const file = req.file;
+      const layoutMode = req.body.layout_mode === 'grid' ? 'grid' : 'simple';
+      const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
+      const file = files?.file?.[0];
+      const seatFile = files?.seatFile?.[0];
       if (!file) return res.status(400).json({ error: 'No file uploaded' });
+      if (layoutMode === 'grid' && !seatFile) {
+        return res.status(400).json({ error: '격자 방식에서는 좌석 배치 CSV 파일이 필요합니다.' });
+      }
 
       const rawRecords = parse(file.buffer, { columns: true, skip_empty_lines: true, bom: true });
       
@@ -285,17 +291,61 @@ app.post('/api/admin/login', async (req, res) => {
         String(req.body.aisle_after_cols).split(',').map((v: string) => parseInt(v.trim())).filter((n: number) => !isNaN(n))
       ) : null;
 
-      const layout = await prisma.venueLayout.create({
-        data: { event_id: event.id, rows: parseInt(rows), cols: parseInt(cols), aisle_after_rows: aisleAfterRows, aisle_after_cols: aisleAfterCols }
-      });
-
-      const seatsData = [];
-      for (let r = 1; r <= parseInt(rows); r++) {
-        for (let c = 1; c <= parseInt(cols); c++) {
-          seatsData.push({ layout_id: layout.id, row: r, col: c, status: 'EMPTY' });
+      if (layoutMode === 'grid') {
+        // ── 격자 CSV 방식: 각 칸이 좌석번호(있으면 좌석) 또는 빈칸(통로/여백) ──
+        // 헤더 없이 원본 격자 그대로 파싱한다.
+        const gridRows: string[][] = parse(seatFile!.buffer, {
+          columns: false, skip_empty_lines: false, relax_column_count: true, bom: true
+        });
+        // 완전히 빈 줄(모든 칸이 빈 값)은 무시
+        const cleanRows = gridRows.filter(row => row.some(cell => (cell ?? '').trim() !== ''));
+        if (cleanRows.length === 0) {
+          throw new Error('좌석 배치 CSV에서 좌석을 찾을 수 없습니다.');
         }
+        const gridCols = Math.max(...cleanRows.map(r => r.length));
+
+        const seatsData: any[] = [];
+        const seenLabels = new Set<string>();
+        cleanRows.forEach((row, rIdx) => {
+          row.forEach((cell, cIdx) => {
+            const label = (cell ?? '').trim();
+            if (label === '') return; // 빈 칸 = 통로/여백 → 좌석 생성 안 함
+            if (seenLabels.has(label)) {
+              throw new Error(`좌석 배치 CSV에 중복된 좌석 번호가 있습니다: ${label}`);
+            }
+            seenLabels.add(label);
+            seatsData.push({
+              layout_id: '', // 아래에서 채움
+              row: rIdx + 1,
+              col: cIdx + 1,
+              status: 'EMPTY',
+              seat_label: label,
+            });
+          });
+        });
+
+        const layout = await prisma.venueLayout.create({
+          data: {
+            event_id: event.id, rows: cleanRows.length, cols: gridCols,
+            aisle_after_rows: null, aisle_after_cols: null, layout_mode: 'grid'
+          }
+        });
+        seatsData.forEach(s => { s.layout_id = layout.id; });
+        await prisma.seat.createMany({ data: seatsData });
+      } else {
+        // ── 기존 방식: 행/열 전체를 꽉 찬 직사각형으로 생성 ──
+        const layout = await prisma.venueLayout.create({
+          data: { event_id: event.id, rows: parseInt(rows), cols: parseInt(cols), aisle_after_rows: aisleAfterRows, aisle_after_cols: aisleAfterCols, layout_mode: 'simple' }
+        });
+
+        const seatsData = [];
+        for (let r = 1; r <= parseInt(rows); r++) {
+          for (let c = 1; c <= parseInt(cols); c++) {
+            seatsData.push({ layout_id: layout.id, row: r, col: c, status: 'EMPTY' });
+          }
+        }
+        await prisma.seat.createMany({ data: seatsData });
       }
-      await prisma.seat.createMany({ data: seatsData });
 
       // Process Participants
       const participantCounts = new Map<string, number>();

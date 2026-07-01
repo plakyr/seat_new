@@ -38,6 +38,7 @@ model VenueLayout {
   cols              Int
   aisle_after_rows  String?  // JSON: 복도가 있는 행 뒤 번호 예: "[2,5]"
   aisle_after_cols  String?  // JSON: 복도가 있는 열 뒤 번호 예: "[3,7]"
+  layout_mode       String?  @default("simple") // "simple"(행/열 격자) | "grid"(CSV 격자 업로드)
   seats             Seat[]
 }
 
@@ -51,6 +52,7 @@ model Seat {
   assigned_to   String?  // Participant ID
   session_id    String?  // The session this seat was reserved in
   manual_label  String?  // 관리자 수동 배정 시 표시할 이름
+  seat_label    String?  // 격자 CSV 업로드 시 좌석 고유 번호/라벨 (예: "42")
   updated_at    DateTime @updatedAt
   
   @@unique([layout_id, row, col])

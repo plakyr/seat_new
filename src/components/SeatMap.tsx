@@ -9,6 +9,19 @@ function rowToLetter(row: number): string {
   return String.fromCharCode(64 + row);
 }
 
+// 좌석 표시용 문자열: 격자 CSV 방식이면 좌석 번호(seat_label), 아니면 "A열 3번"
+function seatLabelText(seat: any): string {
+  if (!seat) return '';
+  if (seat.seat_label) return `${seat.seat_label}번`;
+  return `${rowToLetter(seat.row)}열 ${seat.col}번`;
+}
+
+// 좌석 타일 안에 짧게 표시할 문자열
+function seatShortLabel(seat: any): string {
+  if (seat?.seat_label) return String(seat.seat_label);
+  return `${rowToLetter(seat.row)}-${seat.col}`;
+}
+
 // 모바일 툴팁 컴포넌트
 function SeatTooltip({ text, onClose }: { text: string; onClose: () => void }) {
   return (
@@ -81,7 +94,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       if (user.turn_status === 'COMPLETED' || user.is_final) {
         // 내 자리 터치 → 좌석 정보 툴팁 표시
         if (seat.assigned_to === user.id) {
-          setTooltipText(`내 자리: ${rowToLetter(seat.row)}열 ${seat.col}번`);
+          setTooltipText(`내 자리: ${seatLabelText(seat)}`);
         }
         return;
       }
@@ -90,14 +103,14 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         const assignedParticipant = participants.find((p: any) => p.id === seat.assigned_to);
         const seatName = seat.status === 'MANUAL' ? seat.manual_label : assignedParticipant?.name;
         if (seatName) {
-          setTooltipText(`${rowToLetter(seat.row)}열 ${seat.col}번 — ${seatName}`);
+          setTooltipText(`${seatLabelText(seat)} — ${seatName}`);
         } else {
-          setTooltipText(`${rowToLetter(seat.row)}열 ${seat.col}번`);
+          setTooltipText(seatLabelText(seat));
         }
         return;
       }
       // 빈 자리 → 확인 팝업
-      setConfirmSeat({ seatId: seat.id, label: `${rowToLetter(seat.row)}열 ${seat.col}번` });
+      setConfirmSeat({ seatId: seat.id, label: seatLabelText(seat) });
     }
   };
 
@@ -138,7 +151,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   const handleForceAssign = (participantId: string) => {
     if (!socket || !selectedSeatInfo) return;
     const targetSeat = seats.find(s => s.id === selectedSeatInfo.seatId);
-    const label = targetSeat ? `${rowToLetter(targetSeat.row)}열 ${targetSeat.col}번` : '해당 좌석';
+    const label = targetSeat ? seatLabelText(targetSeat) : '해당 좌석';
     if (!window.confirm(`이 참가자를 ${label}에 강제 배정하시겠습니까?`)) return;
     const eventId =
       selectedSeatInfo.participant?.event_id ||
@@ -290,8 +303,8 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                             )}
                             style={customStyle}
                             title={displayName
-                              ? `${displayName} (${rowToLetter(seat.row)}열 ${seat.col}번)`
-                              : `${rowToLetter(seat.row)}열 ${seat.col}번`}
+                              ? `${displayName} (${seatLabelText(seat)})`
+                              : seatLabelText(seat)}
                           >
                             {seat.status === 'PRIVATE' ? null : displayName ? (
                               <span className={cn(
@@ -301,7 +314,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                                 {displayName}
                               </span>
                             ) : (
-                              <span className="text-[8px] text-gray-500">{rowToLetter(seat.row)}-{seat.col}</span>
+                              <span className="text-[8px] text-gray-500">{seatShortLabel(seat)}</span>
                             )}
                           </div>
                           {hasColAisle && <div className="w-5 shrink-0" />}
@@ -348,7 +361,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
           ) : selectedSeatInfo.isPrivate ? (
             <div className="space-y-3 text-sm text-gray-700">
               <p className="font-medium text-gray-500">
-                사석 ({rowToLetter(seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.row)}열 {seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.col}번)
+                사석 ({seatLabelText(seats.find((s: any) => s.id === selectedSeatInfo.seatId))})
               </p>
               <button onClick={() => handleSetSeatPrivate(false)} className="w-full py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-bold transition-colors">
                 선택 가능으로 되돌리기
@@ -357,7 +370,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
           ) : selectedSeatInfo.isManual ? (
             <div className="space-y-2 text-sm text-gray-700">
               <p className="font-medium text-gray-500">
-                수동 배정 ({rowToLetter(seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.row)}열 {seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.col}번)
+                수동 배정 ({seatLabelText(seats.find((s: any) => s.id === selectedSeatInfo.seatId))})
               </p>
               <input
                 type="text"
@@ -381,7 +394,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
           ) : (
             <div className="space-y-2 text-sm text-gray-700">
               <p className="font-medium text-gray-500">
-                빈 좌석 ({rowToLetter(seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.row)}열 {seats.find((s: any) => s.id === selectedSeatInfo.seatId)?.col}번)
+                빈 좌석 ({seatLabelText(seats.find((s: any) => s.id === selectedSeatInfo.seatId))})
               </p>
               <input
                 type="text"
