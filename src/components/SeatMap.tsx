@@ -340,12 +340,12 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         </TransformComponent>
       </TransformWrapper>
 
-      {/* 범례 */}
-      <div className="shrink-0 flex flex-wrap justify-center gap-x-4 gap-y-1 bg-white/95 py-2 px-4 border-t border-gray-200 text-xs font-medium">
-        <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><div className="w-4 h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#BFBFBF' }} />선택 불가</div>
-        <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><div className="w-4 h-4 rounded bg-gray-200 shadow-sm shrink-0" />선택 가능</div>
-        <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><div className="w-4 h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#4374D9' }} />선택 완료</div>
-        {!isAdmin && <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><div className="w-4 h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#2ecc71' }} />내 자리</div>}
+      {/* 범례 — 한 줄에 모두 표시 (좁은 화면에선 폰트/간격 축소) */}
+      <div className="shrink-0 flex flex-nowrap justify-center items-center gap-x-2 sm:gap-x-4 bg-white/95 py-2 px-2 border-t border-gray-200 text-[10px] sm:text-xs font-medium">
+        <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#BFBFBF' }} />선택 불가</div>
+        <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-gray-200 shadow-sm shrink-0" />선택 가능</div>
+        <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#4374D9' }} />선택 완료</div>
+        {!isAdmin && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#2ecc71' }} />내 자리</div>}
       </div>
 
       {/* 관리자용 좌석 팝업 */}
