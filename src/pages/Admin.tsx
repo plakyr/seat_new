@@ -37,8 +37,8 @@ export default function Admin() {
   const [editEndTime, setEditEndTime] = useState('');
   const [isSessionPanelOpen, setIsSessionPanelOpen] = useState(false);
 
-  // 관리자 화면 진입 시 참가자 상태(메모리)만 초기화. 저장된 참가자 세션은 건드리지 않는다
-  // (localStorage는 탭 간 공유되므로, 여기서 지우면 다른 탭의 참가자가 로그아웃됨)
+  // 관리자 화면 진입 시 참가자 상태(메모리)만 초기화. 저장된 참가자 세션(sessionStorage)은
+  // 건드리지 않는다 — 같은 탭에서 다시 /user로 돌아왔을 때 로그인이 유지되게 하기 위함
   useEffect(() => {
     useStore.getState().clearParticipantMemory();
   }, []);
@@ -623,6 +623,9 @@ const updateStoreWithEventData = (event: any) => {
                 <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col relative min-h-[500px]">
                   {/* 현재 좌석지정자 및 남은 시간 표시 */}
                   <AnnouncementBar
+                    // 턴/공지 상태가 바뀔 때마다 컴포넌트를 완전히 새로 마운트해,
+                    // 내부 타이머 상태(timeLeft 등)까지 깨끗하게 초기화한다.
+                    key={`${announcement.type}-${currentTurnStartTime}`}
                     announcement={announcement}
                     currentTurnOrder={currentTurnOrder}
                     currentTurnStartTime={currentTurnStartTime}

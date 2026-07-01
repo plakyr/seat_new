@@ -108,23 +108,18 @@ export default function AnnouncementBar({
     announcement.type !== 'AUTO_ASSIGN' &&
     announcement.type !== 'ALL_COMPLETE';
 
+  // 이 컴포넌트는 사용하는 쪽(User.tsx/Admin.tsx)에서 턴/공지 상태를 key로 걸어
+  // 상태가 바뀔 때마다 통째로 새로 마운트한다 — 그래서 여기서는 별도 key 없이
+  // 안전하게 렌더링만 하면 된다 (내부 타이머 상태까지 항상 깨끗하게 초기화됨).
   return (
-    // key로 문구가 바뀔 때마다 바 전체(배경색 전환 애니메이션 포함)를 완전히 새로 그린다.
-    // transition-colors/animate-pulse가 걸린 채로 같은 노드를 재사용하면, 모바일
-    // 브라우저에서 직전 프레임의 배경/텍스트가 잔상처럼 새 내용과 겹쳐 보이는 경우가 있다.
     <div
-      key={`${announcement.type}|${text}`}
       style={{ backgroundColor: bgColor }}
       className={`text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
     >
-      <span className="font-bold text-lg truncate">{text}</span>
+      {/* 모바일에서 그룹 안내처럼 긴 문구가 잘리지 않도록, 자르는 대신 2줄까지 줄바꿈되게 한다 */}
+      <span className="font-bold text-base sm:text-lg leading-snug line-clamp-2 flex-1 min-w-0">{text}</span>
       {showTimer && (
-        // key로 턴이 바뀔 때마다(currentTurnStartTime 변경) 타이머 엘리먼트를 새로 그려,
-        // 직전 턴의 빨간 임박 표시(animate-pulse)가 새 타이머와 겹쳐 보이지 않도록 한다.
-        <span
-          key={currentTurnStartTime ?? 'no-timer'}
-          className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}
-        >
+        <span className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums ${timeLeftMs <= 10000 ? 'text-red-300 animate-pulse' : ''}`}>
           {timeLeft}
         </span>
       )}

@@ -99,11 +99,11 @@ interface AppState {
   setCols: (cols: number) => void;
 }
 
-// 새로고침 시에도 로그인 유지되도록 참가자 세션을 localStorage에 보관
+// 참가자 세션은 sessionStorage에 보관 → 새로고침해도 유지되지만 탭/브라우저를 닫으면 자동 로그아웃
 const PARTICIPANT_SESSION_KEY = 'participant_session';
 function loadPersistedSession(): { user: User | null; sessionToken: string | null } {
   try {
-    const raw = localStorage.getItem(PARTICIPANT_SESSION_KEY);
+    const raw = sessionStorage.getItem(PARTICIPANT_SESSION_KEY);
     if (!raw) return { user: null, sessionToken: null };
     const parsed = JSON.parse(raw);
     if (parsed && parsed.user && parsed.sessionToken) {
@@ -154,18 +154,18 @@ export const useStore = create<AppState>((set) => ({
   setUser: (user, sessionToken) => {
     try {
       if (user && sessionToken) {
-        localStorage.setItem(PARTICIPANT_SESSION_KEY, JSON.stringify({ user, sessionToken }));
+        sessionStorage.setItem(PARTICIPANT_SESSION_KEY, JSON.stringify({ user, sessionToken }));
       } else {
-        localStorage.removeItem(PARTICIPANT_SESSION_KEY);
+        sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
       }
     } catch { /* 무시 */ }
     set({ user, sessionToken });
   },
   logoutUser: () => {
-    try { localStorage.removeItem(PARTICIPANT_SESSION_KEY); } catch { /* 무시 */ }
+    try { sessionStorage.removeItem(PARTICIPANT_SESSION_KEY); } catch { /* 무시 */ }
     set({ user: null, sessionToken: null });
   },
-  // 메모리 상태만 초기화 (저장된 세션은 유지 → 다른 탭의 세션에 영향 없음)
+  // 메모리 상태만 초기화 (저장된 세션은 유지)
   clearParticipantMemory: () => set({ user: null, sessionToken: null }),
   clearAdminMemory: () => set({ adminToken: null, adminUser: null, isAdmin: false }),
   setAdminAuth: (token, user) => {
