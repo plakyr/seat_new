@@ -7,7 +7,7 @@ import { useSocket } from '../store/useSocket';
 import ChatWindow from '../components/ChatWindow';
 
 export default function User() {
-  const { user, setUser, serverTime, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, announcement, setLayout, participants, timerPaused } = useStore();
+  const { user, setUser, logoutUser, serverTime, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, announcement, setLayout, participants, timerPaused } = useStore();
   const socket = useSocket();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -99,6 +99,12 @@ export default function User() {
           <h1 className="text-lg font-bold">{user.name}님</h1>
           <p className="text-sm text-gray-500">{user.session_id}그룹 {groupOrder}번째</p>
         </div>
+        <button
+          onClick={() => { if (confirm('로그아웃 하시겠습니까?')) logoutUser(); }}
+          className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 border border-gray-300 hover:bg-gray-100 active:bg-gray-200 transition-colors shrink-0"
+        >
+          로그아웃
+        </button>
       </header>
       <main className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col max-w-6xl mx-auto w-full">
         {/* 공지 바 */}
