@@ -623,8 +623,8 @@ const updateStoreWithEventData = (event: any) => {
                     timerPaused={timerPaused}
                   />
 
-                  <div className="flex-1 flex gap-4">
-                    <div className="flex-[2] flex flex-col">
+                  <div className="flex-1 flex gap-4 min-w-0">
+                    <div className="flex-[2] flex flex-col min-w-0">
                       <div className="flex-1 border border-gray-200 rounded-xl overflow-hidden bg-gray-50 min-h-[400px]">
   <SeatMap forceAdmin={true} />
 </div>
@@ -632,7 +632,7 @@ const updateStoreWithEventData = (event: any) => {
                         선택된 좌석을 클릭하면 참가자 정보를 확인하고 강제 취소할 수 있습니다.
                       </p>
                     </div>
-                    <div className="flex-1 flex flex-col min-h-[400px]">
+                    <div className="flex-1 flex flex-col min-h-[400px] min-w-0">
                       <ChatWindow eventId={selectedEventId} />
                     </div>
                   </div>

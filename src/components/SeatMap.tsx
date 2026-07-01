@@ -205,11 +205,13 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       {/* pinch-to-zoom 지원 */}
       <TransformWrapper
         initialScale={1}
-        minScale={0.3}
+        minScale={0.2}
         maxScale={5}
         wheel={{ step: 0.08 }}
         doubleClick={{ step: 0.7 }}
         panning={{ velocityDisabled: true }}
+        limitToBounds={false}
+        centerZoomedOut={false}
       >
         <TransformComponent
           wrapperStyle={{ width: '100%', flex: 1, overflow: 'hidden' }}
