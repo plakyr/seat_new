@@ -243,13 +243,9 @@ app.post('/api/admin/login', async (req, res) => {
           aisle_after_cols: layout.aisle_after_cols ? JSON.parse(layout.aisle_after_cols) : [],
         } : null,
       });
-      if (systemState) {
-        io.to(`event:${eventId}`).emit('system:turn', {
-          currentTurnOrder: systemState.current_turn_order,
-          currentTurnStartTime: systemState.current_turn_start_time,
-        });
-        io.to(`event:${eventId}`).emit('system:freeze', { isFrozen: false, reason: null });
-      }
+      io.to(`event:${eventId}`).emit('system:freeze', { isFrozen: false, reason: null });
+      io.to(`admin:event:${eventId}`).emit('system:freeze', { isFrozen: false, reason: null });
+
       io.to(`admin:event:${eventId}`).emit('admin:event_data', {
         seats: layout?.seats || [],
         layout: layout ? {
@@ -263,6 +259,23 @@ app.post('/api/admin/login', async (req, res) => {
         sessionColors: await prisma.sessionColor.findMany({ where: { event_id: eventId } }),
         messages: [],
       });
+
+      // 초기화 직후 공지: 그룹 시작 대기 상태면 system:turn(현재 순서)로 깜빡이지 않도록
+      // flow(대기/완료)를 우선 보내고, 그렇지 않을 때만 system:turn을 보낸다.
+      const flow = await getFlowAnnouncement(eventId);
+      if (flow) {
+        io.to(`event:${eventId}`).emit(flow.event, flow.payload);
+        io.to(`admin:event:${eventId}`).emit(flow.event, flow.payload);
+      } else if (systemState) {
+        io.to(`event:${eventId}`).emit('system:turn', {
+          currentTurnOrder: systemState.current_turn_order,
+          currentTurnStartTime: systemState.current_turn_start_time,
+        });
+        io.to(`admin:event:${eventId}`).emit('system:turn', {
+          currentTurnOrder: systemState.current_turn_order,
+          currentTurnStartTime: systemState.current_turn_start_time,
+        });
+      }
 
       res.json({ success: true });
     } catch (error) {
