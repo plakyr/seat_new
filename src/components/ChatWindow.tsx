@@ -28,7 +28,7 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
 
   return (
     <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+      <div className="border-b border-gray-200 px-4 py-3" style={{ backgroundColor: '#FEE500' }}>
         <h3 className="text-base font-bold text-gray-800">실시간 채팅</h3>
       </div>
       

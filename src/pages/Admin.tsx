@@ -400,7 +400,7 @@ const updateStoreWithEventData = (event: any) => {
       </aside>
       
       <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-5xl mx-auto h-full flex flex-col">
+        <div className="max-w-5xl lg:max-w-none mx-auto h-full flex flex-col">
           {/* 모바일 전용 탭 전환 바 (사이드바가 숨겨지므로) */}
           <div className="flex md:hidden gap-2 mb-6">
             <button
@@ -417,7 +417,7 @@ const updateStoreWithEventData = (event: any) => {
             </button>
           </div>
           {activeTab === 'UPLOAD' && (
-            <>
+            <div className="w-full lg:max-w-4xl">
               <h2 className="text-3xl font-bold mb-8 text-gray-900">이벤트 및 참가자 정보 업로드</h2>
               <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                 <form onSubmit={handleUpload} className="space-y-6">
@@ -560,7 +560,7 @@ const updateStoreWithEventData = (event: any) => {
                   )}
                 </form>
               </div>
-            </>
+            </div>
           )}
 
           {activeTab === 'MONITOR' && (
