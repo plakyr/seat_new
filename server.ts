@@ -1112,7 +1112,11 @@ app.post('/api/admin/login', async (req, res) => {
   const AUTO_ASSIGN_NOTICE_MS = 700; // 자동배정 문구 표시 후 좌석 배정까지
   const AUTO_ASSIGN_NEXT_MS = 800;   // 좌석 배정 후 다음 턴 전환까지 (총 1.5초)
   const delay = (ms: number) => new Promise<void>(res => setTimeout(res, ms));
-  const autoAssignInProgress = new Set<string>(); // 진행 중인 이벤트 (재진입 방지)
+  // 실제 배정(자동 시퀀스/수동 강제배정/건너뛰기)이 진행 중인 이벤트.
+  // 이 잠금이 있을 때만 참가자 seat:select를 막는다.
+  const autoAssignInProgress = new Set<string>();
+  // 1초 스케줄러의 평가(evaluation) 중복 실행만 막는 용도. seat:select는 막지 않는다.
+  const autoEvalInProgress = new Set<string>();
 
   function emitTurn(eventId: string, state: { current_turn_order: number; current_turn_start_time: Date }) {
     const payload = {
@@ -1344,10 +1348,11 @@ app.post('/api/admin/login', async (req, res) => {
   }
 
   async function runAutoAssignIfExpired(eventId: string) {
-    // 이미 자동배정 시퀀스가 진행 중이거나 수동 진행 중이면 건너뜀 (중복 방지)
-    if (autoAssignInProgress.has(eventId)) return;
-    // 평가 단계부터 잠금을 보유하여 수동([자동배정]) 경로와 완전히 직렬화한다.
-    autoAssignInProgress.add(eventId);
+    // 스케줄러 평가의 중복 실행만 방지 (이 단계에서는 seat:select를 막지 않는다).
+    // 실제 배정을 시작할 때만 autoAssignInProgress 잠금을 잡는다.
+    if (autoEvalInProgress.has(eventId)) return;
+    autoEvalInProgress.add(eventId);
+    let holdingAssignLock = false;
     try {
     const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
     if (!systemState || systemState.is_frozen) return;
@@ -1382,9 +1387,16 @@ app.post('/api/admin/login', async (req, res) => {
 
     const now = Date.now();
     const turnStart = new Date(systemState.current_turn_start_time).getTime();
-    // 제한시간(정확히 3분) 이전이면 아무것도 안 함
+    // 제한시간(정확히 3분) 이전이면 아무것도 안 함 (여기까지는 잠금 없이 평가만)
     if (now - turnStart < TURN_DURATION_MS) return;
 
+    // 여기부터 실제로 상태를 변경한다 → 이제 seat:select/수동 경로와 직렬화하기 위해
+    // autoAssignInProgress 잠금을 잡는다. 수동 배정이 진행 중이면 다음 틱에 재시도.
+    if (autoAssignInProgress.has(eventId)) return;
+    autoAssignInProgress.add(eventId);
+    holdingAssignLock = true;
+
+    // 잠금을 잡는 사이에 참가자가 직접 좌석을 선택했을 수 있으므로 최신 상태로 다시 읽는다.
     const currentParticipant = await prisma.participant.findFirst({
       where: { event_id: eventId, turn_order: systemState.current_turn_order }
     });
@@ -1480,7 +1492,8 @@ app.post('/api/admin/login', async (req, res) => {
     } catch (err) {
       console.error('[AutoAssign] 평가 단계 오류:', err);
     } finally {
-      autoAssignInProgress.delete(eventId);
+      if (holdingAssignLock) autoAssignInProgress.delete(eventId);
+      autoEvalInProgress.delete(eventId);
     }
   }
 
