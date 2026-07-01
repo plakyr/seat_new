@@ -846,19 +846,28 @@ app.post('/api/admin/login', async (req, res) => {
           }
 
           const participantId = seat.assigned_to;
+          const participant = await tx.participant.findUnique({ where: { id: participantId } });
+          const systemState = await tx.systemState.findUnique({ where: { event_id: data.eventId } });
+          const currentTurn = systemState?.current_turn_order ?? 1;
 
           const updatedSeat = await tx.seat.update({
             where: { id: data.seatId },
             data: { status: 'EMPTY', assigned_to: null, session_id: null }
           });
 
+          // 이미 지난 순번(turn_order < 현재 순번)의 좌석을 취소하는 경우:
+          // is_final: false로 되돌리면 전체 완료 판단(remaining 카운트)이 꼬이고,
+          // 정작 그 참가자는 차례가 지나 재선택도 못 하는 교착이 생긴다.
+          // 따라서 좌석만 회수하고 is_final은 true로 유지(완료 취급), 상태는 CANCELLED로 표시한다.
+          // 다시 앉히려면 관리자가 수동 배정(force_assign)으로 처리한다.
+          // 반면 현재/미래 순번이면 재선택이 가능하도록 WAITING으로 되돌린다.
+          const isPastTurn = participant ? participant.turn_order < currentTurn : false;
+
           const updatedParticipant = await tx.participant.update({
             where: { id: participantId },
-            data: { 
-              seat_id: null,
-              is_final: false,
-              turn_status: 'WAITING'
-            }
+            data: isPastTurn
+              ? { seat_id: null, is_final: true, turn_status: 'CANCELLED' }
+              : { seat_id: null, is_final: false, turn_status: 'WAITING' }
           });
 
           return { updatedSeat, updatedParticipant };
