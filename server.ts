@@ -852,6 +852,24 @@ app.post('/api/admin/login', async (req, res) => {
       }
     });
 
+    // Admin: 좌석 배정 없이 현재 참가자를 건너뛰고 다음 턴으로 (불참/오류 대응)
+    socket.on('admin:skip_turn', async (data: { eventId: string }) => {
+      if (!socket.data.isAdmin) return;
+
+      try {
+        await skipCurrentTurn(data.eventId);
+      } catch (error: any) {
+        socket.emit('admin:error', { error: error.message });
+      }
+    });
+
+    // Admin: 전체 참가자 화면 강제 새로고침 신호 전송 (화면 멈춤 복구용)
+    socket.on('admin:force_reload', async (data: { eventId: string }) => {
+      if (!socket.data.isAdmin) return;
+      io.to(`event:${data.eventId}`).emit('force_reload', {});
+      socket.emit('admin:info', { message: '전체 참가자 화면에 새로고침 신호를 보냈습니다.' });
+    });
+
     // Request initial seats
     socket.on('seat:request_init', async (data: { eventId: string }) => {
       const layout = await prisma.venueLayout.findFirst({
@@ -1265,6 +1283,61 @@ app.post('/api/admin/login', async (req, res) => {
       const updatedState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
       if (updatedState) emitTurn(eventId, updatedState);
     }
+    } finally {
+      autoAssignInProgress.delete(eventId);
+    }
+  }
+
+  // 관리자가 "건너뛰기"를 누르면, 현재 참가자에게 좌석을 배정하지 않고
+  // turn_status를 EXPIRED로만 표시한 뒤 다음 턴으로 넘긴다. (불참/오류 대응)
+  async function skipCurrentTurn(eventId: string) {
+    if (autoAssignInProgress.has(eventId)) {
+      throw new Error('이미 자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.');
+    }
+    autoAssignInProgress.add(eventId);
+    try {
+      const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+      if (!systemState) throw new Error('시스템 상태를 찾을 수 없습니다.');
+
+      // 그룹 시작 전 / 그룹 간 대기 / 전원 완료 상태에서는 진행 불가
+      const flow = await getFlowAnnouncement(eventId);
+      if (flow) {
+        if (flow.event === 'system:all_complete') throw new Error('모든 그룹 좌석 지정이 완료되었습니다.');
+        throw new Error(`아직 그룹 시작 시간이 아닙니다. (그룹 ${flow.payload.nextSession} 시작: ${flow.payload.nextStartTime})`);
+      }
+
+      const currentParticipant = await prisma.participant.findFirst({
+        where: { event_id: eventId, turn_order: systemState.current_turn_order }
+      });
+
+      // 아직 좌석을 선택하지 않은 참가자만 만료 처리 (이미 완료된 경우는 건드리지 않음)
+      if (currentParticipant && !currentParticipant.is_final) {
+        const updatedParticipant = await prisma.participant.update({
+          where: { id: currentParticipant.id },
+          data: { turn_status: 'EXPIRED' }
+        });
+        io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: updatedParticipant });
+        const userSocketId = activeSockets.get(currentParticipant.id);
+        if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: updatedParticipant });
+      }
+
+      const gap = await checkSessionGap(eventId);
+      if (gap) {
+        io.to(`event:${eventId}`).emit('system:session_change', gap);
+        io.to(`admin:event:${eventId}`).emit('system:session_change', gap);
+        return;
+      }
+
+      // 조건부 턴 증가 (중복 증가 방지)
+      const nextTurnOrder = systemState.current_turn_order + 1;
+      const advanced = await prisma.systemState.updateMany({
+        where: { event_id: eventId, current_turn_order: systemState.current_turn_order },
+        data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
+      });
+      if (advanced.count > 0) {
+        const updatedState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+        if (updatedState) emitTurn(eventId, updatedState);
+      }
     } finally {
       autoAssignInProgress.delete(eventId);
     }

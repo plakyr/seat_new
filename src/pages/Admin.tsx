@@ -222,6 +222,20 @@ const updateStoreWithEventData = (event: any) => {
     }
   };
 
+  const handleSkipTurn = () => {
+    if (!selectedEventId || !socket) return;
+    if (confirm('현재 참가자에게 좌석을 배정하지 않고 건너뛰시겠습니까?\n(불참/오류 시 사용 — 좌석 없이 다음 턴으로 넘어갑니다)')) {
+      socket.emit('admin:skip_turn', { eventId: selectedEventId });
+    }
+  };
+
+  const handleForceReload = () => {
+    if (!selectedEventId || !socket) return;
+    if (confirm('전체 참가자 화면에 강제 새로고침 신호를 보내시겠습니까?\n(화면이 멈춰 보일 때 사용)')) {
+      socket.emit('admin:force_reload', { eventId: selectedEventId });
+    }
+  };
+
   const handleResetEvent = async () => {
     if (!selectedEventId) return;
     const target = events.find(ev => ev.id === selectedEventId);
@@ -582,6 +596,22 @@ const updateStoreWithEventData = (event: any) => {
                       className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
                     >
                       자동배정
+                    </button>
+                    <button
+                      onClick={handleSkipTurn}
+                      title="현재 참가자에게 좌석을 주지 않고 다음 턴으로 넘깁니다 (불참/오류 대응)"
+                      style={{ backgroundColor: '#B0752F' }}
+                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                    >
+                      건너뛰기
+                    </button>
+                    <button
+                      onClick={handleForceReload}
+                      title="전체 참가자 화면에 강제 새로고침 신호를 보냅니다 (화면 멈춤 복구용)"
+                      style={{ backgroundColor: '#4a6fa5' }}
+                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                    >
+                      화면 새로고침
                     </button>
                     <button
                       onClick={handleToggleFreeze}

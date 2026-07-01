@@ -309,12 +309,17 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                               : seatLabelText(seat)}
                           >
                             {seat.status === 'PRIVATE' ? null : displayName ? (
-                              <span className={cn(
-                                'w-full text-center px-0.5 leading-none',
-                                displayName.length <= 4 ? 'text-[9px]' : 'text-[7px]',
-                              )}>
-                                {displayName}
-                              </span>
+                              <>
+                                <span className="w-full text-center leading-none text-[6px] opacity-80">
+                                  {seatShortLabel(seat)}
+                                </span>
+                                <span className={cn(
+                                  'w-full text-center px-0.5 leading-none mt-0.5',
+                                  displayName.length <= 4 ? 'text-[8px]' : 'text-[6px]',
+                                )}>
+                                  {displayName}
+                                </span>
+                              </>
                             ) : (
                               <span className="text-[8px] text-gray-500">{seatShortLabel(seat)}</span>
                             )}

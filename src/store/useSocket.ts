@@ -43,6 +43,11 @@ export const useSocket = () => {
       storeRef.current.setSystemState(data.isFrozen, data.reason);
     });
 
+    // 관리자의 강제 재동기화 신호 → 화면 새로고침 (화면 멈춤 복구용)
+    socketInstance.on('force_reload', () => {
+      window.location.reload();
+    });
+
     socketInstance.on('system:turn', (data: { currentTurnOrder: number; currentTurnStartTime: string }) => {
       // 새 차례 공지 뜨는 순간 타이머 재개 + 시작 시간 갱신
       storeRef.current.setTimerPaused(false);
@@ -109,6 +114,10 @@ export const useSocket = () => {
 
     socketInstance.on('admin:error', (data: { error: string }) => {
       alert(`관리자 오류: ${data.error}`);
+    });
+
+    socketInstance.on('admin:info', (data: { message: string }) => {
+      alert(data.message);
     });
 
     socketInstance.on('presence:update', (data: { online: string[] }) => {
