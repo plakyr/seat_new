@@ -725,9 +725,12 @@ app.post('/api/admin/login', async (req, res) => {
         reason: state.frozen_reason
       });
 
-      // 재개하면서 턴 시작 시각을 밀었으면 모든 클라이언트 타이머를 재동기화한다
+      // 재개하면서 턴 시작 시각을 밀었으면 모든 클라이언트 타이머를 재동기화한다.
+      // 단, 무조건 system:turn만 보내면 "그룹 완료 후 다음 그룹 시작 대기" 같은
+      // 상태에서 이미 끝난 마지막 참가자의 타이머가 다시 도는 것처럼 보인다.
+      // notifyTurnAdvance로 현재 흐름(대기/완료 여부)을 먼저 확인한 뒤 알린다.
       if (!data.isFrozen && turnStartShifted) {
-        emitTurn(data.eventId, state);
+        await notifyTurnAdvance(data.eventId, state);
       }
     });
 
