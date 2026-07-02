@@ -259,6 +259,8 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           update: { is_frozen: false, frozen_reason: null, current_turn_order: 1, current_turn_start_time: new Date() },
           create: { event_id: eventId, current_turn_order: 1, current_turn_start_time: new Date() }
         });
+        // 채팅 이력도 함께 삭제 (DB에서 실제 제거)
+        await tx.chatMessage.deleteMany({ where: { event_id: eventId } });
       });
 
       // 진행 흐름 상태 초기화 (공지 캐시)
@@ -279,6 +281,10 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       });
       io.to(`event:${eventId}`).emit('system:freeze', { isFrozen: false, reason: null });
       io.to(`admin:event:${eventId}`).emit('system:freeze', { isFrozen: false, reason: null });
+
+      // 접속 중인 모든 화면의 채팅창을 즉시 비운다 (관리자는 admin:event_data의 messages: []로도 반영됨)
+      io.to(`event:${eventId}`).emit('chat:history', { messages: [] });
+      io.to(`admin:event:${eventId}`).emit('chat:history', { messages: [] });
 
       io.to(`admin:event:${eventId}`).emit('admin:event_data', {
         seats: layout?.seats || [],
