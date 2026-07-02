@@ -3,13 +3,14 @@ import { AnnouncementState } from '../store/useStore';
 
 interface Props {
   announcement: AnnouncementState;
-  currentTurnOrder: number;
+  currentTurnOrder: number | null;
   currentTurnStartTime: string | null;
   serverTime: string | null;
   isFrozen: boolean;
   frozenReason: string | null;
   participants: any[];
   timerPaused: boolean;
+  hasReceivedSystemState: boolean;
 }
 
 export default function AnnouncementBar({
@@ -21,6 +22,7 @@ export default function AnnouncementBar({
   frozenReason,
   participants,
   timerPaused,
+  hasReceivedSystemState,
 }: Props) {
   const [timeLeft, setTimeLeft] = useState<string>('03:00');
   const [timeLeftMs, setTimeLeftMs] = useState<number>(3 * 60 * 1000);
@@ -101,7 +103,11 @@ export default function AnnouncementBar({
     return () => clearInterval(id);
   }, [announcement.type, nextStartTime]);
 
-  const currentParticipant = participants.find(p => p.turn_order === currentTurnOrder);
+  // 서버로부터 실제 진행 상태(system:turn / system:session_change / system:all_complete)를
+  // 받기 전에는 currentTurnOrder 기본값으로 첫 번째 참가자를 잘못 표시하지 않도록 계산을 건너뛴다.
+  const currentParticipant = hasReceivedSystemState && currentTurnOrder != null
+    ? participants.find(p => p.turn_order === currentTurnOrder)
+    : undefined;
 
   let bgColor = '#4a6fa5';
   let text = '';
@@ -132,12 +138,16 @@ export default function AnnouncementBar({
   } else if (currentParticipant) {
     bgColor = '#1C71E8';
     text = `현재 순서 '${currentParticipant.name}'님`;
+  } else if (!hasReceivedSystemState) {
+    bgColor = '#6b7590';
+    text = '상태 불러오는 중...';
   } else {
     bgColor = '#6b7590';
     text = '대기 중';
   }
 
   const showTimer =
+    !!currentTurnStartTime &&
     !isFrozen &&
     !timerPaused &&
     announcement.type !== 'SESSION_CHANGE' &&

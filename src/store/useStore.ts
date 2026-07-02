@@ -61,8 +61,12 @@ interface AppState {
   serverTime: string | null;
   isFrozen: boolean;
   frozenReason: string | null;
-  currentTurnOrder: number;
+  currentTurnOrder: number | null;
   currentTurnStartTime: string | null;
+  // system:turn / system:session_change / system:all_complete 중 하나라도
+  // 받기 전에는 false. 새로고침 직후 실제 진행 상태를 모르는 채로
+  // 첫 번째 참가자를 "현재 순서"로 잘못 표시하지 않기 위한 플래그.
+  hasReceivedSystemState: boolean;
   seats: Seat[];
   layout: LayoutInfo | null;
   participants: User[];
@@ -80,6 +84,7 @@ interface AppState {
   setServerTime: (time: string) => void;
   setSystemState: (isFrozen: boolean, reason: string | null) => void;
   setSystemTurn: (order: number, startTime: string) => void;
+  setSystemReady: () => void;
   setSeats: (seats: Seat[]) => void;
   setLayout: (layout: LayoutInfo | null) => void;
   updateSeat: (seat: Seat) => void;
@@ -138,8 +143,9 @@ export const useStore = create<AppState>((set) => ({
   serverTime: null,
   isFrozen: false,
   frozenReason: null,
-  currentTurnOrder: 1,
+  currentTurnOrder: null,
   currentTurnStartTime: null,
+  hasReceivedSystemState: false,
   seats: [],
   layout: null,
   participants: [],
@@ -180,7 +186,8 @@ export const useStore = create<AppState>((set) => ({
   },
   setServerTime: (time) => set({ serverTime: time }),
   setSystemState: (isFrozen, reason) => set({ isFrozen, frozenReason: reason }),
-  setSystemTurn: (order, startTime) => set({ currentTurnOrder: order, currentTurnStartTime: startTime }),
+  setSystemTurn: (order, startTime) => set({ currentTurnOrder: order, currentTurnStartTime: startTime, hasReceivedSystemState: true }),
+  setSystemReady: () => set({ hasReceivedSystemState: true }),
   setSeats: (seats) => set({ seats }),
   setLayout: (layout) => set({
     layout,

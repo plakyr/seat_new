@@ -109,6 +109,7 @@ export const useSocket = () => {
         storeRef.current.setSystemTurn(data.systemState.current_turn_order, data.systemState.current_turn_start_time);
       } else {
         storeRef.current.setSystemState(false, null);
+        storeRef.current.setSystemReady();
       }
       if (data.sessionColors) storeRef.current.setSessionColors(data.sessionColors);
       if (data.messages) storeRef.current.setMessages(data.messages);
@@ -156,6 +157,7 @@ export const useSocket = () => {
     });
 
     socketInstance.on('system:session_change', (data: { prevSession: string | null; nextSession: string; nextStartTime: string | null }) => {
+      storeRef.current.setSystemReady();
       storeRef.current.setAnnouncement({
         type: 'SESSION_CHANGE',
         currentParticipantName: null,
@@ -166,6 +168,7 @@ export const useSocket = () => {
     });
 
     socketInstance.on('system:all_complete', () => {
+      storeRef.current.setSystemReady();
       storeRef.current.setAnnouncement({
         type: 'ALL_COMPLETE',
         currentParticipantName: null,
