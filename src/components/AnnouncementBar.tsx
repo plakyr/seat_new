@@ -179,7 +179,7 @@ export default function AnnouncementBar({
             <div
               key={countdown.n}
               className="countdown-pop text-white font-black tabular-nums leading-none"
-              style={{ fontSize: 'min(45vw, 45vh)' }}
+              style={{ fontSize: 'min(40vw, 40vh)' }}
             >
               {countdown.n}
             </div>
