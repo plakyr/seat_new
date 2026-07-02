@@ -347,7 +347,8 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       <div className="shrink-0 flex flex-nowrap justify-center items-center gap-x-2 sm:gap-x-4 bg-white/95 py-2 px-2 border-t border-gray-200 text-[10px] sm:text-xs font-medium">
         <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#BFBFBF' }} />선택 불가</div>
         <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-gray-200 shadow-sm shrink-0" />선택 가능</div>
-        <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#4374D9' }} />선택 완료</div>
+        {/* '선택 완료'는 관리자 범례에만 표시 (참가자 화면에서는 그룹 색으로 이미 구분됨) */}
+        {isAdmin && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#4374D9' }} />선택 완료</div>}
         {!isAdmin && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#00C2D1' }} />내 자리</div>}
       </div>
 
