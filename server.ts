@@ -472,10 +472,10 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         if (index < defaultColors.length) {
           color = defaultColors[index];
         } else {
-          // Generate a lighter blue shade for sessions 6+
-          // HSL: Hue ~215 (blue), Saturation ~100%, Lightness increasing from 95%
-          const lightness = Math.min(98, 95 + (index - 5));
-          color = `hsl(215, 100%, ${lightness}%)`;
+          // 7번째 그룹부터: 황금각(137.5°)으로 색상(hue)을 회전시켜 서로 구분되는 진한 색 생성.
+          // (기존 방식은 lightness 95~98%의 거의 흰색이라 좌석 구분이 안 되고 흰 글자도 안 보였다)
+          const hue = Math.round(20 + (index - defaultColors.length) * 137.5) % 360;
+          color = `hsl(${hue}, 55%, 40%)`;
         }
         return { session_id, color };
       });
@@ -681,8 +681,19 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       const existingSocketId = activeSockets.get(participant.id);
       if (existingSocketId) {
         io.to(existingSocketId).emit('session:expired', { reason: '다른 기기에서 로그인하여 세션이 만료되었습니다.' });
-        // We don't disconnect immediately here to allow the client to show the message,
-        // the client will handle the disconnect.
+        // 이전 소켓을 이벤트 방/presence에서 즉시 정리한다
+        // (연결 자체는 끊지 않아 클라이언트가 만료 안내를 표시할 수 있다)
+        const oldSocket = io.sockets.sockets.get(existingSocketId);
+        if (oldSocket) {
+          const oldEventId = oldSocket.data.eventId;
+          oldSocket.data.participantId = null;
+          oldSocket.data.eventId = null;
+          if (oldEventId) {
+            oldSocket.leave(`event:${oldEventId}`);
+            broadcastOnlineParticipants(oldEventId);
+          }
+        }
+        activeSockets.delete(participant.id);
       }
 
       res.json({ success: true, user: updatedParticipant, sessionToken: session_token });
@@ -692,9 +703,21 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     }
   });
 
-  // Public endpoint: seats/participants/colors for the currently active event
+  // 현재 활성 이벤트의 좌석/참가자/색상 조회.
+  // 참가자 명단(이름·순번)이 포함되므로 로그인한 참가자만 조회할 수 있게 한다.
+  // (기존엔 완전 공개 API여서 로그인 없이 전체 명단을 볼 수 있었다)
   app.get('/api/seats', async (req, res) => {
     try {
+      const participantId = req.headers['x-participant-id'];
+      const sessionToken = req.headers['x-session-token'];
+      if (typeof participantId !== 'string' || typeof sessionToken !== 'string' || !participantId || !sessionToken) {
+        return res.status(401).json({ error: '로그인이 필요합니다.' });
+      }
+      const requester = await prisma.participant.findUnique({ where: { id: participantId } });
+      if (!requester || !requester.session_token || requester.session_token !== sessionToken) {
+        return res.status(401).json({ error: '유효하지 않은 세션입니다.' });
+      }
+
       const event = await prisma.event.findFirst({
         where: { is_active: true },
         orderBy: { date: 'desc' },
@@ -707,6 +730,11 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
       if (!event) {
         return res.status(404).json({ error: '활성화된 이벤트가 없습니다.' });
+      }
+
+      // 요청자가 현재 활성 이벤트의 참가자인지 확인 (지난 이벤트 세션으로 조회 불가)
+      if (requester.event_id !== event.id) {
+        return res.status(403).json({ error: '현재 이벤트의 참가자가 아닙니다.' });
       }
 
       const layout0 = event.layouts[0];
@@ -1331,6 +1359,24 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         io.to(`admin:event:${eventId}`).emit('chat:message', message);
       } catch (error) {
         console.error('Chat error:', error);
+      }
+    });
+
+    // 참가자 명시적 로그아웃: presence(접속자 수)에서 즉시 제거하고 세션 토큰을 무효화한다.
+    // (기존엔 클라이언트 상태만 지워져서, 소켓이 끊길 때까지 관리자 화면에 '접속 중'으로 남았다)
+    socket.on('participant:logout', async () => {
+      const pid = socket.data.participantId;
+      const eid = socket.data.eventId;
+      if (!pid) return;
+      try {
+        await prisma.participant.update({ where: { id: pid }, data: { session_token: null } });
+      } catch { /* 이미 삭제된 참가자 등은 무시 */ }
+      if (activeSockets.get(pid) === socket.id) activeSockets.delete(pid);
+      socket.data.participantId = null;
+      socket.data.eventId = null;
+      if (eid) {
+        socket.leave(`event:${eid}`);
+        broadcastOnlineParticipants(eid);
       }
     });
 

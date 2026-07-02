@@ -22,18 +22,22 @@ export default function User() {
     useStore.getState().clearAdminMemory();
   }, []);
 
-  // User.tsx 내부
+  // 초기 좌석/참가자 데이터 로딩.
+  // /api/seats가 참가자 명단을 포함하므로 로그인(세션 보유) 후에만 인증 헤더와 함께 요청한다.
   useEffect(() => {
+    if (!user) return;
     const fetchInitialData = async () => {
-      console.log("좌석 데이터 요청 시작..."); // 콘솔 확인용
       try {
-        const res = await fetch('/api/seats');
-        console.log("응답 상태:", res.status);
-        
+        const { sessionToken } = useStore.getState();
+        const res = await fetch('/api/seats', {
+          headers: {
+            'x-participant-id': user.id,
+            'x-session-token': sessionToken || '',
+          },
+        });
+
         if (res.ok) {
           const data = await res.json();
-          console.log("받은 데이터:", data);
-          
           if (data.seats) useStore.getState().setSeats(data.seats);
           if (data.layout) useStore.getState().setLayout(data.layout);
           if (data.participants) useStore.getState().setParticipants(data.participants);
@@ -44,8 +48,8 @@ export default function User() {
       }
     };
 
-    fetchInitialData(); // 의존성 없이 무조건 실행
-  }, []); // 페이지 로드 시 최초 1회 실행
+    fetchInitialData();
+  }, [user?.id]); // 로그인 완료(또는 새로고침 후 세션 복원) 시 실행
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +105,13 @@ export default function User() {
           <p className="text-sm text-gray-500">{user.session_id}그룹 {groupOrder}번째</p>
         </div>
         <button
-          onClick={() => { if (confirm('로그아웃 하시겠습니까?')) logoutUser(); }}
+          onClick={() => {
+            if (confirm('로그아웃 하시겠습니까?')) {
+              // 서버에 알려 presence(접속자 수) 정리 + 세션 토큰 무효화
+              socket?.emit('participant:logout');
+              logoutUser();
+            }
+          }}
           className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 border border-gray-300 hover:bg-gray-100 active:bg-gray-200 transition-colors shrink-0"
         >
           로그아웃

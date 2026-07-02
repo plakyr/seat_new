@@ -18,7 +18,7 @@ export interface Seat {
   id: string;
   row: number;
   col: number;
-  status: 'EMPTY' | 'RESERVED' | 'FROZEN' | 'AUTO_ASSIGNED' | 'LOCKED';
+  status: 'EMPTY' | 'RESERVED' | 'FROZEN' | 'AUTO_ASSIGNED' | 'LOCKED' | 'PRIVATE' | 'MANUAL';
   assigned_to: string | null;
   session_id: string | null;
   seat_label?: string | null;
@@ -39,6 +39,13 @@ export interface ChatMessage {
   sender_name: string;
   content: string;
   timestamp: string;
+}
+
+// 화면을 막지 않는 알림 (alert 대체)
+export interface Toast {
+  id: number;
+  message: string;
+  type: 'error' | 'info';
 }
 
 // 공지 바 상태
@@ -75,6 +82,7 @@ interface AppState {
   messages: ChatMessage[];
   announcement: AnnouncementState;
   timerPaused: boolean; // 자동배정 중 타이머 멈춤
+  toasts: Toast[];
 
   setUser: (user: User | null, sessionToken: string | null) => void;
   logoutUser: () => void;
@@ -96,6 +104,8 @@ interface AppState {
   addMessage: (message: ChatMessage) => void;
   setAnnouncement: (a: AnnouncementState) => void;
   setTimerPaused: (paused: boolean) => void;
+  addToast: (message: string, type?: 'error' | 'info') => void;
+  removeToast: (id: number) => void;
 
   // 하위 호환용 (Admin.tsx에서 rows/cols 직접 쓰는 곳 대비)
   rows: number;
@@ -134,6 +144,8 @@ function loadPersistedAdmin(): { adminToken: string | null; adminUser: { usernam
 }
 const persistedAdmin = loadPersistedAdmin();
 
+let nextToastId = 1;
+
 export const useStore = create<AppState>((set) => ({
   user: persisted.user,
   sessionToken: persisted.sessionToken,
@@ -154,6 +166,7 @@ export const useStore = create<AppState>((set) => ({
   messages: [],
   announcement: { type: 'IDLE', currentParticipantName: null, prevSessionId: null, nextSessionId: null, nextStartTime: null },
   timerPaused: false,
+  toasts: [],
   rows: 10,
   cols: 10,
 
@@ -213,4 +226,11 @@ export const useStore = create<AppState>((set) => ({
   ),
   setAnnouncement: (announcement) => set({ announcement }),
   setTimerPaused: (timerPaused) => set({ timerPaused }),
+  addToast: (message, type = 'error') => set((state) => ({
+    // 같은 메시지가 이미 떠 있으면 중복 추가하지 않는다
+    toasts: state.toasts.some(t => t.message === message)
+      ? state.toasts
+      : [...state.toasts, { id: nextToastId++, message, type }]
+  })),
+  removeToast: (id) => set((state) => ({ toasts: state.toasts.filter(t => t.id !== id) })),
 }));

@@ -78,17 +78,17 @@ export const useSocket = () => {
 
     // ── 인증 관련 이벤트 ────────────────────────────────────────────────
     socketInstance.on('session:expired', (data: { reason: string }) => {
-      alert(data.reason);
+      storeRef.current.addToast(data.reason, 'error');
       storeRef.current.logoutUser();
     });
 
-    // 팝업 중복 방지: 마지막으로 보낸 시각 추적
+    // 알림 중복 방지: 마지막으로 보낸 시각 추적
     let lastSeatErrorAt = 0;
     socketInstance.on('seat:error', (data: { error: string }) => {
       const now = Date.now();
       if (now - lastSeatErrorAt > 1000) { // 1초 내 중복 무시
         lastSeatErrorAt = now;
-        alert(data.error);
+        storeRef.current.addToast(data.error, 'error');
       }
     });
 
@@ -120,11 +120,11 @@ export const useSocket = () => {
     });
 
     socketInstance.on('admin:error', (data: { error: string }) => {
-      alert(`관리자 오류: ${data.error}`);
+      storeRef.current.addToast(`관리자 오류: ${data.error}`, 'error');
     });
 
     socketInstance.on('admin:info', (data: { message: string }) => {
-      alert(data.message);
+      storeRef.current.addToast(data.message, 'info');
     });
 
     socketInstance.on('presence:update', (data: { online: string[] }) => {
@@ -140,7 +140,7 @@ export const useSocket = () => {
     });
 
     socketInstance.on('chat:error', (data: { error: string }) => {
-      alert(`채팅 오류: ${data.error}`);
+      storeRef.current.addToast(`채팅 오류: ${data.error}`, 'error');
     });
 
     socketInstance.on('system:auto_assign', (data: { participantName: string }) => {
