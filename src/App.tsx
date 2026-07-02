@@ -8,6 +8,7 @@ import { useSocket } from './store/useSocket';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
 import User from './pages/User';
+import ToastContainer from './components/ToastContainer';
 
 export default function App() {
   // Initialize socket connection
@@ -15,6 +16,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ToastContainer />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/admin/*" element={<Admin />} />
