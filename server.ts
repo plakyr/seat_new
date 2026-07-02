@@ -1611,9 +1611,46 @@ app.post('/api/admin/login', async (req, res) => {
       }
     }
 
+    // 현재 순번이 이미 완료됐거나(그룹 마지막 참가자 자동배정 후 그룹 간 대기 등) 없는
+    // 참가자면, 3분(TURN_DURATION_MS)을 기다리지 않고 즉시 다음 순번으로 넘어간다.
+    // (이 처리가 없으면 그룹 시작 후에도 이전 그룹 마지막 참가자에 순번이 머물러
+    //  "현재 순서 000님"으로 넘어가지 못하고 3분간 멈춰 보인다)
+    if (!curP || curP.is_final) {
+      if (autoAssignInProgress.has(eventId)) return;
+      autoAssignInProgress.add(eventId);
+      holdingAssignLock = true;
+
+      // 잠금을 잡는 사이 상태가 바뀌었을 수 있으므로 최신 상태를 다시 확인한다.
+      const latest = await prisma.participant.findFirst({
+        where: { event_id: eventId, turn_order: systemState.current_turn_order }
+      });
+      if (latest && !latest.is_final) return; // 그 사이 미완료 참가자로 바뀜 → 이번 틱은 넘김
+
+      const maxTurnResult = await prisma.participant.aggregate({
+        where: { event_id: eventId }, _max: { turn_order: true }
+      });
+      const maxTurn = maxTurnResult._max.turn_order || 0;
+      const nextTurnOrder = systemState.current_turn_order + 1;
+      if (nextTurnOrder > maxTurn) return; // 더 진행할 순번 없음 (전원 완료는 위 flow에서 처리)
+
+      const gap = await checkSessionGap(eventId);
+      if (gap) {
+        io.to(`event:${eventId}`).emit('system:session_change', gap);
+        io.to(`admin:event:${eventId}`).emit('system:session_change', gap);
+        return;
+      }
+      const updated = await prisma.systemState.update({
+        where: { event_id: eventId },
+        data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
+      });
+      await notifyTurnAdvance(eventId, updated);
+      return;
+    }
+
     const now = Date.now();
     const turnStart = new Date(systemState.current_turn_start_time).getTime();
     // 제한시간(정확히 3분) 이전이면 아무것도 안 함 (여기까지는 잠금 없이 평가만)
+    // (여기 도달 시 curP는 미완료 참가자이므로, 완료된 참가자의 3분 제한은 위에서 이미 처리됨)
     if (now - turnStart < TURN_DURATION_MS) return;
 
     // 여기부터 실제로 상태를 변경한다 → 이제 seat:select/수동 경로와 직렬화하기 위해
