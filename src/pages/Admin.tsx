@@ -245,7 +245,7 @@ const updateStoreWithEventData = (event: any) => {
   };
 
   const handleResetEvent = async () => {
-    if (!selectedEventId) return;
+    if (!selectedEventId || !socket) return;
     const target = events.find(ev => ev.id === selectedEventId);
     const eventName = target?.name ?? '';
     const input = window.prompt(

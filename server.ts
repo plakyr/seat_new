@@ -11,6 +11,7 @@ import { parse } from 'csv-parse/sync';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -95,11 +96,14 @@ async function startServer() {
     const sessionColors = await prisma.sessionColor.findMany({ where: { event_id: eventId } });
     targetSocket.emit('session:colors', { sessionColors });
 
+    // 최신 100개를 가져온 뒤 시간순(오래된 → 최신)으로 뒤집어 보낸다.
+    // (asc + take는 "가장 오래된 100개"가 되어 100개 초과 시 최신 메시지가 누락된다)
     const messages = await prisma.chatMessage.findMany({
       where: { event_id: eventId },
-      orderBy: { timestamp: 'asc' },
-      take: 100 // 성능을 위해 최근 100개로 제한
+      orderBy: { timestamp: 'desc' },
+      take: 100
     });
+    messages.reverse();
     targetSocket.emit('chat:history', { messages });
   };
 
@@ -138,15 +142,40 @@ async function startServer() {
     }
   }
 
+  // Render 등 리버스 프록시 뒤에서 클라이언트 실제 IP(X-Forwarded-For)를 신뢰
+  // (rate limit이 프록시 IP가 아닌 사용자 IP 기준으로 동작하기 위해 필요)
+  app.set('trust proxy', 1);
   app.use(cors());
   app.use(express.json());
+
+  // 관리자 로그인: IP당 15분에 10회. 관리자는 소수이므로 낮게 잡아 무차별 대입을 차단.
+  const adminLoginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: '로그인 시도가 너무 많습니다. 15분 후 다시 시도해주세요.' },
+  });
+
+  // 참가자 로그인: IP+이름 조합당 1분에 10회.
+  // 비밀번호가 4자리 숫자(최대 1만 조합)라 IP 기준만으로는 부족하고,
+  // 행사장 와이파이처럼 여러 참가자가 한 IP를 공유하는 경우 서로 막지 않도록
+  // 이름별로 나눠서 제한한다. (특정인 계정에 대한 무차별 대입을 차단)
+  const participantLoginLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => `${ipKeyGenerator(req.ip || '')}|${String(req.body?.name ?? '')}`,
+    message: { error: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+  });
 
   // API Routes
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -577,7 +606,7 @@ app.post('/api/admin/login', async (req, res) => {
     }
   });
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post('/api/auth/login', participantLoginLimiter, async (req, res) => {
     const { name, phone_last4, unique_code } = req.body;
     try {
       const activeEvent = await prisma.event.findFirst({
@@ -759,11 +788,13 @@ app.post('/api/admin/login', async (req, res) => {
         where: { event_id: data.eventId }
       });
 
+      // 최신 100개를 시간순으로 (emitInitialStateToSocket와 동일한 이유)
       const messages = await prisma.chatMessage.findMany({
         where: { event_id: data.eventId },
-        orderBy: { timestamp: 'asc' },
+        orderBy: { timestamp: 'desc' },
         take: 100
       });
+      messages.reverse();
 
       socket.emit('admin:event_data', {
         seats: layout?.seats || [],
@@ -1134,8 +1165,10 @@ app.post('/api/admin/login', async (req, res) => {
           if (seat.status !== 'EMPTY') throw new Error('이미 선택되었거나 사용할 수 없는 좌석입니다.');
 
           // Update seat and participant
+          // where에 status: 'EMPTY' 조건을 함께 걸어(다른 배정 경로들과 동일),
+          // 위에서 읽은 뒤 다른 경로가 먼저 좌석을 차지했으면 덮어쓰지 않고 실패하게 한다.
           const updatedSeat = await tx.seat.update({
-            where: { id: data.seatId },
+            where: { id: data.seatId, status: 'EMPTY' },
             data: { status: 'RESERVED', assigned_to: participantId, session_id: participant.session_id }
           });
 
