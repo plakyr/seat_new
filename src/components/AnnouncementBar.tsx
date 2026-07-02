@@ -137,7 +137,13 @@ export default function AnnouncementBar({
     text = '모든 그룹 좌석 지정이 완료되었습니다.';
   } else if (currentParticipant) {
     bgColor = '#1C71E8';
-    text = `현재 순서 '${currentParticipant.name}'님`;
+    // 그룹 내 순번 계산: 전체 turn_order가 아닌, 같은 그룹 안에서 몇 번째인지 표시
+    const groupMembers = participants
+      .filter(p => p.session_id === currentParticipant.session_id)
+      .sort((a, b) => a.turn_order - b.turn_order);
+    const groupIndex = groupMembers.findIndex(p => p.id === currentParticipant.id);
+    const groupOrder = groupIndex >= 0 ? groupIndex + 1 : currentParticipant.turn_order;
+    text = `현재 순서 ${currentParticipant.session_id}그룹 ${groupOrder}번째 '${currentParticipant.name}'님`;
   } else if (!hasReceivedSystemState) {
     bgColor = '#6b7590';
     text = '상태 불러오는 중...';
