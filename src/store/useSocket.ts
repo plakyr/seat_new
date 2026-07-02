@@ -28,13 +28,19 @@ export const useSocket = () => {
     socketInstance.on('connect', () => {
       console.log('Connected:', socketInstance?.id);
       // 재연결 시 재인증
-      const { user, sessionToken, adminToken } = storeRef.current;
+      const { user, sessionToken, adminToken, adminEventId } = storeRef.current;
       if (user && sessionToken) {
         socketInstance!.emit('participant:auth', { participantId: user.id, sessionToken });
         socketInstance!.emit('seat:request_init', { eventId: user.event_id });
       }
       if (adminToken) {
         socketInstance!.emit('admin:auth', { token: adminToken });
+        // 관제 중이던 이벤트가 있으면 방에 자동 재입장 + 최신 상태 재수신.
+        // (재연결 시 서버의 방 정보가 사라지므로, 이걸 안 보내면 접속자 수·좌석
+        //  변화 등 실시간 갱신이 멈춘 채 마지막 값으로 굳어 보인다)
+        if (adminEventId) {
+          socketInstance!.emit('admin:request_event', { eventId: adminEventId });
+        }
       }
     });
 

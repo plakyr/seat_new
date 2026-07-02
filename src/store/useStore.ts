@@ -65,6 +65,9 @@ interface AppState {
   isAdmin: boolean;
   adminToken: string | null;
   adminUser: { username: string; role: string } | null;
+  // 관리자가 현재 관제 중인 이벤트 ID. 소켓 재연결 시 이벤트 방에
+  // 자동 재입장(admin:request_event)하기 위해 보관한다.
+  adminEventId: string | null;
   serverTime: string | null;
   isFrozen: boolean;
   frozenReason: string | null;
@@ -89,6 +92,7 @@ interface AppState {
   clearParticipantMemory: () => void;
   clearAdminMemory: () => void;
   setAdminAuth: (token: string | null, user: { username: string; role: string } | null) => void;
+  setAdminEventId: (eventId: string | null) => void;
   setServerTime: (time: string) => void;
   setSystemState: (isFrozen: boolean, reason: string | null) => void;
   setSystemTurn: (order: number, startTime: string) => void;
@@ -152,6 +156,7 @@ export const useStore = create<AppState>((set) => ({
   isAdmin: !!persistedAdmin.adminToken,
   adminToken: persistedAdmin.adminToken,
   adminUser: persistedAdmin.adminUser,
+  adminEventId: null,
   serverTime: null,
   isFrozen: false,
   frozenReason: null,
@@ -197,6 +202,7 @@ export const useStore = create<AppState>((set) => ({
     } catch { /* 무시 */ }
     set({ adminToken: token, adminUser: user, isAdmin: !!token });
   },
+  setAdminEventId: (adminEventId) => set({ adminEventId }),
   setServerTime: (time) => set({ serverTime: time }),
   setSystemState: (isFrozen, reason) => set({ isFrozen, frozenReason: reason }),
   setSystemTurn: (order, startTime) => set({ currentTurnOrder: order, currentTurnStartTime: startTime, hasReceivedSystemState: true }),

@@ -261,14 +261,15 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                           customStyle = { backgroundColor: '#00C2D1' };
                           seatClass = 'text-white shadow-lg ring-2 ring-cyan-200 scale-110 z-10 cursor-default font-extrabold';
                         } else if (isAdmin) {
-                          seatClass = 'text-white cursor-pointer hover:opacity-80 active:opacity-60';
+                          // 참가자 화면과 동일한 명도(opacity-80)로 표시해 양쪽 색을 일치시킨다
+                          seatClass = 'text-white opacity-80 cursor-pointer hover:opacity-60 active:opacity-50';
                         } else {
                           seatClass = 'text-white opacity-80 cursor-pointer';
                         }
                       } else if (seat.status === 'MANUAL') {
                         customStyle = { backgroundColor: '#14B8A6' };
                         seatClass = isAdmin
-                          ? 'text-white cursor-pointer hover:opacity-80 active:opacity-60'
+                          ? 'text-white opacity-90 cursor-pointer hover:opacity-70 active:opacity-60'
                           : 'text-white opacity-90 cursor-default';
                       } else if (seat.status === 'FROZEN') {
                         seatClass = 'bg-red-100 border-2 border-red-300 cursor-not-allowed text-red-800';

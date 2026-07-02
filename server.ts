@@ -540,7 +540,14 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
       // ── 여기부터 실제 DB 반영. 하나의 트랜잭션으로 묶어 중간에 실패해도
       // "반쪽짜리" 이벤트가 남지 않도록 한다. ──────────────────────────
-      const event = await prisma.$transaction(async (tx) => {
+      const { event, prevActiveIds } = await prisma.$transaction(async (tx) => {
+        // 비활성화 대상(기존 활성 이벤트) ID를 먼저 확보해 둔다
+        // → 업로드 완료 후 해당 이벤트의 접속 참가자들을 로그아웃시키는 데 사용
+        const prevActive = await tx.event.findMany({
+          where: { is_active: true },
+          select: { id: true }
+        });
+
         // Deactivate all previous events so the new one becomes the active event
         await tx.event.updateMany({
           where: { is_active: true },
@@ -595,8 +602,30 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           }
         });
 
-        return event;
+        return { event, prevActiveIds: prevActive.map(e => e.id) };
       });
+
+      // ── 이전 활성 이벤트의 참가자들을 즉시 로그아웃 처리 ──────────────
+      // 새 이벤트가 활성화되면 이전 이벤트 화면을 켜둔 참가자는 갱신이 멈춘 채
+      // 이전 좌석표만 계속 보게 되고, 세션 토큰도 유효해서 새로고침해도 그대로였다.
+      // 토큰을 무효화하고 session:expired를 보내 로그인 화면으로 돌려보낸다.
+      for (const oldId of prevActiveIds) {
+        await prisma.participant.updateMany({
+          where: { event_id: oldId },
+          data: { session_token: null }
+        });
+        const oldSockets = await io.in(`event:${oldId}`).fetchSockets();
+        for (const s of oldSockets) {
+          if (!s.data.participantId) continue; // 같은 방의 관리자 소켓은 건드리지 않음
+          activeSockets.delete(s.data.participantId);
+          s.data.participantId = null;
+          s.data.eventId = null;
+          s.leave(`event:${oldId}`);
+          s.emit('session:expired', { reason: '새로운 이벤트가 시작되었습니다. 다시 로그인해주세요.' });
+        }
+        flowAnnounced.delete(oldId);
+        broadcastOnlineParticipants(oldId);
+      }
 
       res.json({ success: true, eventId: event.id });
     } catch (error: any) {
@@ -780,6 +809,15 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       
       if (!participant || participant.session_token !== sessionToken) {
         socket.emit('session:expired', { reason: '유효하지 않은 세션입니다. 다시 로그인해주세요.' });
+        return;
+      }
+
+      // 안전망: 참가자의 이벤트가 더 이상 활성이 아니면(새 이벤트로 교체됨) 세션 만료 처리.
+      // 업로드 시점의 일괄 로그아웃 신호를 놓친 기기(당시 오프라인이었던 폰 등)도
+      // 다음 재연결/새로고침 때 여기서 확실히 걸러진다.
+      const participantEvent = await prisma.event.findUnique({ where: { id: participant.event_id } });
+      if (!participantEvent || !participantEvent.is_active) {
+        socket.emit('session:expired', { reason: '이벤트가 종료되었습니다. 다시 로그인해주세요.' });
         return;
       }
 
