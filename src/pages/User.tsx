@@ -15,6 +15,9 @@ export default function User() {
   const [requiresCode, setRequiresCode] = useState(false);
   const [error, setError] = useState('');
   const [sessionExpiredMsg, setSessionExpiredMsg] = useState('');
+  // 로그아웃 확인 팝업. 브라우저 내장 confirm()은 모바일에서 "추가 대화상자 생성 방지"
+  // 체크박스가 붙고, 사용자가 체크하면 이후 버튼이 조용히 무반응이 되므로 자체 팝업을 쓴다.
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // 참가자 화면 진입 시 관리자 상태(메모리)만 초기화. 저장된 관리자 세션은 건드리지 않는다
   // (sessionStorage도 탭 간 공유되므로, 여기서 지우면 다른 탭의 관리자가 로그아웃됨)
@@ -105,18 +108,42 @@ export default function User() {
           <p className="text-sm text-gray-500">{user.session_id}그룹 {groupOrder}번째</p>
         </div>
         <button
-          onClick={() => {
-            if (confirm('로그아웃 하시겠습니까?')) {
-              // 서버에 알려 presence(접속자 수) 정리 + 세션 토큰 무효화
-              socket?.emit('participant:logout');
-              logoutUser();
-            }
-          }}
+          onClick={() => setShowLogoutConfirm(true)}
           className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 border border-gray-300 hover:bg-gray-100 active:bg-gray-200 transition-colors shrink-0"
         >
           로그아웃
         </button>
       </header>
+
+      {/* 로그아웃 확인 팝업 (좌석 선택 확인 팝업과 동일한 스타일) */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <p className="text-base font-bold text-gray-900 mb-1 text-center">로그아웃</p>
+            <p className="text-gray-600 text-sm text-center mb-6">로그아웃 하시겠습니까?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 active:bg-gray-100"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  // 서버에 알려 presence(접속자 수) 정리 + 세션 토큰 무효화
+                  socket?.emit('participant:logout');
+                  logoutUser();
+                }}
+                style={{ backgroundColor: '#1C71E8' }}
+                className="flex-1 py-3 rounded-xl text-white font-bold hover:opacity-90 active:opacity-80"
+              >
+                로그아웃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <main className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col max-w-6xl lg:max-w-none mx-auto w-full">
         {/* 공지 바 */}
         {/* 턴/공지 상태가 바뀔 때마다 컴포넌트를 완전히 새로 마운트해,
