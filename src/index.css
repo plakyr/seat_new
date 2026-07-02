@@ -10,3 +10,11 @@
 body {
   font-family: 'Pretendard', sans-serif;
 }
+
+/* 시작 전 카운트다운 오버레이 팝 애니메이션 */
+@keyframes countdownPop {
+  0% { transform: scale(0.4); opacity: 0; }
+  45% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.countdown-pop { animation: countdownPop 0.35s ease-out; }

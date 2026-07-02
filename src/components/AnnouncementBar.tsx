@@ -28,6 +28,9 @@ export default function AnnouncementBar({
   const offsetRef = useRef<number>(0);
   const offsetInitialized = useRef<boolean>(false);
 
+  // 그룹 시작 전 카운트다운 오버레이 상태 (null = 표시 안 함)
+  const [countdown, setCountdown] = useState<{ kind: 'intro' | 'num'; n?: number } | null>(null);
+
   useEffect(() => {
     if (!serverTime) return;
     const candidate = new Date(serverTime).getTime() - Date.now();
@@ -64,6 +67,39 @@ export default function AnnouncementBar({
     const interval = setInterval(update, 500);
     return () => clearInterval(interval);
   }, [currentTurnStartTime, timerPaused]);
+
+  // ── 그룹 시작 전 카운트다운 ──────────────────────────────────────────
+  // 대기(SESSION_CHANGE) 상태에서 다음 그룹 시작시간(HH:MM)까지 6초 이내가 되면
+  // 오버레이를 띄운다. 6~3초: 인트로 문구, 3·2·1: 큰 숫자. 서버 부하 없이 클라에서만 계산.
+  const COUNTDOWN_ENABLED = true; // 끄고 싶으면 false
+  const nextStartTime = announcement.nextStartTime;
+  useEffect(() => {
+    if (!COUNTDOWN_ENABLED || announcement.type !== 'SESSION_CHANGE' || !nextStartTime) {
+      setCountdown(null);
+      return;
+    }
+    const m = nextStartTime.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) { setCountdown(null); return; }
+    const startSec = Number(m[1]) * 3600 + Number(m[2]) * 60;
+
+    const tick = () => {
+      // 서버 보정 시각을 Asia/Seoul 벽시계(초 단위)로 변환해 시작까지 남은 초 계산
+      const nowServer = new Date(Date.now() + offsetRef.current);
+      const seoul = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Seoul', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }).format(nowServer);
+      const [h, mm, s] = seoul.split(':').map(Number);
+      const remaining = startSec - (h * 3600 + mm * 60 + s);
+      if (remaining > 0 && remaining <= 6) {
+        setCountdown(remaining > 3 ? { kind: 'intro' } : { kind: 'num', n: Math.ceil(remaining) });
+      } else {
+        setCountdown(null);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [announcement.type, nextStartTime]);
 
   const currentParticipant = participants.find(p => p.turn_order === currentTurnOrder);
 
@@ -113,22 +149,43 @@ export default function AnnouncementBar({
   const isUrgent = timeLeftMs <= 10000;
 
   return (
-    <div
-      style={{ backgroundColor: bgColor }}
-      className={`text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
-    >
-      {/* 모바일에서 그룹 안내처럼 긴 문구가 잘리지 않도록, 자르는 대신 2줄까지 줄바꿈되게 한다 */}
-      <span className="font-bold text-base sm:text-lg leading-snug line-clamp-2 flex-1 min-w-0">{text}</span>
-      {showTimer && (
-        // key로 일반↔임박 전환마다 엘리먼트를 완전히 새로 그려, 이전 상태(흰 숫자)가
-        // 남은 채로 새 상태(빨간 깜빡임)와 겹쳐 보이는 것을 막는다.
-        <span
-          key={isUrgent ? 'urgent-timer' : 'normal-timer'}
-          className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums inline-block w-[5ch] text-right ${isUrgent ? 'text-red-300 animate-pulse' : 'text-white'}`}
-        >
-          {timeLeft}
-        </span>
+    <>
+      <div
+        style={{ backgroundColor: bgColor }}
+        className={`text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
+      >
+        {/* 모바일에서 그룹 안내처럼 긴 문구가 잘리지 않도록, 자르는 대신 2줄까지 줄바꿈되게 한다 */}
+        <span className="font-bold text-base sm:text-lg leading-snug line-clamp-2 flex-1 min-w-0">{text}</span>
+        {showTimer && (
+          // key로 일반↔임박 전환마다 엘리먼트를 완전히 새로 그려, 이전 상태(흰 숫자)가
+          // 남은 채로 새 상태(빨간 깜빡임)와 겹쳐 보이는 것을 막는다.
+          <span
+            key={isUrgent ? 'urgent-timer' : 'normal-timer'}
+            className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums inline-block w-[5ch] text-right ${isUrgent ? 'text-red-300 animate-pulse' : 'text-white'}`}
+          >
+            {timeLeft}
+          </span>
+        )}
+      </div>
+
+      {/* 그룹 시작 전 카운트다운 오버레이 (클릭을 막지 않도록 pointer-events-none) */}
+      {countdown && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-none px-6">
+          {countdown.kind === 'intro' ? (
+            <div className="countdown-pop text-white text-3xl sm:text-5xl font-black text-center leading-snug">
+              '그룹 {announcement.nextSessionId}'<br />곧 좌석 배정 시작합니다
+            </div>
+          ) : (
+            <div
+              key={countdown.n}
+              className="countdown-pop text-white font-black tabular-nums leading-none"
+              style={{ fontSize: 'min(45vw, 45vh)' }}
+            >
+              {countdown.n}
+            </div>
+          )}
+        </div>
       )}
-    </div>
+    </>
   );
 }
