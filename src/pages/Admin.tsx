@@ -7,7 +7,7 @@ import ChatWindow from '../components/ChatWindow';
 import AnnouncementBar from '../components/AnnouncementBar';
 
 export default function Admin() {
-  const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants, serverTime, announcement, timerPaused, onlineParticipantIds } = useStore();
+  const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants, serverTime, announcement, timerPaused, onlineParticipantIds, hasReceivedSystemState } = useStore();
   const socket = useSocket();
   
   // Login State
@@ -649,6 +649,7 @@ const updateStoreWithEventData = (event: any) => {
                     frozenReason={frozenReason}
                     participants={participants}
                     timerPaused={timerPaused}
+                    hasReceivedSystemState={hasReceivedSystemState}
                   />
 
                   <div className="flex-1 flex gap-4 min-w-0">
