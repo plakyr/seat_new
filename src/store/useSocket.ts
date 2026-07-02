@@ -13,6 +13,9 @@ export const useSocket = () => {
     return useStore.subscribe((state) => { storeRef.current = state; });
   }, []);
 
+  // 서버 시간 보정 오프셋 (서버시각 - 클라시각). time:sync 때마다 갱신.
+  const offsetRef = useRef<number>(0);
+
   useEffect(() => {
     if (socketInstance) {
       setSocket(socketInstance);
@@ -36,6 +39,7 @@ export const useSocket = () => {
     });
 
     socketInstance.on('time:sync', (data: { serverTime: string }) => {
+      offsetRef.current = new Date(data.serverTime).getTime() - Date.now();
       storeRef.current.setServerTime(data.serverTime);
     });
 
@@ -170,6 +174,32 @@ export const useSocket = () => {
         nextStartTime: null,
       });
     });
+
+    // 재동기화 안전망: 그룹 시작 시각이 지났는데도 여전히 대기(SESSION_CHANGE) 상태로
+    // 남아 있으면(실시간 push 유실 등) 서버에 현재 상태를 다시 요청해 강제로 동기화한다.
+    // 정상 상태(비대기/시작 전)에서는 아무것도 하지 않으며, 비정상 상태에서도 3초에 한 번만
+    // 요청해 서버 부하를 최소화한다.
+    let lastResyncAt = 0;
+    setInterval(() => {
+      const st = storeRef.current;
+      if (st.announcement.type !== 'SESSION_CHANGE') return;
+      const startStr = st.announcement.nextStartTime;
+      if (!startStr) return;
+      const m = startStr.match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return;
+      // 서버 보정 시각을 Asia/Seoul 벽시계(분 단위)로 환산해 시작 시각이 지났는지 확인
+      const nowServer = new Date(Date.now() + offsetRef.current);
+      const seoul = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Seoul', hour12: false, hour: '2-digit', minute: '2-digit'
+      }).format(nowServer);
+      const [h, mm] = seoul.split(':').map(Number);
+      if (h * 60 + mm < Number(m[1]) * 60 + Number(m[2])) return; // 아직 시작 전 → 정상 대기
+      if (Date.now() - lastResyncAt < 3000) return; // 3초 스로틀
+      lastResyncAt = Date.now();
+      // 참가자는 seat:request_init로 현재 상태를 다시 받아온다 (관리자는 '새로고침(관리자)' 버튼 사용)
+      const { user } = st;
+      if (user) socketInstance!.emit('seat:request_init', { eventId: user.event_id });
+    }, 1000);
 
     setSocket(socketInstance);
   }, []); // 딱 한 번만 실행 → 리스너 중복 등록 원천 차단
