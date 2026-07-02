@@ -50,6 +50,8 @@ export default function Admin() {
   }, [adminToken, activeTab]);
 
   useEffect(() => {
+    // 소켓 재연결 시 자동 재입장에 쓰도록 현재 관제 중인 이벤트 ID를 스토어에 보관
+    useStore.getState().setAdminEventId(selectedEventId);
     if (selectedEventId && socket) {
       socket.emit('admin:request_event', { eventId: selectedEventId });
     }
