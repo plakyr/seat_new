@@ -14,7 +14,12 @@ import crypto from 'crypto';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 const prisma = new PrismaClient();
-const upload = multer({ storage: multer.memoryStorage() });
+// CSV 업로드 용도이므로 파일당 2MB, 최대 2개 파일로 제한
+// (제한이 없으면 대용량 업로드 한 번에 서버 메모리가 그대로 부풀어 오른다)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024, files: 2 },
+});
 
 // 프로덕션에서는 JWT_SECRET이 반드시 설정되어 있어야 한다.
 // 기본값(하드코딩된 시크릿)으로 토큰을 서명하면 누구나 관리자 토큰을 위조할 수 있으므로,
@@ -336,7 +341,21 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     }
   });
 
-  app.post('/api/admin/upload', requireAdmin, upload.fields([{ name: 'file', maxCount: 1 }, { name: 'seatFile', maxCount: 1 }]), async (req, res) => {
+  // multer 미들웨어 오류(파일 크기 초과 등)를 HTML 500 대신 JSON으로 응답하기 위한 래퍼
+  const uploadFields = upload.fields([{ name: 'file', maxCount: 1 }, { name: 'seatFile', maxCount: 1 }]);
+  const handleUploadFiles = (req: any, res: any, next: any) => {
+    uploadFields(req, res, (err: any) => {
+      if (err) {
+        const msg = err.code === 'LIMIT_FILE_SIZE'
+          ? '파일이 너무 큽니다. CSV 파일은 2MB 이하여야 합니다.'
+          : '파일 업로드에 실패했습니다: ' + err.message;
+        return res.status(400).json({ error: msg });
+      }
+      next();
+    });
+  };
+
+  app.post('/api/admin/upload', requireAdmin, handleUploadFiles, async (req, res) => {
     try {
       const { name, rows, cols } = req.body;
       const layoutMode = req.body.layout_mode === 'grid' ? 'grid' : 'simple';
@@ -372,6 +391,19 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       }
       
       console.log("First parsed record:", records[0]);
+
+      // 필수 컬럼 사전 검증: order_in_group이 누락된 채 뒤의 그룹/순번 중복 검사로 넘어가면
+      // "그룹 1 순번 undefined 중복" 같은 엉뚱한 에러가 떠서 원인을 찾기 어렵다.
+      // 어떤 행에 무엇이 빠졌는지 여기서 먼저 정확히 알려준다.
+      records.forEach((r: any, index: number) => {
+        if (!r.group_id || !r.participant_name || !r.password_4 || !r.order_in_group) {
+          const availableKeys = Object.keys(r).join(', ');
+          throw new Error(`CSV 파일 ${index + 1}번째 행에 필수 데이터가 누락되었습니다. (필수 컬럼: group_id, participant_name, password_4, order_in_group / 발견된 컬럼: ${availableKeys})`);
+        }
+        if (!Number.isInteger(Number(r.order_in_group))) {
+          throw new Error(`CSV 파일 ${index + 1}번째 행의 order_in_group 값("${r.order_in_group}")이 올바른 숫자가 아닙니다.`);
+        }
+      });
 
       // 복도 정보 파싱 (body에서 aisle_after_rows, aisle_after_cols 받음)
       const aisleAfterRows = req.body.aisle_after_rows ? JSON.stringify(
@@ -492,11 +524,8 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         turnOrderMap.set(group, index + 1);
       });
 
-      const participantsData = records.map((r: any, index: number) => {
-        if (!r.group_id || !r.participant_name || !r.password_4) {
-          const availableKeys = Object.keys(r).join(', ');
-          throw new Error(`CSV 파일 ${index + 1}번째 행에 필수 데이터가 누락되었습니다. (발견된 컬럼: ${availableKeys})`);
-        }
+      const participantsData = records.map((r: any) => {
+        // 필수 컬럼은 위 사전 검증에서 이미 확인됨
         const key = `${r.participant_name}-${r.password_4}`;
         const isDuplicate = (participantCounts.get(key) || 0) > 1;
         const globalTurnOrder = turnOrderMap.get(`${r.group_id}|${r.order_in_group}`) || 1;
@@ -748,6 +777,8 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         if (decoded.role === 'admin') {
           socket.data.isAdmin = true;
           socket.data.adminId = decoded.id;
+          // 매 관리자 요청마다 만료를 재검증할 수 있도록 토큰을 보관한다
+          socket.data.adminToken = data.token;
           console.log(`Admin authenticated on socket ${socket.id}`);
         }
       } catch (err) {
@@ -755,9 +786,26 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       }
     });
 
+    // 관리자 소켓 검증: admin:auth 때 저장해 둔 토큰을 요청마다 다시 검증한다.
+    // (한 번 인증됐다고 소켓이 살아있는 동안 무기한 관리자 권한이 유지되지 않도록.
+    //  HTTP 라우트의 requireAdmin은 매 요청 검증하지만 소켓은 그동안 최초 1회뿐이었다)
+    const verifyAdminSocket = (): boolean => {
+      if (!socket.data.isAdmin || !socket.data.adminToken) return false;
+      try {
+        const decoded = jwt.verify(socket.data.adminToken, JWT_SECRET) as any;
+        if (decoded.role !== 'admin') throw new Error();
+        return true;
+      } catch {
+        socket.data.isAdmin = false;
+        socket.data.adminToken = null;
+        socket.emit('admin:error', { error: '관리자 인증이 만료되었습니다. 다시 로그인해주세요.' });
+        return false;
+      }
+    };
+
     // Admin request event details (seats + participants)
     socket.on('admin:request_event', async (data: { eventId: string }) => {
-      if (!socket.data.isAdmin) return;
+      if (!verifyAdminSocket()) return;
 
       // 이벤트를 전환할 때 이전에 선택했던 이벤트의 방에서 나간다.
       // (나가지 않으면 이전 이벤트의 좌석/턴 브로드캐스트가 계속 섞여 들어온다)
@@ -828,7 +876,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
     // Admin freeze/unfreeze system
     socket.on('admin:toggle_freeze', async (data: { eventId: string, isFrozen: boolean, reason?: string }) => {
-      if (!socket.data.isAdmin) return;
+      if (!verifyAdminSocket()) return;
 
       const now = new Date();
       const existing = await prisma.systemState.findUnique({ where: { event_id: data.eventId } });
@@ -874,7 +922,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
     // Admin force cancel seat
     socket.on('admin:cancel_seat', async (data: { seatId: string, eventId: string }) => {
-      if (!socket.data.isAdmin) return;
+      if (!verifyAdminSocket()) return;
       // 자동배정 시퀀스와 동시에 같은 좌석/참가자를 건드리지 않도록 잠금을 공유한다.
       if (autoAssignInProgress.has(data.eventId)) {
         return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
@@ -937,7 +985,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     // Admin force assign seat
     // 관리자: 좌석을 '사석'으로 지정하거나 다시 선택 가능 상태로 되돌리기
     socket.on('admin:set_seat_private', async (data: { seatId: string, eventId: string, isPrivate: boolean }) => {
-      if (!socket.data.isAdmin) return;
+      if (!verifyAdminSocket()) return;
       if (autoAssignInProgress.has(data.eventId)) {
         return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
       }
@@ -966,7 +1014,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
     // Admin: 수동 배정 (참가자 계정 없이 좌석에 이름만 표기)
     socket.on('admin:set_manual_seat', async (data: { seatId: string, eventId: string, label: string | null }) => {
-      if (!socket.data.isAdmin) return;
+      if (!verifyAdminSocket()) return;
       if (autoAssignInProgress.has(data.eventId)) {
         return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
       }
@@ -997,7 +1045,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     socket.on('admin:force_assign', async (data: { seatId: string, participantId: string, eventId: string }) => {
-      if (!socket.data.isAdmin) return;
+      if (!verifyAdminSocket()) return;
       if (autoAssignInProgress.has(data.eventId)) {
         return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
       }
@@ -1066,7 +1114,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
     // Admin: 현재 선택자 좌석 자동배정 후 다음 턴으로 넘기기
     socket.on('admin:next_turn', async (data: { eventId: string }) => {
-      if (!socket.data.isAdmin) return;
+      if (!verifyAdminSocket()) return;
 
       try {
         await forceAssignAndAdvanceTurn(data.eventId);
@@ -1077,7 +1125,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
     // Admin: 좌석 배정 없이 현재 참가자를 건너뛰고 다음 턴으로 (불참/오류 대응)
     socket.on('admin:skip_turn', async (data: { eventId: string }) => {
-      if (!socket.data.isAdmin) return;
+      if (!verifyAdminSocket()) return;
 
       try {
         await skipCurrentTurn(data.eventId);
@@ -1088,7 +1136,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
     // Admin: 전체 참가자 화면 강제 새로고침 신호 전송 (화면 멈춤 복구용)
     socket.on('admin:force_reload', async (data: { eventId: string }) => {
-      if (!socket.data.isAdmin) return;
+      if (!verifyAdminSocket()) return;
       io.to(`event:${data.eventId}`).emit('force_reload', {});
       socket.emit('admin:info', { message: '전체 참가자 화면에 새로고침 신호를 보냈습니다.' });
     });
@@ -1160,8 +1208,13 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
             throw new Error('이미 좌석을 선택하셨습니다.');
           }
 
-          const seat = await tx.seat.findUnique({ where: { id: data.seatId } });
+          const seat = await tx.seat.findUnique({ where: { id: data.seatId }, include: { layout: true } });
           if (!seat) throw new Error('좌석을 찾을 수 없습니다.');
+          // 좌석이 이 참가자의 이벤트 소속인지 확인
+          // (과거 이벤트의 좌석 ID 등으로 다른 이벤트 좌석이 배정되는 데이터 오염 방지)
+          if (seat.layout.event_id !== socket.data.eventId) {
+            throw new Error('이 이벤트의 좌석이 아닙니다.');
+          }
           if (seat.status !== 'EMPTY') throw new Error('이미 선택되었거나 사용할 수 없는 좌석입니다.');
 
           // Update seat and participant
@@ -1224,6 +1277,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         let eventId: string;
 
         if (socket.data.isAdmin) {
+          if (!verifyAdminSocket()) return; // 토큰 만료된 관리자 소켓의 채팅 차단
           senderType = 'ADMIN';
           senderName = '관리자';
           eventId = data.eventId;

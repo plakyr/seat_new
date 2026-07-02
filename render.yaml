@@ -3,7 +3,8 @@ services:
     name: seat-selection-app
     runtime: node
     plan: free
-    buildCommand: npm install && npx prisma generate && npx prisma db push && npm run build
+    # prisma generate / db push는 npm run build 안에서 이미 실행되므로 여기서 중복 실행하지 않는다
+    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
