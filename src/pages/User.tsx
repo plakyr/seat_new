@@ -109,20 +109,23 @@ export default function User() {
       </header>
       <main className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col max-w-6xl lg:max-w-none mx-auto w-full">
         {/* 공지 바 */}
-        <AnnouncementBar
-          // 턴/공지 상태가 바뀔 때마다 컴포넌트를 완전히 새로 마운트해,
-          // 내부 타이머 상태(timeLeft 등)까지 깨끗하게 초기화한다.
-          key={`${announcement.type}-${currentTurnStartTime}`}
-          announcement={announcement}
-          currentTurnOrder={currentTurnOrder}
-          currentTurnStartTime={currentTurnStartTime}
-          serverTime={serverTime}
-          isFrozen={isFrozen}
-          frozenReason={frozenReason}
-          participants={participants}
-          timerPaused={timerPaused}
-          hasReceivedSystemState={hasReceivedSystemState}
-        />
+        {/* 턴/공지 상태가 바뀔 때마다 컴포넌트를 완전히 새로 마운트해,
+            내부 타이머 상태(timeLeft 등)까지 깨끗하게 초기화한다.
+            key는 AnnouncementBar props가 아닌 Fragment에 둬서 tsc가
+            커스텀 컴포넌트에 key를 전달하는 것으로 오인하지 않게 한다. */}
+        <React.Fragment key={`${announcement.type}-${currentTurnStartTime}`}>
+          <AnnouncementBar
+            announcement={announcement}
+            currentTurnOrder={currentTurnOrder}
+            currentTurnStartTime={currentTurnStartTime}
+            serverTime={serverTime}
+            isFrozen={isFrozen}
+            frozenReason={frozenReason}
+            participants={participants}
+            timerPaused={timerPaused}
+            hasReceivedSystemState={hasReceivedSystemState}
+          />
+        </React.Fragment>
         <div className="flex flex-col lg:flex-row lg:flex-1 gap-4 lg:min-h-0 min-w-0">
           <div className="flex-1 relative min-h-[300px] min-w-0">
             <SeatMap />

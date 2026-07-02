@@ -636,21 +636,24 @@ const updateStoreWithEventData = (event: any) => {
 
               {selectedEventId ? (
                 <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col relative min-h-[500px]">
-                  {/* 현재 좌석지정자 및 남은 시간 표시 */}
-                  <AnnouncementBar
-                    // 턴/공지 상태가 바뀔 때마다 컴포넌트를 완전히 새로 마운트해,
-                    // 내부 타이머 상태(timeLeft 등)까지 깨끗하게 초기화한다.
-                    key={`${announcement.type}-${currentTurnStartTime}`}
-                    announcement={announcement}
-                    currentTurnOrder={currentTurnOrder}
-                    currentTurnStartTime={currentTurnStartTime}
-                    serverTime={serverTime}
-                    isFrozen={isFrozen}
-                    frozenReason={frozenReason}
-                    participants={participants}
-                    timerPaused={timerPaused}
-                    hasReceivedSystemState={hasReceivedSystemState}
-                  />
+                  {/* 현재 좌석지정자 및 남은 시간 표시.
+                      턴/공지 상태가 바뀔 때마다 컴포넌트를 완전히 새로 마운트해,
+                      내부 타이머 상태(timeLeft 등)까지 깨끗하게 초기화한다.
+                      key는 AnnouncementBar props가 아닌 Fragment에 둬서 tsc가
+                      커스텀 컴포넌트에 key를 전달하는 것으로 오인하지 않게 한다. */}
+                  <React.Fragment key={`${announcement.type}-${currentTurnStartTime}`}>
+                    <AnnouncementBar
+                      announcement={announcement}
+                      currentTurnOrder={currentTurnOrder}
+                      currentTurnStartTime={currentTurnStartTime}
+                      serverTime={serverTime}
+                      isFrozen={isFrozen}
+                      frozenReason={frozenReason}
+                      participants={participants}
+                      timerPaused={timerPaused}
+                      hasReceivedSystemState={hasReceivedSystemState}
+                    />
+                  </React.Fragment>
 
                   <div className="flex-1 flex gap-4 min-w-0">
                     <div className="flex-[2] flex flex-col min-w-0">
