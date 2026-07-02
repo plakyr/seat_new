@@ -251,7 +251,7 @@ const updateStoreWithEventData = (event: any) => {
     const target = events.find(ev => ev.id === selectedEventId);
     const eventName = target?.name ?? '';
     const input = window.prompt(
-      `[초기화 확인]\n이 이벤트의 모든 좌석 배정이 초기화되어 처음부터 다시 시작됩니다. 이 작업은 되돌릴 수 없습니다.\n\n계속하려면 아래에 이벤트 이름을 정확히 입력하세요:\n${eventName}`
+      `[초기화 확인]\n이 이벤트의 모든 좌석 배정과 채팅 기록이 삭제되어 처음부터 다시 시작됩니다. 이 작업은 되돌릴 수 없습니다.\n\n계속하려면 아래에 이벤트 이름을 정확히 입력하세요:\n${eventName}`
     );
     if (input === null) return; // 취소
     if (input.trim() !== eventName) {
