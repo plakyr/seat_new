@@ -517,9 +517,15 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         throw new Error(`참가자 명단에 그룹/순번이 중복된 항목이 있습니다: ${detail}. group_id와 order_in_group 조합은 고유해야 합니다.`);
       }
 
+      // '추가' 그룹은 관전(추가신청) 계정: 로그인해서 좌석 현황만 볼 수 있고
+      // 좌석 선택 순번을 부여하지 않는다 (turn_order 0 = 관전 계정 표식).
+      // 완료 판정·진행 흐름에서도 제외되어, 미배정으로 남아도 완료 공지에 영향 없음.
+      const OBSERVER_GROUP_ID = '추가';
+
       // Calculate global turn_order
       const turnGroups = new Set<string>();
       records.forEach((r: any) => {
+        if (String(r.group_id) === OBSERVER_GROUP_ID) return; // 관전 계정은 순번 계산 제외
         turnGroups.add(`${r.group_id}|${r.order_in_group}`);
       });
 
@@ -547,7 +553,8 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         // 필수 컬럼은 위 사전 검증에서 이미 확인됨
         const key = `${r.participant_name}-${r.password_4}`;
         const isDuplicate = (participantCounts.get(key) || 0) > 1;
-        const globalTurnOrder = turnOrderMap.get(`${r.group_id}|${r.order_in_group}`) || 1;
+        const isObserver = String(r.group_id) === OBSERVER_GROUP_ID;
+        const globalTurnOrder = isObserver ? 0 : (turnOrderMap.get(`${r.group_id}|${r.order_in_group}`) || 1);
         return {
           session_id: String(r.group_id),
           name: String(r.participant_name),
@@ -1297,6 +1304,12 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
             throw new Error('이미 선택 완료된 자리입니다.');
           }
 
+          // 관전 계정(turn_order 0)은 좌석 선택 불가 — 차례가 영원히 오지 않지만
+          // "차례가 아닙니다" 대신 명확한 안내를 준다.
+          if (participant.turn_order === 0) {
+            throw new Error('관람용 계정은 좌석을 선택할 수 없습니다. 좌석 지정은 운영진이 도와드립니다.');
+          }
+
           // Dynamic turn check
           if (!systemState || participant.turn_order !== systemState.current_turn_order) {
             throw new Error('아직 좌석 선택 차례가 아닙니다.');
@@ -1577,7 +1590,11 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     if (!systemState) return null;
     const total = await prisma.participant.count({ where: { event_id: eventId } });
     if (total === 0) return null;
-    const remaining = await prisma.participant.count({ where: { event_id: eventId, is_final: false } });
+    // 관전 계정(turn_order 0, '추가' 그룹)은 좌석을 배정받지 않아도 완료 판정에서 제외한다.
+    // (제외하지 않으면 미사용 관전 계정 때문에 전원 완료 공지가 영원히 뜨지 않는다)
+    const remaining = await prisma.participant.count({
+      where: { event_id: eventId, is_final: false, turn_order: { gt: 0 } }
+    });
     if (remaining === 0) return { event: 'system:all_complete', payload: {} };
     const cur = await prisma.participant.findFirst({
       where: { event_id: eventId, turn_order: systemState.current_turn_order }

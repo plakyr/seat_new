@@ -105,7 +105,10 @@ export default function User() {
       <header className="bg-white shadow-sm p-4 shrink-0 z-20 flex justify-between items-center">
         <div>
           <h1 className="text-lg font-bold">{user.name}님</h1>
-          <p className="text-sm text-gray-500">{user.session_id}그룹 {groupOrder}번째</p>
+          {/* 관전 계정(turn_order 0, '추가' 그룹)은 그룹/순번 대신 '추가신청자'로 표기 */}
+          <p className="text-sm text-gray-500">
+            {user.turn_order === 0 ? '추가신청자' : `${user.session_id}그룹 ${groupOrder}번째`}
+          </p>
         </div>
         <button
           onClick={() => setShowLogoutConfirm(true)}
