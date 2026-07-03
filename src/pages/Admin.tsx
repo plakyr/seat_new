@@ -37,6 +37,14 @@ export default function Admin() {
   const [editEndTime, setEditEndTime] = useState('');
   const [isSessionPanelOpen, setIsSessionPanelOpen] = useState(false);
 
+  // 비밀번호 변경 모달 상태
+  const [isPwModalOpen, setIsPwModalOpen] = useState(false);
+  const [curPw, setCurPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [newPw2, setNewPw2] = useState('');
+  const [pwError, setPwError] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+
   // 관리자 화면 진입 시 참가자 상태(메모리)만 초기화. 저장된 참가자 세션(sessionStorage)은
   // 건드리지 않는다 — 같은 탭에서 다시 /user로 돌아왔을 때 로그인이 유지되게 하기 위함
   useEffect(() => {
@@ -298,6 +306,38 @@ const updateStoreWithEventData = (event: any) => {
     }
   };
 
+  const openPwModal = () => {
+    setCurPw(''); setNewPw(''); setNewPw2(''); setPwError('');
+    setIsPwModalOpen(true);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminToken) return;
+    setPwError('');
+    if (newPw.length < 8) { setPwError('새 비밀번호는 8자 이상이어야 합니다.'); return; }
+    if (newPw !== newPw2) { setPwError('새 비밀번호가 서로 일치하지 않습니다.'); return; }
+    setPwSaving(true);
+    try {
+      const res = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({ currentPassword: curPw, newPassword: newPw }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsPwModalOpen(false);
+        useStore.getState().addToast('비밀번호가 변경되었습니다.', 'info');
+      } else {
+        setPwError(data.error || '비밀번호 변경에 실패했습니다.');
+      }
+    } catch {
+      setPwError('서버 오류가 발생했습니다.');
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
   const handleSaveSession = async (session: any) => {
     try {
       const res = await fetch('/api/admin/sessions', {
@@ -361,11 +401,66 @@ const updateStoreWithEventData = (event: any) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* 비밀번호 변경 모달 */}
+      {isPwModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">비밀번호 변경 <span className="text-sm font-medium text-gray-400">({adminUser?.username})</span></h3>
+              <button onClick={() => setIsPwModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+            </div>
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <input
+                type="password"
+                value={curPw}
+                onChange={(e) => setCurPw(e.target.value)}
+                placeholder="현재 비밀번호"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+              />
+              <input
+                type="password"
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                placeholder="새 비밀번호 (8자 이상)"
+                required
+                minLength={8}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+              />
+              <input
+                type="password"
+                value={newPw2}
+                onChange={(e) => setNewPw2(e.target.value)}
+                placeholder="새 비밀번호 확인"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+              />
+              {pwError && <p className="text-red-500 text-sm font-medium">{pwError}</p>}
+              <button
+                type="submit"
+                disabled={pwSaving}
+                className="w-full py-3 bg-gray-900 hover:bg-black text-white rounded-xl font-bold disabled:opacity-50 transition-colors"
+              >
+                {pwSaving ? '변경 중...' : '변경하기'}
+              </button>
+            </form>
+            <p className="mt-3 text-xs text-gray-400 leading-relaxed">
+              본인 계정의 비밀번호만 변경됩니다. 변경 후에도 현재 로그인은 유지되며, 다른 관리자 계정에는 영향이 없습니다.
+            </p>
+          </div>
+        </div>
+      )}
       <aside className="w-64 bg-gray-900 text-white p-6 hidden md:flex flex-col">
         <h1 className="text-2xl font-bold mb-8 tracking-tight">관리자 메뉴</h1>
         <div className="mb-6 pb-6 border-b border-gray-800">
           <p className="text-sm text-gray-400">접속 계정</p>
           <p className="font-medium text-lg">{adminUser?.username}</p>
+          <button
+            onClick={openPwModal}
+            className="mt-2 text-xs text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
+          >
+            비밀번호 변경
+          </button>
         </div>
         <nav className="space-y-2 flex-1">
           <button
@@ -404,6 +499,14 @@ const updateStoreWithEventData = (event: any) => {
               className={`flex-1 py-2.5 rounded-lg font-bold text-sm ${activeTab === 'UPLOAD' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
             >
               대시보드 / 업로드
+            </button>
+            {/* 모바일용 비밀번호 변경 (사이드바가 숨겨지므로) */}
+            <button
+              onClick={openPwModal}
+              title="비밀번호 변경"
+              className="px-3 py-2.5 rounded-lg text-sm font-bold bg-white text-gray-600 border border-gray-300"
+            >
+              🔒
             </button>
           </div>
           {activeTab === 'UPLOAD' && (
