@@ -500,18 +500,18 @@ const updateStoreWithEventData = (event: any) => {
               onClick={openResetModal}
               className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline underline-offset-2"
             >
-              비밀번호를 잊은 동료가 있나요? → 동료 비밀번호 초기화
+              비밀번호를 잊은 관리자가 있나요? → 관리자 비밀번호 초기화
             </button>
           </div>
         </div>
       )}
 
-      {/* 동료 비밀번호 초기화 모달 */}
+      {/* 관리자 비밀번호 초기화 모달 */}
       {isResetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900">동료 비밀번호 초기화</h3>
+              <h3 className="text-lg font-bold text-gray-900">관리자 비밀번호 초기화</h3>
               <button onClick={() => setIsResetModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
             </div>
             {resetResult ? (
@@ -568,7 +568,9 @@ const updateStoreWithEventData = (event: any) => {
           </div>
         </div>
       )}
-      <aside className="w-64 bg-gray-900 text-white p-6 hidden md:flex flex-col">
+      {/* 사이드바를 화면에 고정(sticky)해, 본문을 스크롤해도 메뉴와 하단 로그아웃
+          버튼이 항상 같은 자리에 보이게 한다 */}
+      <aside className="w-64 bg-gray-900 text-white p-6 hidden md:flex flex-col md:sticky md:top-0 md:h-screen shrink-0">
         <h1 className="text-2xl font-bold mb-8 tracking-tight">관리자 메뉴</h1>
         <div className="mb-6 pb-6 border-b border-gray-800">
           <p className="text-sm text-gray-400">접속 계정</p>
@@ -584,7 +586,7 @@ const updateStoreWithEventData = (event: any) => {
               onClick={openResetModal}
               className="text-xs text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
             >
-              동료 비밀번호 초기화
+              관리자 비밀번호 초기화
             </button>
           </div>
         </div>
@@ -633,6 +635,13 @@ const updateStoreWithEventData = (event: any) => {
               className="px-3 py-2.5 rounded-lg text-sm font-bold bg-white text-gray-600 border border-gray-300"
             >
               🔒
+            </button>
+            {/* 모바일용 로그아웃 (사이드바가 숨겨지므로) */}
+            <button
+              onClick={() => setAdminAuth(null, null)}
+              className="px-3 py-2.5 rounded-lg text-sm font-bold bg-white text-gray-600 border border-gray-300 whitespace-nowrap"
+            >
+              로그아웃
             </button>
           </div>
           {activeTab === 'UPLOAD' && (
