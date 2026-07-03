@@ -171,7 +171,7 @@ async function startServer() {
     limit: 10,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => `${ipKeyGenerator(req.ip || '')}|${String(req.body?.name ?? '')}`,
+    keyGenerator: (req) => `${ipKeyGenerator(req.ip || '')}|${String(req.body?.name ?? '').trim()}`,
     message: { error: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.' },
   });
 
@@ -671,7 +671,12 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   });
 
   app.post('/api/auth/login', participantLoginLimiter, async (req, res) => {
-    const { name, phone_last4, unique_code } = req.body;
+    // 입력값 앞뒤 공백 자동 제거 (모바일 키보드 자동완성 등으로 공백이 붙어
+    // "참가자 정보를 찾을 수 없습니다"가 뜨는 것 방지). 이름 중간 공백은 그대로 구분한다.
+    const name = String(req.body.name ?? '').trim();
+    const phone_last4 = String(req.body.phone_last4 ?? '').trim();
+    const uniqueCodeRaw = req.body.unique_code;
+    const unique_code = typeof uniqueCodeRaw === 'string' && uniqueCodeRaw.trim() ? uniqueCodeRaw.trim() : undefined;
     try {
       const activeEvent = await prisma.event.findFirst({
         where: { is_active: true },
