@@ -845,6 +845,18 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         return;
       }
 
+      // 역할 상호 배타: 참가자로 인증한 소켓은 관리자 권한을 내려놓는다.
+      // (같은 탭에서 관리자 → 참가자로 이동해 테스트하면 소켓에 관리자 표식이 남아,
+      //  참가자 채팅이 '관리자' 이름으로 나가고 차례 제한도 우회되는 문제 방지)
+      if (socket.data.isAdmin) {
+        socket.data.isAdmin = false;
+        socket.data.adminToken = null;
+        if (socket.data.adminEventId) {
+          socket.leave(`admin:event:${socket.data.adminEventId}`);
+          socket.data.adminEventId = null;
+        }
+      }
+
       // Register active socket
       activeSockets.set(participantId, socket.id);
       socket.data.participantId = participantId;
@@ -865,6 +877,20 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       try {
         const decoded = jwt.verify(data.token, JWT_SECRET) as any;
         if (decoded.role === 'admin') {
+          // 역할 상호 배타: 관리자로 인증한 소켓은 참가자 상태를 정리한다.
+          // (같은 탭에서 참가자 → 관리자로 이동한 경우 접속자 수에 잔류하는 것 방지)
+          const prevPid = socket.data.participantId;
+          const prevEid = socket.data.eventId;
+          if (prevPid) {
+            if (activeSockets.get(prevPid) === socket.id) activeSockets.delete(prevPid);
+            socket.data.participantId = null;
+            socket.data.eventId = null;
+            if (prevEid) {
+              socket.leave(`event:${prevEid}`);
+              broadcastOnlineParticipants(prevEid);
+            }
+          }
+
           socket.data.isAdmin = true;
           socket.data.adminId = decoded.id;
           // 매 관리자 요청마다 만료를 재검증할 수 있도록 토큰을 보관한다
