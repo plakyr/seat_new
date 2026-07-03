@@ -4,6 +4,7 @@ import { createServer as createViteServer } from 'vite';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
@@ -51,9 +52,13 @@ const requireAdmin = (req: any, res: any, next: any) => {
 async function startServer() {
   const app = express();
   const httpServer = createServer(app);
-  const io = new Server(httpServer, {
-    cors: { origin: '*' }
-  });
+
+  // CORS 정책: 프론트엔드가 이 서버에서 함께 서빙되므로(동일 출처) 기본적으로
+  // 교차 출처 허용이 필요 없다. 다른 도메인에서 API/소켓 접근을 허용해야 할 때만
+  // ALLOWED_ORIGIN 환경변수로 해당 출처를 지정한다. (기존: 전 출처 허용 '*')
+  const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN;
+
+  const io = new Server(httpServer, ALLOWED_ORIGIN ? { cors: { origin: ALLOWED_ORIGIN } } : {});
   const PORT = Number(process.env.PORT) || 3000;
 
   // 해당 이벤트의 현재 접속 중인 참가자 ID 목록을 관리자에게 실시간 전송
@@ -150,7 +155,15 @@ async function startServer() {
   // Render 등 리버스 프록시 뒤에서 클라이언트 실제 IP(X-Forwarded-For)를 신뢰
   // (rate limit이 프록시 IP가 아닌 사용자 IP 기준으로 동작하기 위해 필요)
   app.set('trust proxy', 1);
-  app.use(cors());
+
+  // 보안 응답 헤더 (클릭재킹 방지 X-Frame-Options, MIME 스니핑 방지, HSTS 등).
+  // CSP는 Vite 번들의 인라인 스타일과 충돌할 수 있어 비활성화 (필요 시 별도 도입)
+  app.use(helmet({ contentSecurityPolicy: false }));
+
+  // 교차 출처 허용이 필요한 경우에만 CORS 미들웨어 적용 (기본: 동일 출처만)
+  if (ALLOWED_ORIGIN) {
+    app.use(cors({ origin: ALLOWED_ORIGIN }));
+  }
   app.use(express.json());
 
   // 관리자 로그인: IP당 15분에 10회. 관리자는 소수이므로 낮게 잡아 무차별 대입을 차단.
@@ -1348,6 +1361,12 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       try {
         const { content } = data;
         if (!content || !content.trim()) return;
+        // 길이 제한: 제한이 없으면 요청 본문 한도(~100KB)까지의 메시지를 저장·전체
+        // 브로드캐스트할 수 있어 화면 도배/저장소 낭비에 악용될 수 있다.
+        if (content.trim().length > 500) {
+          socket.emit('chat:error', { error: '메시지는 500자 이내로 입력해주세요.' });
+          return;
+        }
 
         let senderType = 'USER';
         let senderName = 'Unknown';
