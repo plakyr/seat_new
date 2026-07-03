@@ -244,6 +244,8 @@ const updateStoreWithEventData = (event: any) => {
   const handleReloadState = () => {
     if (!selectedEventId || !socket) return;
     socket.emit('admin:request_event', { eventId: selectedEventId });
+    // 조용한 상태 교체라 눌러도 반응이 없어 보이므로, 동작했음을 토스트로 알려준다
+    useStore.getState().addToast('최신 상태를 다시 불러왔습니다.', 'info');
   };
 
   const handleResetEvent = async () => {
