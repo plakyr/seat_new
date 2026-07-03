@@ -45,6 +45,15 @@ export default function Admin() {
   const [pwError, setPwError] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
 
+  // 동료 비밀번호 초기화 모달 상태
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [adminList, setAdminList] = useState<string[]>([]);
+  const [resetTarget, setResetTarget] = useState('');
+  const [resetMyPw, setResetMyPw] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSaving, setResetSaving] = useState(false);
+  const [resetResult, setResetResult] = useState<string | null>(null);
+
   // 관리자 화면 진입 시 참가자 상태(메모리)만 초기화. 저장된 참가자 세션(sessionStorage)은
   // 건드리지 않는다 — 같은 탭에서 다시 /user로 돌아왔을 때 로그인이 유지되게 하기 위함
   useEffect(() => {
@@ -338,6 +347,46 @@ const updateStoreWithEventData = (event: any) => {
     }
   };
 
+  const openResetModal = async () => {
+    setResetTarget(''); setResetMyPw(''); setResetError(''); setResetResult(null);
+    setIsPwModalOpen(false);
+    setIsResetModalOpen(true);
+    try {
+      const res = await fetch('/api/admin/admins', {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAdminList((data.admins || []).filter((u: string) => u !== adminUser?.username));
+      }
+    } catch { /* 목록 로딩 실패 시 빈 목록 유지 */ }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminToken) return;
+    setResetError('');
+    if (!resetTarget) { setResetError('초기화할 계정을 선택해주세요.'); return; }
+    setResetSaving(true);
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({ targetUsername: resetTarget, myPassword: resetMyPw }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResetResult(data.tempPassword);
+      } else {
+        setResetError(data.error || '비밀번호 초기화에 실패했습니다.');
+      }
+    } catch {
+      setResetError('서버 오류가 발생했습니다.');
+    } finally {
+      setResetSaving(false);
+    }
+  };
+
   const handleSaveSession = async (session: any) => {
     try {
       const res = await fetch('/api/admin/sessions', {
@@ -447,6 +496,75 @@ const updateStoreWithEventData = (event: any) => {
             <p className="mt-3 text-xs text-gray-400 leading-relaxed">
               본인 계정의 비밀번호만 변경됩니다. 변경 후에도 현재 로그인은 유지되며, 다른 관리자 계정에는 영향이 없습니다.
             </p>
+            <button
+              onClick={openResetModal}
+              className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline underline-offset-2"
+            >
+              비밀번호를 잊은 동료가 있나요? → 동료 비밀번호 초기화
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 동료 비밀번호 초기화 모달 */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">동료 비밀번호 초기화</h3>
+              <button onClick={() => setIsResetModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+            </div>
+            {resetResult ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-700">
+                  <span className="font-bold">{resetTarget}</span> 계정의 임시 비밀번호가 발급되었습니다:
+                </p>
+                <div className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-center">
+                  <span className="font-mono font-bold text-2xl tracking-widest select-all">{resetResult}</span>
+                </div>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  이 값은 지금 한 번만 표시됩니다. 동료에게 안전한 방법으로 전달하고,
+                  로그인 후 반드시 "비밀번호 변경"으로 본인만 아는 비밀번호로 바꾸도록 안내해주세요.
+                </p>
+                <button
+                  onClick={() => setIsResetModalOpen(false)}
+                  className="w-full py-3 bg-gray-900 hover:bg-black text-white rounded-xl font-bold transition-colors"
+                >
+                  확인
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPassword} className="space-y-3">
+                <select
+                  value={resetTarget}
+                  onChange={(e) => setResetTarget(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none bg-white"
+                >
+                  <option value="">-- 초기화할 계정 선택 --</option>
+                  {adminList.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+                <input
+                  type="password"
+                  value={resetMyPw}
+                  onChange={(e) => setResetMyPw(e.target.value)}
+                  placeholder="본인 비밀번호 (확인용)"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                />
+                {resetError && <p className="text-red-500 text-sm font-medium">{resetError}</p>}
+                <button
+                  type="submit"
+                  disabled={resetSaving}
+                  className="w-full py-3 bg-gray-900 hover:bg-black text-white rounded-xl font-bold disabled:opacity-50 transition-colors"
+                >
+                  {resetSaving ? '발급 중...' : '임시 비밀번호 발급'}
+                </button>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  선택한 계정의 비밀번호가 임시 비밀번호로 교체됩니다. 도용 방지를 위해 본인 비밀번호를 다시 확인합니다.
+                </p>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -455,12 +573,20 @@ const updateStoreWithEventData = (event: any) => {
         <div className="mb-6 pb-6 border-b border-gray-800">
           <p className="text-sm text-gray-400">접속 계정</p>
           <p className="font-medium text-lg">{adminUser?.username}</p>
-          <button
-            onClick={openPwModal}
-            className="mt-2 text-xs text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
-          >
-            비밀번호 변경
-          </button>
+          <div className="mt-2 flex flex-col items-start gap-1">
+            <button
+              onClick={openPwModal}
+              className="text-xs text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
+            >
+              비밀번호 변경
+            </button>
+            <button
+              onClick={openResetModal}
+              className="text-xs text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
+            >
+              동료 비밀번호 초기화
+            </button>
+          </div>
         </div>
         <nav className="space-y-2 flex-1">
           <button
