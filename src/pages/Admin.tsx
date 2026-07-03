@@ -723,7 +723,11 @@ const updateStoreWithEventData = (event: any) => {
                             )}
                             
                             <div className="flex items-center gap-2">
-                              {isEditing ? (
+                              {/* '추가' 그룹은 관전용이라 시간 설정이 동작에 영향을 주지 않으므로
+                                  혼동하지 않도록 시간 설정 UI를 숨긴다 */}
+                              {sc.session_id === '추가' ? (
+                                <span className="text-sm text-gray-400">관전용 — 시간 설정 없음</span>
+                              ) : isEditing ? (
                                 <>
                                   <input 
                                     type="time" 
