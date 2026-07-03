@@ -230,6 +230,36 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     return res.status(500).json({ error: '로그인 처리 중 오류가 발생했습니다.' });
   }
 });
+
+  // 관리자 본인 비밀번호 변경. 현재 비밀번호 확인 후 DB의 해시만 교체한다.
+  // (ADMIN_SEED_PASSWORD 환경변수는 최초 계정 생성 시에만 쓰이므로 여기서 건드리지 않음.
+  //  변경 후 기존 로그인 세션은 그대로 유지되고, 다른 관리자 계정에는 영향 없음)
+  app.post('/api/admin/change-password', requireAdmin, async (req: any, res: any) => {
+    try {
+      const currentPassword = String(req.body.currentPassword ?? '');
+      const newPassword = String(req.body.newPassword ?? '');
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: '현재 비밀번호와 새 비밀번호를 모두 입력해주세요.' });
+      }
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: '새 비밀번호는 8자 이상이어야 합니다.' });
+      }
+      const admin = await prisma.adminUser.findUnique({ where: { id: req.admin.id } });
+      if (!admin) {
+        return res.status(404).json({ error: '계정을 찾을 수 없습니다.' });
+      }
+      const isValid = await bcrypt.compare(currentPassword, admin.password_hash);
+      if (!isValid) {
+        return res.status(401).json({ error: '현재 비밀번호가 올바르지 않습니다.' });
+      }
+      const password_hash = await bcrypt.hash(newPassword, 10);
+      await prisma.adminUser.update({ where: { id: admin.id }, data: { password_hash } });
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Change password error:', error);
+      return res.status(500).json({ error: '비밀번호 변경 중 오류가 발생했습니다.' });
+    }
+  });
   
   app.get('/api/admin/events', requireAdmin, async (req, res) => {
     try {
