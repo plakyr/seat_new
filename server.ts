@@ -34,6 +34,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-in-prod';
 // Store active participant sockets: participantId -> socketId
 const activeSockets = new Map<string, string>();
 
+// 관리자 화면으로 보내는 참가자 정보에서 세션 토큰을 제거한다.
+// 토큰은 해당 참가자의 신분 증명값이라 관제 화면에 쓰일 일이 없고,
+// 불필요하게 클라이언트(개발자 도구)에 노출할 이유가 없다.
+const stripSessionToken = (p: any) => {
+  if (!p) return p;
+  const { session_token, ...rest } = p;
+  return rest;
+};
+
 // Middleware to protect admin routes
 const requireAdmin = (req: any, res: any, next: any) => {
   const authHeader = req.headers.authorization;
@@ -307,7 +316,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           aisle_after_rows: layout.aisle_after_rows ? JSON.parse(layout.aisle_after_rows) : [],
           aisle_after_cols: layout.aisle_after_cols ? JSON.parse(layout.aisle_after_cols) : [],
         } : null,
-        participants,
+        participants: participants.map(stripSessionToken),
         systemState,
         sessionColors: await prisma.sessionColor.findMany({ where: { event_id: eventId } }),
         messages: [],
@@ -975,7 +984,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           aisle_after_rows: layout.aisle_after_rows ? JSON.parse(layout.aisle_after_rows) : [],
           aisle_after_cols: layout.aisle_after_cols ? JSON.parse(layout.aisle_after_cols) : [],
         } : null,
-        participants,
+        participants: participants.map(stripSessionToken),
         systemState,
         sessionColors,
         messages
@@ -1089,7 +1098,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
         io.to(`event:${data.eventId}`).emit('seat:update', { seat: result.updatedSeat });
         io.to(`admin:event:${data.eventId}`).emit('seat:update', { seat: result.updatedSeat });
-        io.to(`admin:event:${data.eventId}`).emit('participant:update_admin', { participant: result.updatedParticipant });
+        io.to(`admin:event:${data.eventId}`).emit('participant:update_admin', { participant: stripSessionToken(result.updatedParticipant) });
 
         // Notify the specific user that their seat was cancelled
         const userSocketId = activeSockets.get(result.updatedParticipant.id);
@@ -1219,7 +1228,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
         io.to(`event:${data.eventId}`).emit('seat:update', { seat: result.updatedSeat });
         io.to(`admin:event:${data.eventId}`).emit('seat:update', { seat: result.updatedSeat });
-        io.to(`admin:event:${data.eventId}`).emit('participant:update_admin', { participant: result.updatedParticipant });
+        io.to(`admin:event:${data.eventId}`).emit('participant:update_admin', { participant: stripSessionToken(result.updatedParticipant) });
 
         // Notify the specific user
         const userSocketId = activeSockets.get(result.updatedParticipant.id);
@@ -1383,7 +1392,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         socket.emit('participant:update', { participant: result.updatedParticipant });
         
         // Notify admins about the participant update
-        io.to(`admin:event:${socket.data.eventId}`).emit('participant:update_admin', { participant: result.updatedParticipant });
+        io.to(`admin:event:${socket.data.eventId}`).emit('participant:update_admin', { participant: stripSessionToken(result.updatedParticipant) });
 
         // 턴 전환 알림: 전원 완료/그룹 간 대기 여부를 먼저 확인한 뒤 emit한다
         // (무조건 system:turn만 보내면 마지막 참가자가 선택한 순간 "대기 중"으로 잘못 보임)
@@ -1724,7 +1733,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         });
       }
 
-      io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: updatedParticipant });
+      io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: stripSessionToken(updatedParticipant) });
       const userSocketId = activeSockets.get(currentParticipant.id);
       if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: updatedParticipant });
     }
@@ -1781,7 +1790,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           where: { id: currentParticipant.id },
           data: { turn_status: 'EXPIRED', is_final: true }
         });
-        io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: updatedParticipant });
+        io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: stripSessionToken(updatedParticipant) });
         const userSocketId = activeSockets.get(currentParticipant.id);
         if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: updatedParticipant });
       }
@@ -1955,7 +1964,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           data: { turn_status: 'EXPIRED', is_final: true }
         });
         // 관리자 화면과 해당 참가자 화면에 만료 상태를 반영한다.
-        io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: expiredParticipant });
+        io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: stripSessionToken(expiredParticipant) });
         const userSocketId = activeSockets.get(currentParticipant.id);
         if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: expiredParticipant });
       } else {
@@ -1978,7 +1987,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
           io.to(`event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
           io.to(`admin:event:${eventId}`).emit('seat:update', { seat: result.updatedSeat });
-          io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: result.updatedParticipant });
+          io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: stripSessionToken(result.updatedParticipant) });
           const userSocketId = activeSockets.get(currentParticipant.id);
           if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: result.updatedParticipant });
           console.log(`[AutoAssign] ${currentParticipant.name} → ${targetSeat.row}행 ${targetSeat.col}열 완료`);
@@ -1990,7 +1999,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
             where: { id: currentParticipant.id },
             data: { turn_status: 'EXPIRED', is_final: true }
           });
-          io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: expiredParticipant });
+          io.to(`admin:event:${eventId}`).emit('participant:update_admin', { participant: stripSessionToken(expiredParticipant) });
           const userSocketId = activeSockets.get(currentParticipant.id);
           if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: expiredParticipant });
         }
