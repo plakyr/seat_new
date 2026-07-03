@@ -440,11 +440,13 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
               <button onClick={() => handleSetSeatPrivate(true)} className="w-full py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-bold transition-colors text-sm">
                 사석으로 지정
               </button>
+              {/* 강제 배정 대상 목록: 관전 계정(turn_order 0, 추가신청자)은 제외한다.
+                  추가신청자는 항상 수동 배정(실명 입력)으로 처리하므로 이 목록에 필요 없음 */}
               <div className="mt-2 space-y-1 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-1">
-                {participants.filter((p: any) => !p.seat_id).length === 0 ? (
+                {participants.filter((p: any) => !p.seat_id && p.turn_order > 0).length === 0 ? (
                   <p className="text-xs text-gray-400 text-center py-2">미배정 참가자가 없습니다.</p>
                 ) : (
-                  participants.filter((p: any) => !p.seat_id).sort((a: any, b: any) => a.turn_order - b.turn_order).map((p: any) => (
+                  participants.filter((p: any) => !p.seat_id && p.turn_order > 0).sort((a: any, b: any) => a.turn_order - b.turn_order).map((p: any) => (
                     <button key={p.id} onClick={() => handleForceAssign(p.id)}
                       className="w-full text-left px-2 py-1.5 text-xs hover:bg-blue-50 active:bg-blue-100 rounded flex justify-between items-center border-b last:border-0 border-gray-50">
                       <span>{p.name} ({p.turn_order}번)</span>
