@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import React, { useState, useRef } from 'react';
+import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { cn } from '../lib/utils';
 import { useStore } from '../store/useStore';
 import { useSocket } from '../store/useSocket';
@@ -51,6 +51,9 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   const [confirmSeat, setConfirmSeat] = useState<{ seatId: string; label: string } | null>(null);
   // 수동 배정 이름 입력값
   const [manualName, setManualName] = useState('');
+  // 좌석표 이동/확대 초기화용 (자유 이동(limitToBounds=false)이라 화면 밖으로
+  // 밀어버릴 수 있으므로, 원위치 복귀 버튼에서 사용)
+  const transformRef = useRef<ReactZoomPanPinchRef>(null);
 
   const maxRow = seats.length > 0 ? Math.max(...seats.map(s => s.row)) : 0;
   const maxCol = seats.length > 0 ? Math.max(...seats.map(s => s.col)) : 0;
@@ -204,6 +207,7 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
 
       {/* pinch-to-zoom 지원 */}
       <TransformWrapper
+        ref={transformRef}
         initialScale={1}
         minScale={0.2}
         maxScale={5}
@@ -342,6 +346,17 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         </div>
         </TransformComponent>
       </TransformWrapper>
+
+      {/* 좌석표를 화면 밖으로 밀어버렸을 때 원위치/원래 배율로 복귀하는 버튼.
+          (경계 제한(limitToBounds)은 모바일에서 구석 좌석 도달 불가/스냅백 버그를
+          일으켜 쓰지 않고, 자유 이동 + 초기화 버튼 방식을 사용) */}
+      <button
+        type="button"
+        onClick={() => transformRef.current?.resetTransform()}
+        className="absolute right-3 bottom-12 z-10 flex items-center gap-1 bg-white/90 border border-gray-300 rounded-full px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-md hover:bg-white active:bg-gray-100 select-none"
+      >
+        ⟲ 위치 초기화
+      </button>
 
       {/* 범례 — 한 줄에 모두 표시 (좁은 화면에선 폰트/간격 축소) */}
       {/* 항목이 줄어 한 줄 여유가 생겨 모바일 폰트를 10px → 12px로 키움 */}
