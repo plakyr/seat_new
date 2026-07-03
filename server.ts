@@ -260,6 +260,58 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       return res.status(500).json({ error: '비밀번호 변경 중 오류가 발생했습니다.' });
     }
   });
+
+  // 관리자 사용자명 목록 (동료 비밀번호 초기화의 대상 선택용)
+  app.get('/api/admin/admins', requireAdmin, async (req: any, res: any) => {
+    try {
+      const admins = await prisma.adminUser.findMany({
+        select: { username: true },
+        orderBy: { username: 'asc' }
+      });
+      return res.json({ success: true, admins: admins.map(a => a.username) });
+    } catch (error) {
+      console.error('Admin list error:', error);
+      return res.status(500).json({ error: '관리자 목록을 불러오지 못했습니다.' });
+    }
+  });
+
+  // 동료 관리자 비밀번호 초기화.
+  // 비밀번호를 잊은 동료를 위해, 로그인 가능한 다른 관리자가 임시 비밀번호를 발급한다.
+  // 자리 비운 화면에서의 도용을 막기 위해 요청자 본인의 비밀번호를 반드시 재확인한다.
+  // 임시 비밀번호는 이 응답에서 1회만 보여지며 서버에는 해시로만 저장된다.
+  app.post('/api/admin/reset-password', requireAdmin, async (req: any, res: any) => {
+    try {
+      const targetUsername = String(req.body.targetUsername ?? '').trim();
+      const myPassword = String(req.body.myPassword ?? '');
+      if (!targetUsername || !myPassword) {
+        return res.status(400).json({ error: '대상 계정과 본인 비밀번호를 모두 입력해주세요.' });
+      }
+      const me = await prisma.adminUser.findUnique({ where: { id: req.admin.id } });
+      if (!me) {
+        return res.status(404).json({ error: '요청자 계정을 찾을 수 없습니다.' });
+      }
+      if (me.username === targetUsername) {
+        return res.status(400).json({ error: '본인 계정은 "비밀번호 변경" 기능을 이용해주세요.' });
+      }
+      const isValid = await bcrypt.compare(myPassword, me.password_hash);
+      if (!isValid) {
+        return res.status(401).json({ error: '본인 비밀번호가 올바르지 않습니다.' });
+      }
+      const target = await prisma.adminUser.findUnique({ where: { username: targetUsername } });
+      if (!target) {
+        return res.status(404).json({ error: '대상 계정을 찾을 수 없습니다.' });
+      }
+      // 8자리 임시 비밀번호 (숫자+소문자 hex — 전화로 불러주기 쉬운 조합)
+      const tempPassword = crypto.randomBytes(4).toString('hex');
+      const password_hash = await bcrypt.hash(tempPassword, 10);
+      await prisma.adminUser.update({ where: { id: target.id }, data: { password_hash } });
+      console.log(`[Admin] ${me.username} 님이 ${target.username} 계정의 비밀번호를 초기화했습니다.`);
+      return res.json({ success: true, tempPassword });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return res.status(500).json({ error: '비밀번호 초기화 중 오류가 발생했습니다.' });
+    }
+  });
   
   app.get('/api/admin/events', requireAdmin, async (req, res) => {
     try {
