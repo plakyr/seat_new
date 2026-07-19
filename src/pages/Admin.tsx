@@ -944,7 +944,7 @@ const updateStoreWithEventData = (event: any) => {
                             </div>
                             {/* 마우스 오버 시 그룹 참가자 명단 (순서대로) */}
                             {totalCount > 0 && (
-                              <div className="absolute left-4 bottom-full mb-2 z-30 hidden group-hover:block bg-gray-900 text-white text-sm rounded-lg shadow-xl p-3 min-w-[200px] max-h-[300px] overflow-y-auto">
+                              <div className="absolute left-4 bottom-full mb-2 z-30 hidden group-hover:block bg-gray-900 text-white text-sm rounded-lg shadow-xl p-3 min-w-[200px]">
                                 <p className="font-bold mb-2 text-gray-300">그룹 {sc.session_id} 참가자 순서</p>
                                 {/* 관전 그룹(추가)은 전원 turn_order 0이라 이름순(숫자 인식)으로 2차 정렬해
                                     로그인 등으로 DB 행 순서가 바뀌어도 표시 순서를 고정한다 */}
