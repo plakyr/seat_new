@@ -1412,7 +1412,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           });
           if (!isGroupStarted(sess?.start_time)) {
             throw new Error(sess?.start_time
-              ? `아직 그룹 시작 시간이 아닙니다. (시작: ${sess.start_time})`
+              ? `아직 그룹 시작 시간이 아닙니다. (시작: ${formatSessionTime(sess.start_time)})`
               : '아직 그룹 시작 시간이 지정되지 않았습니다.');
           }
 
@@ -1520,13 +1520,17 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           
           if (!participant || !systemState) return;
           
-          // 채팅 권한: 자기 차례이고 아직 선택 완료 전이면 가능.
-          // 일시정지(is_frozen) 중에도 현재 차례였던 참가자는 채팅 가능하게 허용.
+          // 채팅 권한: 현재 차례인 참가자와 같은 그룹이면(= 자기 그룹 진행 중) 전원 가능.
+          // 이미 좌석을 확정한 사람도 자기 그룹이 진행 중인 동안은 의견을 남길 수 있다.
+          // 일시정지(is_frozen) 중에도 동일하게 허용.
           // 관전 계정(turn_order 0, '추가' 그룹)은 차례가 없으므로 상시 채팅 허용
           // ('추가' 그룹은 시작 시간도 없어 아래 그룹 시작 검사도 건너뛴다)
           if (participant.turn_order !== 0) {
-            if (participant.turn_order !== systemState.current_turn_order || participant.is_final) {
-              socket.emit('chat:error', { error: '채팅 권한이 없습니다.' });
+            const currentTurnP = await prisma.participant.findFirst({
+              where: { event_id: eventId, turn_order: systemState.current_turn_order }
+            });
+            if (!currentTurnP || currentTurnP.session_id !== participant.session_id) {
+              socket.emit('chat:error', { error: '자신의 그룹이 진행 중일 때만 채팅이 가능합니다.' });
               return;
             }
 
@@ -1536,7 +1540,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
             });
             if (!isGroupStarted(chatSession?.start_time)) {
               socket.emit('chat:error', { error: chatSession?.start_time
-                ? `아직 그룹 시작 시간이 아닙니다. (시작: ${chatSession.start_time})`
+                ? `아직 그룹 시작 시간이 아닙니다. (시작: ${formatSessionTime(chatSession.start_time)})`
                 : '아직 그룹 시작 시간이 지정되지 않았습니다.' });
               return;
             }
@@ -1634,25 +1638,52 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   }
 
 
-  // "HH:MM" 형식의 시작 시간이 현재 시각(한국 시간 기준)에 도달했는지 확인
+  // 그룹 시작/종료 시간 문자열 파싱 (Asia/Seoul 기준). 두 형식을 모두 허용한다:
+  //  - "HH:MM"            : 기존 형식. "오늘"의 해당 시각으로 해석
+  //  - "YYYY-MM-DDTHH:MM" : datetime-local 입력값. 날짜까지 지정된 시각
+  //    (날짜가 지정되면 그 날짜가 될 때까지 시작으로 판정되지 않으므로,
+  //     전날 미리 시간을 입력해도 타이머가 도는 사고가 없다)
+  // 클라이언트(src/utils/time.ts)에도 동일한 규칙의 헬퍼가 있다 — 함께 수정할 것.
+  function parseSessionTime(value: string | null | undefined): { y?: number; mo?: number; d?: number; hh: number; mm: number } | null {
+    if (!value) return null;
+    let m = value.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{1,2}):(\d{2})$/);
+    if (m) return { y: Number(m[1]), mo: Number(m[2]), d: Number(m[3]), hh: Number(m[4]), mm: Number(m[5]) };
+    m = value.match(/^(\d{1,2}):(\d{2})$/);
+    if (m) return { hh: Number(m[1]), mm: Number(m[2]) };
+    return null;
+  }
+
+  // 안내 문구용: 날짜가 있으면 "7/20 14:00", 없으면 "14:00"
+  function formatSessionTime(value: string): string {
+    const t = parseSessionTime(value);
+    if (!t) return value;
+    const hhmm = `${String(t.hh).padStart(2, '0')}:${String(t.mm).padStart(2, '0')}`;
+    return t.y ? `${t.mo}/${t.d} ${hhmm}` : hhmm;
+  }
+
+  // 시작 시간이 현재 시각(한국 시간 기준)에 도달했는지 확인
   // 서버가 UTC 등 다른 시간대에서 돌아도 항상 Asia/Seoul 기준으로 비교
   function isSessionStartTimeReached(startTime: string | null | undefined): boolean {
     if (!startTime) return true;
-    const m = startTime.match(/^(\d{1,2}):(\d{2})$/);
-    if (!m) return true;
+    const t = parseSessionTime(startTime);
+    if (!t) return true;
+    if (t.y) {
+      // 날짜 포함: 서울 로컬 시각을 UTC 순간으로 변환해 현재와 비교 (서울은 UTC+9, DST 없음)
+      return Date.now() >= Date.UTC(t.y, t.mo! - 1, t.d!, t.hh - 9, t.mm, 0, 0);
+    }
     const seoulNow = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false
     }).format(new Date());
     const [nowH, nowM] = seoulNow.split(':').map(Number);
-    return nowH * 60 + nowM >= Number(m[1]) * 60 + Number(m[2]);
+    return nowH * 60 + nowM >= t.hh * 60 + t.mm;
   }
 
-  // "HH:MM"(Asia/Seoul) 시작 시간을 "오늘" 날짜의 실제 UTC 순간(Date)으로 변환한다.
-  // 타이머가 그룹 시작 이전 시각으로 설정돼 있는지 판단하는 데 사용한다. (서울은 UTC+9, DST 없음)
+  // 시작 시간을 실제 UTC 순간(Date)으로 변환한다. "HH:MM"이면 "오늘"(서울 기준)의 그 시각.
+  // 타이머가 그룹 시작 이전 시각으로 설정돼 있는지 판단하는 데 사용한다.
   function sessionStartMomentToday(startTime: string | null | undefined): Date | null {
-    if (!startTime) return null;
-    const m = startTime.match(/^(\d{1,2}):(\d{2})$/);
-    if (!m) return null;
+    const t = parseSessionTime(startTime);
+    if (!t) return null;
+    if (t.y) return new Date(Date.UTC(t.y, t.mo! - 1, t.d!, t.hh - 9, t.mm, 0, 0));
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit'
     }).formatToParts(new Date());
@@ -1661,7 +1692,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     const d = Number(parts.find(p => p.type === 'day')?.value);
     if (!y || !mo || !d) return null;
     // 서울(UTC+9) 기준 시각을 UTC instant로 변환 (hh-9가 음수여도 Date.UTC가 롤오버 처리)
-    return new Date(Date.UTC(y, mo - 1, d, Number(m[1]) - 9, Number(m[2]), 0, 0));
+    return new Date(Date.UTC(y, mo - 1, d, t.hh - 9, t.mm, 0, 0));
   }
 
   // 진행 흐름 판단용: 그룹이 "시작되었는지" 여부.

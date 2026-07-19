@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useStore, Seat, User } from './useStore';
+import { sessionStartEpochMs } from '../utils/time';
 
 let socketInstance: Socket | null = null;
 
@@ -194,15 +195,12 @@ export const useSocket = () => {
       if (st.announcement.type !== 'SESSION_CHANGE') return;
       const startStr = st.announcement.nextStartTime;
       if (!startStr) return;
-      const m = startStr.match(/^(\d{1,2}):(\d{2})$/);
-      if (!m) return;
-      // 서버 보정 시각을 Asia/Seoul 벽시계(분 단위)로 환산해 시작 시각이 지났는지 확인
-      const nowServer = new Date(Date.now() + offsetRef.current);
-      const seoul = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Asia/Seoul', hour12: false, hour: '2-digit', minute: '2-digit'
-      }).format(nowServer);
-      const [h, mm] = seoul.split(':').map(Number);
-      if (h * 60 + mm < Number(m[1]) * 60 + Number(m[2])) return; // 아직 시작 전 → 정상 대기
+      // 서버 보정 시각 기준으로 시작 시각이 지났는지 확인
+      // ("HH:MM"은 오늘, "YYYY-MM-DDTHH:MM"은 지정 날짜 기준 — utils/time 참고)
+      const nowMs = Date.now() + offsetRef.current;
+      const startMs = sessionStartEpochMs(startStr, nowMs);
+      if (startMs == null) return;
+      if (nowMs < startMs) return; // 아직 시작 전 → 정상 대기
       if (Date.now() - lastResyncAt < 3000) return; // 3초 스로틀
       lastResyncAt = Date.now();
       // 참가자는 seat:request_init로 현재 상태를 다시 받아온다 (관리자는 '새로고침(관리자)' 버튼 사용)

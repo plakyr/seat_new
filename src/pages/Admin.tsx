@@ -5,6 +5,19 @@ import { useSocket } from '../store/useSocket';
 import SeatMap from '../components/SeatMap';
 import ChatWindow from '../components/ChatWindow';
 import AnnouncementBar from '../components/AnnouncementBar';
+import { formatSessionTime } from '../utils/time';
+
+// 저장된 시간 문자열("HH:MM" 또는 "YYYY-MM-DDTHH:MM")을 datetime-local 입력값으로 변환.
+// 기존 "HH:MM" 값은 오늘 날짜를 붙여 보여준다 (저장 시에는 날짜 포함 형식으로 저장됨).
+function toDatetimeLocalValue(value: string | null | undefined): string {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}T\d{1,2}:\d{2}$/.test(value)) return value;
+  const m = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return '';
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(Number(m[1]))}:${m[2]}`;
+}
 
 export default function Admin() {
   const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants, serverTime, announcement, timerPaused, onlineParticipantIds, hasReceivedSystemState } = useStore();
@@ -970,14 +983,14 @@ const updateStoreWithEventData = (event: any) => {
                               ) : isEditing ? (
                                 <>
                                   <input 
-                                    type="time" 
+                                    type="datetime-local"
                                     value={editStartTime} 
                                     onChange={e => setEditStartTime(e.target.value)}
                                     className="border border-gray-300 rounded px-2 py-1 text-sm"
                                   />
                                   <span className="text-gray-500">-</span>
                                   <input 
-                                    type="time" 
+                                    type="datetime-local"
                                     value={editEndTime} 
                                     onChange={e => setEditEndTime(e.target.value)}
                                     className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -998,13 +1011,13 @@ const updateStoreWithEventData = (event: any) => {
                               ) : (
                                 <>
                                   <span className="text-sm text-gray-600 font-mono">
-                                    {sc.start_time || '--:--'} ~ {sc.end_time || '--:--'}
+                                    {formatSessionTime(sc.start_time) || '--:--'} ~ {formatSessionTime(sc.end_time) || '--:--'}
                                   </span>
-                                  <button 
+                                  <button
                                     onClick={() => {
                                       setEditingSessionId(sc.id);
-                                      setEditStartTime(sc.start_time || '');
-                                      setEditEndTime(sc.end_time || '');
+                                      setEditStartTime(toDatetimeLocalValue(sc.start_time));
+                                      setEditEndTime(toDatetimeLocalValue(sc.end_time));
                                     }}
                                     className="ml-4 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border border-gray-300 transition-colors"
                                   >

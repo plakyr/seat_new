@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 import { useSocket } from '../store/useSocket';
 
 export default function ChatWindow({ eventId }: { eventId: string }) {
-  const { messages, user, isAdmin, adminUser, currentTurnOrder } = useStore();
+  const { messages, user, isAdmin, adminUser, currentTurnOrder, participants } = useStore();
   const socket = useSocket();
   const [inputValue, setInputValue] = useState('');
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -13,9 +13,16 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
     if (container) container.scrollTop = container.scrollHeight;
   }, [messages]);
 
-  // 일시정지(isFrozen) 중에도 현재 차례였던 참가자는 채팅 가능
-  // 관전 계정(turn_order 0, '추가' 그룹)은 차례가 없으므로 상시 채팅 가능
-  const canChat = isAdmin || (user && (user.turn_order === 0 || (user.turn_order === currentTurnOrder && !user.is_final)));
+  // 채팅 가능 조건 (서버 검증과 동일한 규칙):
+  //  - 관리자: 항상
+  //  - 관전 계정(turn_order 0, '추가' 그룹): 항상
+  //  - 일반 참가자: 현재 차례 참가자와 같은 그룹이면(= 자기 그룹 진행 중) 좌석 확정 여부와 무관하게 가능
+  // 일시정지(isFrozen) 중에도 동일하게 허용
+  const currentTurnParticipant = participants.find(p => p.turn_order === currentTurnOrder);
+  const canChat = isAdmin || (user && (
+    user.turn_order === 0 ||
+    (currentTurnParticipant != null && currentTurnParticipant.session_id === user.session_id)
+  ));
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +70,7 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
             onChange={(e) => setInputValue(e.target.value)}
             maxLength={500}
             disabled={!canChat}
-            placeholder={canChat ? "메시지를 입력하세요..." : "내 차례에만 채팅이 가능합니다."}
+            placeholder={canChat ? "메시지를 입력하세요..." : "우리 그룹 진행 중에만 채팅이 가능합니다."}
             className="flex-1 min-w-0 px-3 py-2 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-100 disabled:text-gray-500"
           />
           <button

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnnouncementState } from '../store/useStore';
+import { formatSessionTime, sessionStartEpochMs } from '../utils/time';
 
 interface Props {
   announcement: AnnouncementState;
@@ -80,18 +81,13 @@ export default function AnnouncementBar({
       setCountdown(null);
       return;
     }
-    const m = nextStartTime.match(/^(\d{1,2}):(\d{2})$/);
-    if (!m) { setCountdown(null); return; }
-    const startSec = Number(m[1]) * 3600 + Number(m[2]) * 60;
-
     const tick = () => {
-      // 서버 보정 시각을 Asia/Seoul 벽시계(초 단위)로 변환해 시작까지 남은 초 계산
-      const nowServer = new Date(Date.now() + offsetRef.current);
-      const seoul = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Asia/Seoul', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
-      }).format(nowServer);
-      const [h, mm, s] = seoul.split(':').map(Number);
-      const remaining = startSec - (h * 3600 + mm * 60 + s);
+      // 서버 보정 시각 기준으로 시작 순간까지 남은 초 계산
+      // ("HH:MM"은 오늘, "YYYY-MM-DDTHH:MM"은 지정 날짜 기준 — utils/time 참고)
+      const nowMs = Date.now() + offsetRef.current;
+      const startMs = sessionStartEpochMs(nextStartTime, nowMs);
+      if (startMs == null) { setCountdown(null); return; }
+      const remaining = (startMs - nowMs) / 1000;
       if (remaining > 0 && remaining <= 6) {
         setCountdown(remaining > 3 ? { kind: 'intro' } : { kind: 'num', n: Math.ceil(remaining) });
       } else {
@@ -123,13 +119,14 @@ export default function AnnouncementBar({
     pulse = true;
   } else if (announcement.type === 'SESSION_CHANGE') {
     bgColor = '#7253C4';
+    const nextStartLabel = formatSessionTime(announcement.nextStartTime);
     if (announcement.prevSessionId) {
-      text = announcement.nextStartTime
-        ? `그룹 ${announcement.prevSessionId} 좌석지정 완료. 그룹 ${announcement.nextSessionId} 시작시간은 ${announcement.nextStartTime} 입니다.`
+      text = nextStartLabel
+        ? `그룹 ${announcement.prevSessionId} 좌석지정 완료. 그룹 ${announcement.nextSessionId} 시작시간은 ${nextStartLabel} 입니다.`
         : `그룹 ${announcement.prevSessionId} 좌석지정 완료. 다음 그룹을 준비 중입니다.`;
     } else {
-      text = announcement.nextStartTime
-        ? `그룹 ${announcement.nextSessionId} 시작시간은 ${announcement.nextStartTime} 입니다.`
+      text = nextStartLabel
+        ? `그룹 ${announcement.nextSessionId} 시작시간은 ${nextStartLabel} 입니다.`
         : '그룹 시작을 준비 중입니다.';
     }
   } else if (announcement.type === 'ALL_COMPLETE') {
