@@ -946,8 +946,10 @@ const updateStoreWithEventData = (event: any) => {
                             {totalCount > 0 && (
                               <div className="absolute left-4 bottom-full mb-2 z-30 hidden group-hover:block bg-gray-900 text-white text-sm rounded-lg shadow-xl p-3 min-w-[200px] max-h-[300px] overflow-y-auto">
                                 <p className="font-bold mb-2 text-gray-300">그룹 {sc.session_id} 참가자 순서</p>
+                                {/* 관전 그룹(추가)은 전원 turn_order 0이라 이름순(숫자 인식)으로 2차 정렬해
+                                    로그인 등으로 DB 행 순서가 바뀌어도 표시 순서를 고정한다 */}
                                 {[...sessionParticipants]
-                                  .sort((a, b) => a.turn_order - b.turn_order)
+                                  .sort((a, b) => (a.turn_order - b.turn_order) || a.name.localeCompare(b.name, 'ko', { numeric: true }))
                                   .map((p, i) => (
                                     <div key={p.id} className="flex justify-between gap-4 py-0.5">
                                       <span className="flex items-center gap-1.5">

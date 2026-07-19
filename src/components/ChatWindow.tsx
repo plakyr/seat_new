@@ -44,7 +44,7 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
                   {msg.sender_type === 'ADMIN' ? '👑 관리자' : msg.sender_name}
                 </span>
                 <span className="text-xs text-gray-400">
-                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(msg.timestamp).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
               <div className={`px-3 py-2 rounded-lg text-base max-w-[85%] ${isMe ? 'bg-gray-900 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
