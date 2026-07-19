@@ -1522,20 +1522,24 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           
           // 채팅 권한: 자기 차례이고 아직 선택 완료 전이면 가능.
           // 일시정지(is_frozen) 중에도 현재 차례였던 참가자는 채팅 가능하게 허용.
-          if (participant.turn_order !== systemState.current_turn_order || participant.is_final) {
-            socket.emit('chat:error', { error: '채팅 권한이 없습니다.' });
-            return;
-          }
+          // 관전 계정(turn_order 0, '추가' 그룹)은 차례가 없으므로 상시 채팅 허용
+          // ('추가' 그룹은 시작 시간도 없어 아래 그룹 시작 검사도 건너뛴다)
+          if (participant.turn_order !== 0) {
+            if (participant.turn_order !== systemState.current_turn_order || participant.is_final) {
+              socket.emit('chat:error', { error: '채팅 권한이 없습니다.' });
+              return;
+            }
 
-          // 그룹이 시작되기 전(시작시간 미지정 또는 미도달)에는 채팅 불가
-          const chatSession = await prisma.sessionColor.findFirst({
-            where: { event_id: eventId, session_id: participant.session_id }
-          });
-          if (!isGroupStarted(chatSession?.start_time)) {
-            socket.emit('chat:error', { error: chatSession?.start_time
-              ? `아직 그룹 시작 시간이 아닙니다. (시작: ${chatSession.start_time})`
-              : '아직 그룹 시작 시간이 지정되지 않았습니다.' });
-            return;
+            // 그룹이 시작되기 전(시작시간 미지정 또는 미도달)에는 채팅 불가
+            const chatSession = await prisma.sessionColor.findFirst({
+              where: { event_id: eventId, session_id: participant.session_id }
+            });
+            if (!isGroupStarted(chatSession?.start_time)) {
+              socket.emit('chat:error', { error: chatSession?.start_time
+                ? `아직 그룹 시작 시간이 아닙니다. (시작: ${chatSession.start_time})`
+                : '아직 그룹 시작 시간이 지정되지 않았습니다.' });
+              return;
+            }
           }
           
           senderType = 'USER';

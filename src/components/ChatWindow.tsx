@@ -14,7 +14,8 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
   }, [messages]);
 
   // 일시정지(isFrozen) 중에도 현재 차례였던 참가자는 채팅 가능
-  const canChat = isAdmin || (user && user.turn_order === currentTurnOrder && !user.is_final);
+  // 관전 계정(turn_order 0, '추가' 그룹)은 차례가 없으므로 상시 채팅 가능
+  const canChat = isAdmin || (user && (user.turn_order === 0 || (user.turn_order === currentTurnOrder && !user.is_final)));
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
