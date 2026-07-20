@@ -270,7 +270,8 @@ const updateStoreWithEventData = (event: any) => {
     if (!confirm(
       `'${target?.name ?? ''}' 이벤트를 활성으로 전환하시겠습니까?\n\n` +
       `- 기존 활성 이벤트의 접속 참가자는 전원 로그아웃됩니다.\n` +
-      `- 이후 참가자 로그인은 이 이벤트로 연결됩니다.`
+      `- 이후 참가자 로그인은 이 이벤트로 연결됩니다.\n` +
+      `- 안전을 위해 입장은 '차단' 상태로 시작합니다. 준비되면 [입장 허용]을 눌러주세요.`
     )) return;
     try {
       const res = await fetch(`/api/admin/events/${selectedEventId}/activate`, {

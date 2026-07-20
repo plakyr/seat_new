@@ -382,7 +382,10 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           where: { is_active: true, id: { not: eventId } },
           data: { is_active: false }
         });
-        await tx.event.update({ where: { id: eventId }, data: { is_active: true } });
+        // 안전장치: 전환된 이벤트에 이전의 입장 허용 상태가 남아 있다가 의도치 않게
+        // 즉시 로그인이 열리는 것을 막기 위해, 활성 전환 시 입장은 항상 차단으로 시작한다.
+        // (관리자가 준비된 시점에 [입장 허용]을 눌러 열어야 함)
+        await tx.event.update({ where: { id: eventId }, data: { is_active: true, login_open: false } });
         return prevActive.map(e => e.id);
       });
 
