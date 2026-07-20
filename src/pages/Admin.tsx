@@ -914,8 +914,6 @@ const updateStoreWithEventData = (event: any) => {
                 </div>
                 
                 {selectedEventId && (
-                  {/* 좌측 블록에 활성 상태 문구가 추가되며 높이가 커졌으므로,
-                      아래 정렬(self-end) 대신 세로 중앙 정렬로 버튼을 맞춘다 */}
                   <div className="w-full md:w-auto mt-4 md:mt-0 md:self-center flex flex-wrap gap-2">
                     <button
                       onClick={handleToggleLoginOpen}
