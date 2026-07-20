@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { useSocket } from '../store/useSocket';
 import SeatMap from '../components/SeatMap';
@@ -20,7 +20,7 @@ function toDatetimeLocalValue(value: string | null | undefined): string {
 }
 
 export default function Admin() {
-  const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants, serverTime, announcement, timerPaused, onlineParticipantIds, hasReceivedSystemState } = useStore();
+  const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants, serverTime, announcement, timerPaused, onlineParticipantIds, hasReceivedSystemState, messages } = useStore();
   const socket = useSocket();
   
   // Login State
@@ -43,6 +43,21 @@ export default function Admin() {
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'UPLOAD' | 'MONITOR'>('MONITOR');
+
+  // 레이아웃 접기 상태: 좁은 화면에서 좌석표를 넓게 보기 위한 토글
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(true);
+  // 채팅이 접혀 있는 동안 도착한 새 메시지 수 (펼치면 초기화)
+  const [chatUnread, setChatUnread] = useState(0);
+  const chatSeenCountRef = useRef(0);
+  useEffect(() => {
+    if (isChatOpen) {
+      chatSeenCountRef.current = messages.length;
+      setChatUnread(0);
+    } else {
+      setChatUnread(Math.max(0, messages.length - chatSeenCountRef.current));
+    }
+  }, [messages, isChatOpen]);
 
   // Session Edit State
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -245,6 +260,29 @@ const updateStoreWithEventData = (event: any) => {
       }
     } catch (err) {
       alert('서버 오류가 발생했습니다.');
+    }
+  };
+
+  // 선택한 이벤트를 활성 이벤트로 전환 (기존 활성 이벤트 접속자는 전원 로그아웃됨)
+  const handleActivateEvent = async () => {
+    if (!selectedEventId) return;
+    const target = events.find(ev => ev.id === selectedEventId);
+    if (!confirm(
+      `'${target?.name ?? ''}' 이벤트를 활성으로 전환하시겠습니까?\n\n` +
+      `- 기존 활성 이벤트의 접속 참가자는 전원 로그아웃됩니다.\n` +
+      `- 이후 참가자 로그인은 이 이벤트로 연결됩니다.`
+    )) return;
+    try {
+      const res = await fetch(`/api/admin/events/${selectedEventId}/activate`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      useStore.getState().addToast('활성 이벤트가 전환되었습니다.', 'info');
+      fetchEvents();
+    } catch (err: any) {
+      alert(err?.message || '활성 이벤트 전환에 실패했습니다.');
     }
   };
 
@@ -582,9 +620,31 @@ const updateStoreWithEventData = (event: any) => {
         </div>
       )}
       {/* 사이드바를 화면에 고정(sticky)해, 본문을 스크롤해도 메뉴와 하단 로그아웃
-          버튼이 항상 같은 자리에 보이게 한다 */}
+          버튼이 항상 같은 자리에 보이게 한다.
+          좁은 화면에서 좌석표를 넓게 쓸 수 있도록 접기/펼치기를 지원한다 */}
+      {!isSidebarOpen && (
+        <div className="hidden md:flex flex-col items-center bg-gray-900 text-white w-10 py-4 md:sticky md:top-0 md:h-screen shrink-0">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            title="메뉴 펼치기"
+            className="text-gray-300 hover:text-white text-xl leading-none"
+          >
+            »
+          </button>
+        </div>
+      )}
+      {isSidebarOpen && (
       <aside className="w-64 bg-gray-900 text-white p-6 hidden md:flex flex-col md:sticky md:top-0 md:h-screen shrink-0">
-        <h1 className="text-2xl font-bold mb-8 tracking-tight">관리자 메뉴</h1>
+        <div className="flex items-start justify-between mb-8">
+          <h1 className="text-2xl font-bold tracking-tight">관리자 메뉴</h1>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            title="메뉴 접기 (좌석표 넓게 보기)"
+            className="text-gray-400 hover:text-white text-xl leading-none mt-1"
+          >
+            «
+          </button>
+        </div>
         <div className="mb-6 pb-6 border-b border-gray-800">
           <p className="text-sm text-gray-400">접속 계정</p>
           <p className="font-medium text-lg">{adminUser?.username}</p>
@@ -617,14 +677,15 @@ const updateStoreWithEventData = (event: any) => {
             대시보드 / 업로드
           </button>
         </nav>
-        <button 
+        <button
           onClick={() => setAdminAuth(null, null)}
           className="mt-auto py-2 px-4 text-left text-gray-400 hover:text-white transition-colors"
         >
           로그아웃
         </button>
       </aside>
-      
+      )}
+
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-5xl lg:max-w-none mx-auto h-full flex flex-col">
           {/* 모바일 전용 탭 전환 바 (사이드바가 숨겨지므로) */}
@@ -818,9 +879,33 @@ const updateStoreWithEventData = (event: any) => {
                   >
                     <option value="">-- 이벤트를 선택하세요 --</option>
                     {events.map(ev => (
-                      <option key={ev.id} value={ev.id}>{ev.name} (참가자 {ev._count?.participants || 0}명)</option>
+                      <option key={ev.id} value={ev.id}>{ev.name} (참가자 {ev._count?.participants || 0}명){ev.is_active ? ' · 활성' : ''}</option>
                     ))}
                   </select>
+                  {selectedEvent && (
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      {selectedEvent.is_active ? (
+                        <span className="text-sm font-semibold text-green-600 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          활성 이벤트 — 참가자 로그인이 이 이벤트로 연결됩니다
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-sm font-semibold text-gray-400 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                            비활성 이벤트 — 참가자 로그인 불가
+                          </span>
+                          <button
+                            onClick={handleActivateEvent}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg text-white shadow-sm hover:opacity-90"
+                            style={{ backgroundColor: '#17A85A' }}
+                          >
+                            이 이벤트를 활성으로 전환
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 {selectedEventId && (
@@ -896,19 +981,23 @@ const updateStoreWithEventData = (event: any) => {
                       내부 타이머 상태(timeLeft 등)까지 깨끗하게 초기화한다.
                       key는 AnnouncementBar props가 아닌 Fragment에 둬서 tsc가
                       커스텀 컴포넌트에 key를 전달하는 것으로 오인하지 않게 한다. */}
-                  <React.Fragment key={`${announcement.type}-${currentTurnStartTime}`}>
-                    <AnnouncementBar
-                      announcement={announcement}
-                      currentTurnOrder={currentTurnOrder}
-                      currentTurnStartTime={currentTurnStartTime}
-                      serverTime={serverTime}
-                      isFrozen={isFrozen}
-                      frozenReason={frozenReason}
-                      participants={participants}
-                      timerPaused={timerPaused}
-                      hasReceivedSystemState={hasReceivedSystemState}
-                    />
-                  </React.Fragment>
+                  {/* 관리자 화면 전용: 하단 그룹 현황까지 스크롤해도 공지가 항상 보이도록
+                      상단에 고정한다 (참가자 화면은 변경 없음) */}
+                  <div className="sticky top-0 z-40 bg-white">
+                    <React.Fragment key={`${announcement.type}-${currentTurnStartTime}`}>
+                      <AnnouncementBar
+                        announcement={announcement}
+                        currentTurnOrder={currentTurnOrder}
+                        currentTurnStartTime={currentTurnStartTime}
+                        serverTime={serverTime}
+                        isFrozen={isFrozen}
+                        frozenReason={frozenReason}
+                        participants={participants}
+                        timerPaused={timerPaused}
+                        hasReceivedSystemState={hasReceivedSystemState}
+                      />
+                    </React.Fragment>
+                  </div>
 
                   <div className="flex-1 flex gap-4 min-w-0">
                     <div className="flex-[2] flex flex-col min-w-0">
@@ -919,9 +1008,34 @@ const updateStoreWithEventData = (event: any) => {
                         선택된 좌석을 클릭하면 참가자 정보를 확인하고 강제 취소할 수 있습니다.
                       </p>
                     </div>
-                    <div className="flex-1 lg:flex-none lg:w-[370px] lg:shrink-0 flex flex-col min-w-0 h-[50vh] lg:h-[70vh]">
-                      <ChatWindow eventId={selectedEventId} />
-                    </div>
+                    {/* 채팅창 접기: 좁은 화면에서 좌석표를 넓게 쓰기 위한 토글.
+                        접혀 있는 동안 새 메시지가 오면 개수 뱃지를 표시한다 */}
+                    {isChatOpen ? (
+                      <div className="relative flex-1 lg:flex-none lg:w-[370px] lg:shrink-0 flex flex-col min-w-0 h-[50vh] lg:h-[70vh]">
+                        <button
+                          onClick={() => setIsChatOpen(false)}
+                          title="채팅 접기 (좌석표 넓게 보기)"
+                          className="absolute top-2.5 right-2 z-10 px-2 py-0.5 rounded-md text-lg font-bold text-gray-700 hover:bg-black/10 leading-none"
+                        >
+                          »
+                        </button>
+                        <ChatWindow eventId={selectedEventId} />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setIsChatOpen(true)}
+                        title="채팅 펼치기"
+                        className="relative self-start shrink-0 flex flex-col items-center gap-2 rounded-lg border border-gray-300 bg-white px-2.5 py-4 text-gray-700 shadow-sm hover:bg-gray-50"
+                      >
+                        <span className="text-lg">💬</span>
+                        <span className="text-xs font-bold [writing-mode:vertical-rl]">채팅 열기</span>
+                        {chatUnread > 0 && (
+                          <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                            {chatUnread > 99 ? '99+' : chatUnread}
+                          </span>
+                        )}
+                      </button>
+                    )}
                   </div>
 
                   {/* Session Info Panel */}

@@ -345,6 +345,58 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     }
   });
 
+  // 이벤트의 접속 참가자 전원을 로그아웃 처리한다 (이벤트 비활성화/전환 시 사용).
+  // 세션 토큰을 무효화하고 session:expired를 보내 로그인 화면으로 돌려보낸다.
+  async function logoutParticipantsOfEvent(eventId: string, reason: string) {
+    await prisma.participant.updateMany({
+      where: { event_id: eventId },
+      data: { session_token: null }
+    });
+    const oldSockets = await io.in(`event:${eventId}`).fetchSockets();
+    for (const s of oldSockets) {
+      if (!s.data.participantId) continue; // 같은 방의 관리자 소켓은 건드리지 않음
+      activeSockets.delete(s.data.participantId);
+      s.data.participantId = null;
+      s.data.eventId = null;
+      s.leave(`event:${eventId}`);
+      s.emit('session:expired', { reason });
+    }
+    flowAnnounced.delete(eventId);
+    broadcastOnlineParticipants(eventId);
+  }
+
+  // 활성 이벤트 전환: 선택한 이벤트를 활성화하고 나머지는 모두 비활성화한다.
+  // (업로드 시 자동 활성화와 동일한 규칙 — 활성 이벤트는 항상 하나만 존재)
+  // 이전 활성 이벤트의 접속 참가자는 업로드 때와 동일하게 즉시 로그아웃 처리한다.
+  app.post('/api/admin/events/:eventId/activate', requireAdmin, async (req, res) => {
+    const { eventId } = req.params;
+    try {
+      const prevActiveIds = await prisma.$transaction(async (tx) => {
+        const target = await tx.event.findUnique({ where: { id: eventId } });
+        if (!target) throw new Error('이벤트를 찾을 수 없습니다.');
+        const prevActive = await tx.event.findMany({
+          where: { is_active: true, id: { not: eventId } },
+          select: { id: true }
+        });
+        await tx.event.updateMany({
+          where: { is_active: true, id: { not: eventId } },
+          data: { is_active: false }
+        });
+        await tx.event.update({ where: { id: eventId }, data: { is_active: true } });
+        return prevActive.map(e => e.id);
+      });
+
+      for (const oldId of prevActiveIds) {
+        await logoutParticipantsOfEvent(oldId, '이벤트가 종료되었습니다. 다시 로그인해주세요.');
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Activate event error:', error);
+      res.status(500).json({ error: error.message || '활성 이벤트 전환에 실패했습니다.' });
+    }
+  });
+
   // 테스트용: 이벤트의 모든 좌석/참가자 상태를 초기화
   app.post('/api/admin/events/:eventId/reset', requireAdmin, async (req, res) => {
     const { eventId } = req.params;
@@ -725,23 +777,8 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       // ── 이전 활성 이벤트의 참가자들을 즉시 로그아웃 처리 ──────────────
       // 새 이벤트가 활성화되면 이전 이벤트 화면을 켜둔 참가자는 갱신이 멈춘 채
       // 이전 좌석표만 계속 보게 되고, 세션 토큰도 유효해서 새로고침해도 그대로였다.
-      // 토큰을 무효화하고 session:expired를 보내 로그인 화면으로 돌려보낸다.
       for (const oldId of prevActiveIds) {
-        await prisma.participant.updateMany({
-          where: { event_id: oldId },
-          data: { session_token: null }
-        });
-        const oldSockets = await io.in(`event:${oldId}`).fetchSockets();
-        for (const s of oldSockets) {
-          if (!s.data.participantId) continue; // 같은 방의 관리자 소켓은 건드리지 않음
-          activeSockets.delete(s.data.participantId);
-          s.data.participantId = null;
-          s.data.eventId = null;
-          s.leave(`event:${oldId}`);
-          s.emit('session:expired', { reason: '새로운 이벤트가 시작되었습니다. 다시 로그인해주세요.' });
-        }
-        flowAnnounced.delete(oldId);
-        broadcastOnlineParticipants(oldId);
+        await logoutParticipantsOfEvent(oldId, '새로운 이벤트가 시작되었습니다. 다시 로그인해주세요.');
       }
 
       res.json({ success: true, eventId: event.id });
