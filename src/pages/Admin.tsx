@@ -686,7 +686,10 @@ const updateStoreWithEventData = (event: any) => {
       </aside>
       )}
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      {/* overflow-y-auto를 두지 않는다: 실제 스크롤은 창(window)에서 일어나는데,
+          main에 overflow가 걸려 있으면 내부 sticky(공지 고정)의 기준이 main이 되어
+          창 스크롤 시 고정이 동작하지 않는다 */}
+      <main className="flex-1 p-8">
         <div className="max-w-5xl lg:max-w-none mx-auto h-full flex flex-col">
           {/* 모바일 전용 탭 전환 바 (사이드바가 숨겨지므로) */}
           <div className="flex md:hidden gap-2 mb-6">
