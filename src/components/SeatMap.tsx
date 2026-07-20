@@ -373,8 +373,8 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         {/* '내 자리'는 일반 참가자에게만 표시 — 관전 계정(turn_order 0, 추가신청자)은
             좌석이 계정과 연결되지 않으므로(수동 배정) 해당 없음 */}
         {!isAdmin && user?.turn_order !== 0 && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#00C2D1' }} />내 자리</div>}
-        {/* 관리자에게는 같은 색을 '방금 배정' 의미로 표시 */}
-        {isAdmin && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#00C2D1' }} />방금 배정</div>}
+        {/* 관리자에게는 같은 색을 '직전 선택' 의미로 표시 */}
+        {isAdmin && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#00C2D1' }} />직전 선택</div>}
       </div>
 
       {/* 관리자용 좌석 팝업 */}
