@@ -884,7 +884,7 @@ const updateStoreWithEventData = (event: any) => {
                   >
                     <option value="">-- 이벤트를 선택하세요 --</option>
                     {events.map(ev => (
-                      <option key={ev.id} value={ev.id}>{ev.name} (참가자 {ev._count?.participants || 0}명){ev.is_active ? ' 《 활성 》' : ''}</option>
+                      <option key={ev.id} value={ev.id}>{ev.name} (참가자 {ev._count?.participants || 0}명){ev.is_active ? ' • 활성 •' : ''}</option>
                     ))}
                   </select>
                   {selectedEvent && (
@@ -892,7 +892,7 @@ const updateStoreWithEventData = (event: any) => {
                       {selectedEvent.is_active ? (
                         <span className="text-sm font-semibold text-green-600 flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                          활성 이벤트 — 참가자가 해당 이벤트로 접속합니다
+                          참가자가 해당 이벤트로 접속합니다
                         </span>
                       ) : (
                         <>
