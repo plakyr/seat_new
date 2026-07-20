@@ -898,14 +898,14 @@ const updateStoreWithEventData = (event: any) => {
                         <>
                           <span className="text-sm font-semibold text-gray-400 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                            비활성 이벤트 — 참가자 로그인 불가
+                            참가자 접속 불가
                           </span>
                           <button
                             onClick={handleActivateEvent}
                             className="text-xs font-bold px-3 py-1.5 rounded-lg text-white shadow-sm hover:opacity-90"
                             style={{ backgroundColor: '#17A85A' }}
                           >
-                            이 이벤트를 활성으로 전환
+                            활성 전환
                           </button>
                         </>
                       )}
