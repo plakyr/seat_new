@@ -688,8 +688,10 @@ const updateStoreWithEventData = (event: any) => {
 
       {/* overflow-y-auto를 두지 않는다: 실제 스크롤은 창(window)에서 일어나는데,
           main에 overflow가 걸려 있으면 내부 sticky(공지 고정)의 기준이 main이 되어
-          창 스크롤 시 고정이 동작하지 않는다 */}
-      <main className="flex-1 p-8">
+          창 스크롤 시 고정이 동작하지 않는다.
+          min-w-0: flex 항목의 "내용물 최소 폭 보장"을 해제해 좌석표/채팅이
+          창 폭에 맞게 줄어들게 한다 (없으면 페이지에 가로 스크롤이 생김) */}
+      <main className="flex-1 min-w-0 p-8">
         <div className="max-w-5xl lg:max-w-none mx-auto h-full flex flex-col">
           {/* 모바일 전용 탭 전환 바 (사이드바가 숨겨지므로) */}
           <div className="flex md:hidden gap-2 mb-6">
@@ -912,7 +914,9 @@ const updateStoreWithEventData = (event: any) => {
                 </div>
                 
                 {selectedEventId && (
-                  <div className="w-full md:w-auto mt-4 md:mt-0 md:self-end flex flex-wrap gap-2">
+                  {/* 좌측 블록에 활성 상태 문구가 추가되며 높이가 커졌으므로,
+                      아래 정렬(self-end) 대신 세로 중앙 정렬로 버튼을 맞춘다 */}
+                  <div className="w-full md:w-auto mt-4 md:mt-0 md:self-center flex flex-wrap gap-2">
                     <button
                       onClick={handleToggleLoginOpen}
                       style={{ backgroundColor: selectedEvent?.login_open ? '#6b7590' : '#17A85A' }}
