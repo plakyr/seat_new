@@ -86,6 +86,8 @@ interface AppState {
   announcement: AnnouncementState;
   timerPaused: boolean; // 자동배정 중 타이머 멈춤
   toasts: Toast[];
+  // 관제용: 가장 최근에 배정(선택/자동/수동)된 좌석 ID. 관리자 좌석표에서 강조 표시에 사용
+  lastAssignedSeatId: string | null;
 
   setUser: (user: User | null, sessionToken: string | null) => void;
   logoutUser: () => void;
@@ -110,6 +112,7 @@ interface AppState {
   setTimerPaused: (paused: boolean) => void;
   addToast: (message: string, type?: 'error' | 'info') => void;
   removeToast: (id: number) => void;
+  setLastAssignedSeatId: (seatId: string | null) => void;
 
   // 하위 호환용 (Admin.tsx에서 rows/cols 직접 쓰는 곳 대비)
   rows: number;
@@ -172,6 +175,7 @@ export const useStore = create<AppState>((set) => ({
   announcement: { type: 'IDLE', currentParticipantName: null, prevSessionId: null, nextSessionId: null, nextStartTime: null },
   timerPaused: false,
   toasts: [],
+  lastAssignedSeatId: null,
   rows: 10,
   cols: 10,
 
@@ -218,6 +222,7 @@ export const useStore = create<AppState>((set) => ({
   updateSeat: (updatedSeat) => set((state) => ({
     seats: state.seats.map(seat => seat.id === updatedSeat.id ? updatedSeat : seat)
   })),
+  setLastAssignedSeatId: (seatId) => set({ lastAssignedSeatId: seatId }),
   setParticipants: (participants) => set({ participants }),
   setOnlineParticipantIds: (ids) => set({ onlineParticipantIds: ids }),
   updateParticipant: (updatedParticipant) => set((state) => ({

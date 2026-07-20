@@ -81,6 +81,13 @@ export const useSocket = () => {
 
     socketInstance.on('seat:update', (data: { seat: Seat }) => {
       storeRef.current.updateSeat(data.seat);
+      // 관제용: 방금 배정된 좌석을 기억해 관리자 좌석표에서 강조 표시.
+      // 취소 등으로 그 좌석이 회수되면 강조를 해제한다.
+      if (data.seat.status === 'RESERVED' || data.seat.status === 'AUTO_ASSIGNED') {
+        storeRef.current.setLastAssignedSeatId(data.seat.id);
+      } else if (storeRef.current.lastAssignedSeatId === data.seat.id) {
+        storeRef.current.setLastAssignedSeatId(null);
+      }
     });
 
     // ── 인증 관련 이벤트 ────────────────────────────────────────────────
