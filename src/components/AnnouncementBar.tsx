@@ -17,21 +17,36 @@ interface Props {
   viewerTurnOrder?: number;
 }
 
+/** 공지 바 공통 껍데기. 어떤 상태든 높이가 같아야 아래 좌석표가 밀려 오르내리지 않는다. */
+function Shell({ minH, style, className = '', children }: {
+  minH: number;
+  style?: React.CSSProperties;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`rounded-[20px] px-[18px] py-3 mb-3 flex items-center ${className}`}
+      style={{ minHeight: minH, ...style }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /** 상태 바(자동배정·일시정지·그룹전환·완료·대기)에 쓰는 한 줄짜리 색 바 */
-function StatusBar({ color, icon, children, pulse }: {
+function StatusBar({ color, icon, children, pulse, minH }: {
   color: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   pulse?: boolean;
+  minH: number;
 }) {
   return (
-    <div
-      className={`rounded-[20px] px-[18px] py-[15px] mb-3 flex items-center gap-2.5 text-white ${pulse ? 'animate-pulse' : ''}`}
-      style={{ background: color }}
-    >
+    <Shell minH={minH} style={{ background: color }} className={`gap-2.5 text-white ${pulse ? 'animate-pulse' : ''}`}>
       <span className="shrink-0 flex">{icon}</span>
       <span className="text-base font-extrabold leading-[1.35] min-w-0">{children}</span>
-    </div>
+    </Shell>
   );
 }
 
@@ -171,21 +186,26 @@ export default function AnnouncementBar({
     </div>
   );
 
+  // 공지 바 고정 높이. 참가자 화면은 '내 차례'(배지+제목+타이머)가 가장 크므로 그 높이에 맞추고,
+  // 가로로 넓은 관리자 관제 화면은 한 줄이면 충분하므로 낮게 잡는다.
+  const isAdminView = viewerTurnOrder == null;
+  const barMinH = isAdminView ? 64 : 98;
+
   // ── 상태별 바 ───────────────────────────────────────────────────────
   let bar: React.ReactNode;
 
   if (isFrozen) {
     bar = (
-      <StatusBar color="var(--c-red)" icon={PauseIcon} pulse>
+      <StatusBar color="var(--c-red)" icon={PauseIcon} pulse minH={barMinH}>
         일시정지 중{frozenReason ? ` — ${frozenReason}` : ' — 잠시만 기다려주세요'}
       </StatusBar>
     );
   } else if (announcement.type === 'AUTO_ASSIGN') {
-    bar = <StatusBar color="var(--c-orange)" icon={GearIcon} pulse>시스템 자동 배정 중...</StatusBar>;
+    bar = <StatusBar color="var(--c-orange)" icon={GearIcon} pulse minH={barMinH}>시스템 자동 배정 중...</StatusBar>;
   } else if (announcement.type === 'SESSION_CHANGE') {
     const nextStartLabel = formatSessionTime(announcement.nextStartTime);
     bar = (
-      <StatusBar color="var(--c-purple)" icon={ClockIcon}>
+      <StatusBar color="var(--c-purple)" icon={ClockIcon} minH={barMinH}>
         {announcement.prevSessionId && (
           <>그룹 {announcement.prevSessionId} 좌석지정 완료<br /></>
         )}
@@ -195,7 +215,7 @@ export default function AnnouncementBar({
       </StatusBar>
     );
   } else if (announcement.type === 'ALL_COMPLETE') {
-    bar = <StatusBar color="var(--c-green)" icon={CheckIcon}>모든 그룹 좌석 지정이 완료되었습니다</StatusBar>;
+    bar = <StatusBar color="var(--c-green)" icon={CheckIcon} minH={barMinH}>모든 그룹 좌석 지정이 완료되었습니다</StatusBar>;
   } else if (currentParticipant) {
     const timer = (
       <span className={`tabular-nums ${isUrgent ? 'urgent-timer' : ''}`} style={isUrgent ? { color: 'var(--c-red-soft)' } : undefined}>
@@ -215,8 +235,9 @@ export default function AnnouncementBar({
     if (isMyTurn) {
       // 내 차례 — 가장 강한 표시. 노란 배지와 큰 타이머로 힐끗 봐도 잡히게 한다.
       bar = (
-        <div
-          className="rounded-[20px] px-[18px] py-4 mb-3 flex items-center justify-between gap-3 text-white"
+        <Shell
+          minH={barMinH}
+          className="justify-between gap-3 text-white"
           style={{ background: 'var(--c-primary)', boxShadow: 'var(--sh-primary)' }}
         >
           <div className="min-w-0">
@@ -235,13 +256,14 @@ export default function AnnouncementBar({
               <div className="text-[25px] font-extrabold leading-[1.1] mt-0.5">{timer}</div>
             </div>
           )}
-        </div>
+        </Shell>
       );
     } else if (viewerTurnOrder != null) {
       // 다른 사람 차례 — 색을 낮춰서, 화면을 힐끗 봐도 내 차례가 아님이 바로 보이게 한다
       bar = (
-        <div
-          className="rounded-[20px] px-[18px] py-3.5 mb-3 flex items-center justify-between gap-3"
+        <Shell
+          minH={barMinH}
+          className="justify-between gap-3"
           style={{ background: 'var(--c-primary-soft)', color: 'var(--c-ink-2)' }}
         >
           <div className="min-w-0">
@@ -254,13 +276,14 @@ export default function AnnouncementBar({
           {showTimer && (
             <div className="shrink-0 text-xl font-extrabold" style={{ color: 'var(--c-muted)' }}>{timer}</div>
           )}
-        </div>
+        </Shell>
       );
     } else {
       // 관리자 관제 화면 — 누구 차례인지와 남은 시간을 한 줄로
       bar = (
-        <div
-          className="rounded-2xl px-[18px] py-3.5 mb-3 flex items-center justify-between gap-3 text-white"
+        <Shell
+          minH={barMinH}
+          className="justify-between gap-3 text-white"
           style={{ background: 'var(--c-primary)', boxShadow: '0 6px 16px rgba(74,107,245,.24)' }}
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -271,13 +294,13 @@ export default function AnnouncementBar({
             <span className="text-lg font-extrabold truncate">현재 순서 {who}</span>
           </div>
           {showTimer && <span className="text-2xl font-extrabold shrink-0">{timer}</span>}
-        </div>
+        </Shell>
       );
     }
   } else if (!hasReceivedSystemState) {
-    bar = <StatusBar color="var(--c-slate)" icon={ClockIcon}>상태 불러오는 중...</StatusBar>;
+    bar = <StatusBar color="var(--c-slate)" icon={ClockIcon} minH={barMinH}>상태 불러오는 중...</StatusBar>;
   } else {
-    bar = <StatusBar color="var(--c-slate)" icon={ClockIcon}>대기 중</StatusBar>;
+    bar = <StatusBar color="var(--c-slate)" icon={ClockIcon} minH={barMinH}>대기 중</StatusBar>;
   }
 
   return (

@@ -1,5 +1,11 @@
 /* ── 서체 ─────────────────────────────────────────────────────────────
-   Paperlogy 세 굵기(Medium 500 / Bold 700 / ExtraBold 800)만 사용한다.
+   @import 는 CSS 규칙상 @charset/@layer 를 빼면 어떤 규칙보다도 앞에 와야 한다.
+   @font-face 뒤에 두면 번들러가 통째로 버리므로 반드시 이 자리를 지킨다. */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+/* Paperlogy 세 굵기(Medium 500 / Bold 700 / ExtraBold 800)만 사용한다.
    세 파일 모두 같은 font-family로 등록하므로 컴포넌트에서는 font-weight 로만 고른다.
 
    ⚠️ 아래 CDN 경로는 눈누(noonnu) 배포 버전에 따라 달라진다. 눈누의 @font-face
@@ -26,10 +32,6 @@
   font-display: swap;
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');
 }
-
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
-@import "tailwindcss";
 
 @theme {
   --font-sans: 'Paperlogy', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
