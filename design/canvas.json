@@ -5,7 +5,7 @@
     { "file": "DirectionB.dc.html", "x": 1020, "y": 0, "w": 390, "h": 844, "title": "B안 · 볼드 아웃라인" },
     { "file": "DirectionC.dc.html", "x": 1530, "y": 0, "w": 390, "h": 844, "title": "C안 · 웜 커뮤니티" },
     { "file": "AdminA.dc.html", "x": 0, "y": 1120, "w": 1440, "h": 900, "title": "A안 적용 · 관리자 관제" },
-    { "file": "NoticeStates.dc.html", "x": 2040, "y": 0, "w": 440, "h": 1010, "title": "A안 · 공지 바 상태" },
+    { "file": "NoticeStates.dc.html", "x": 2040, "y": 0, "w": 440, "h": 1160, "title": "A안 · 공지 바 상태" },
     { "file": "MyTurnVariants.dc.html", "x": 2600, "y": 0, "w": 440, "h": 880, "title": "\"내 차례\" 강조 비교" }
   ],
   "annotations": [
