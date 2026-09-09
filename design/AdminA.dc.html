@@ -7,9 +7,11 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&amp;display=swap">
   <style>
-    body { margin: 0; font-family: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    /* 실제 적용 서체는 Paperlogy입니다. 이 캔버스는 Google Fonts만 불러올 수 있고
+       Paperlogy는 거기 없어서, 화면에는 결이 비슷한 Gothic A1로 대신 그려집니다. */
+    body { margin: 0; font-family: Paperlogy, "Gothic A1", "Apple SD Gothic Neo", sans-serif; }
     a { color: #4A6BF5; } a:hover { color: #3450d6; }
   </style>
 </helmet>
@@ -188,7 +190,7 @@
         <div style="flex: 1; min-height: 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 13px; overflow: hidden;">
           <div style="display: flex; flex-direction: column; align-items: flex-end;">
             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
-              <span style="display: inline-flex; align-items: center; background: #FFF0E6; color: #D2652C; border-radius: 999px; padding: 2px 7px; font-size: 11px; font-weight: 800;">운영진</span>
+              <span style="display: inline-flex; align-items: center; background: #FFF0E6; color: #D2652C; border-radius: 999px; padding: 2px 7px; font-size: 11px; font-weight: 800;">관리자</span>
               <span style="font-size: 11px; color: #A2AAC0;">9/9 오후 2:31</span>
             </div>
             <div style="padding: 10px 13px; border-radius: 14px 14px 4px 14px; font-size: 14px; font-weight: 500; max-width: 86%; background: #4A6BF5; color: #ffffff; line-height: 1.45;">2그룹 시작합니다. 순서대로 진행해주세요.</div>

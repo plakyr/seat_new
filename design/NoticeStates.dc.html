@@ -9,7 +9,9 @@
 <helmet>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&display=swap">
   <style>
-    body { margin: 0; font-family: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    /* 실제 적용 서체는 Paperlogy입니다. 이 캔버스는 Google Fonts만 불러올 수 있고
+       Paperlogy는 거기 없어서, 화면에는 결이 비슷한 Gothic A1로 대신 그려집니다. */
+    body { margin: 0; font-family: Paperlogy, "Gothic A1", "Apple SD Gothic Neo", sans-serif; }
     a { color: #4A6BF5; } a:hover { color: #3450d6; }
     @keyframes urgent-blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
     .urgent-timer { animation: urgent-blink 1s ease-in-out infinite; }

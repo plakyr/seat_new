@@ -7,9 +7,11 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&amp;display=swap">
   <style>
-    body { margin: 0; font-family: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    /* 실제 적용 서체는 Paperlogy입니다. 이 캔버스는 Google Fonts만 불러올 수 있고
+       Paperlogy는 거기 없어서, 화면에는 결이 비슷한 Gothic A1로 대신 그려집니다. */
+    body { margin: 0; font-family: Paperlogy, "Gothic A1", "Apple SD Gothic Neo", sans-serif; }
     a { color: #4A6BF5; } a:hover { color: #3450d6; }
   </style>
 </helmet>
@@ -19,7 +21,7 @@
   <div style="background: #ffffff; border-radius: 24px; box-shadow: 0 2px 14px rgba(23,35,66,.07); padding: 28px 24px;">
 
     <div style="font-size: 23px; font-weight: 900; letter-spacing: -.02em;">참가자 로그인</div>
-    <div style="font-size: 13.5px; font-weight: 500; color: #6C7590; margin-top: 6px; line-height: 1.55;">신청하실 때 제출한 정보로 입장합니다.</div>
+    
 
     <div style="height: 24px;"></div>
 
@@ -35,14 +37,14 @@
     <div>
       <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 7px;">
         <span style="font-size: 13px; font-weight: 700; color: #2A3350;">비밀번호</span>
-        <span style="font-size: 12px; font-weight: 600; color: #8791AB;">신청 시 정한 숫자</span>
+        
       </div>
       <div style="height: 54px; border-radius: 15px; background: #ffffff; border: 1.5px solid #4A6BF5; box-shadow: 0 0 0 4px rgba(74,107,245,.14); display: flex; align-items: center; padding: 0 16px; font-size: 15.5px; font-weight: 600; letter-spacing: .35em; color: #171C2E;">••••</div>
     </div>
 
     <div style="height: 24px;"></div>
 
-    <div style="height: 58px; border-radius: 18px; background: #4A6BF5; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; box-shadow: 0 6px 16px rgba(74,107,245,.28);">입장하기</div>
+    <div style="height: 58px; border-radius: 18px; background: #4A6BF5; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; box-shadow: 0 6px 16px rgba(74,107,245,.28);">로그인</div>
 
   </div>
 
@@ -50,7 +52,7 @@
 
   <div style="display: flex; align-items: flex-start; gap: 8px; padding: 0 6px;">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8791AB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-    <div style="font-size: 12.5px; font-weight: 500; color: #8791AB; line-height: 1.65;">로그인이 안 되면 운영진에게 문의해주세요.</div>
+    <div style="font-size: 12.5px; font-weight: 500; color: #8791AB; line-height: 1.65;">신청 시 제출한 정보를 입력해주세요.</div>
   </div>
 
 </div>
