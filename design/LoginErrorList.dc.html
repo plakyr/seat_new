@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&display=swap">
+  <style>
+    body { margin: 0; font-family: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    a { color: #4A6BF5; } a:hover { color: #3450d6; }
+  </style>
+</helmet>
+
+<div style="width: 440px; height: 620px; background: #EDF1F9; padding: 26px 32px; box-sizing: border-box; color: #171C2E; display: flex; flex-direction: column;">
+
+  <div style="font-size: 20px; font-weight: 800; letter-spacing: -.01em;">로그인 실패 문구</div>
+  <div style="font-size: 12.5px; font-weight: 500; color: #6C7590; margin-top: 5px; line-height: 1.55;">원인에 따라 색을 나눴습니다. 빨강은 입력을 고쳐야 하는 것, 노랑은 기다리면 풀리는 것, 회색은 시스템 상태입니다.</div>
+
+  <div style="height: 20px;"></div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+
+    <!-- 입력 오류 -->
+    <div style="width: 342px; display: flex; gap: 10px; background: #FDEDEC; border: 1px solid #F6D2CF; border-radius: 15px; padding: 13px 14px; box-sizing: border-box;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D14944" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16.5h.01"></path></svg>
+      <div style="min-width: 0;">
+        <div style="font-size: 13.5px; font-weight: 800; color: #B03B36; line-height: 1.4;">참가자 정보를 찾을 수 없습니다</div>
+        <div style="font-size: 12.5px; font-weight: 500; color: #99544F; margin-top: 4px; line-height: 1.6;">이름과 전화번호 뒷 4자리를 다시 확인해주세요.</div>
+      </div>
+    </div>
+
+    <!-- 입장 전 -->
+    <div style="width: 342px; display: flex; gap: 10px; background: #FFF6E3; border: 1px solid #F2DFB4; border-radius: 15px; padding: 13px 14px; box-sizing: border-box;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B8860B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+      <div style="min-width: 0;">
+        <div style="font-size: 13.5px; font-weight: 800; color: #96690A; line-height: 1.4;">아직 입장이 허용되지 않았습니다</div>
+        <div style="font-size: 12.5px; font-weight: 500; color: #8A7233; margin-top: 4px; line-height: 1.6;">운영진의 안내를 기다려주세요.</div>
+      </div>
+    </div>
+
+    <!-- 시도 제한 -->
+    <div style="width: 342px; display: flex; gap: 10px; background: #FFF6E3; border: 1px solid #F2DFB4; border-radius: 15px; padding: 13px 14px; box-sizing: border-box;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B8860B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+      <div style="min-width: 0;">
+        <div style="font-size: 13.5px; font-weight: 800; color: #96690A; line-height: 1.4;">로그인 시도가 너무 많습니다</div>
+        <div style="font-size: 12.5px; font-weight: 500; color: #8A7233; margin-top: 4px; line-height: 1.6;">1분 정도 기다렸다가 다시 시도해주세요.</div>
+      </div>
+    </div>
+
+    <!-- 이벤트 없음 -->
+    <div style="width: 342px; display: flex; gap: 10px; background: #F1F4FB; border: 1px solid #DDE4F2; border-radius: 15px; padding: 13px 14px; box-sizing: border-box;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C7590" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+      <div style="min-width: 0;">
+        <div style="font-size: 13.5px; font-weight: 800; color: #4A5570; line-height: 1.4;">현재 진행 중인 이벤트가 없습니다</div>
+        <div style="font-size: 12.5px; font-weight: 500; color: #6C7590; margin-top: 4px; line-height: 1.6;">운영진에게 문의해주세요.</div>
+      </div>
+    </div>
+
+    <!-- 서버 오류 -->
+    <div style="width: 342px; display: flex; gap: 10px; background: #FDEDEC; border: 1px solid #F6D2CF; border-radius: 15px; padding: 13px 14px; box-sizing: border-box;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D14944" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+      <div style="min-width: 0;">
+        <div style="font-size: 13.5px; font-weight: 800; color: #B03B36; line-height: 1.4;">서버 오류가 발생했습니다</div>
+        <div style="font-size: 12.5px; font-weight: 500; color: #99544F; margin-top: 4px; line-height: 1.6;">잠시 후 다시 시도해주세요.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":440,"height":620}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>
