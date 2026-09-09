@@ -30,7 +30,8 @@ function SeatTooltip({ text, onClose }: { text: string; onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="bg-gray-900 text-white px-6 py-3 rounded-2xl shadow-2xl text-base font-bold"
+        className="text-white px-6 py-3 rounded-2xl shadow-2xl text-base font-bold"
+        style={{ background: 'var(--c-ink)' }}
         onClick={e => e.stopPropagation()}
       >
         {text}
@@ -166,32 +167,36 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
   };
 
   return (
-    <div className="w-full h-[50vh] lg:h-[70vh] bg-gray-100 rounded-xl border border-gray-200 relative shadow-inner flex flex-col overflow-hidden">
+    <div
+      className="w-full h-[50vh] lg:h-[70vh] rounded-[20px] relative flex flex-col overflow-hidden"
+      style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)' }}
+    >
       {seats.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60">
-          <p className="text-gray-500 font-bold animate-pulse">좌석 데이터를 불러오는 중입니다...</p>
+          <p className="font-bold animate-pulse" style={{ color: 'var(--c-muted)' }}>좌석 데이터를 불러오는 중입니다...</p>
         </div>
       )}
 
       {/* 좌석 선택 확인 팝업 */}
       {confirmSeat && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 mx-4 w-full max-w-sm">
-            <p className="text-base font-bold text-gray-900 mb-1 text-center">좌석 선택</p>
-            <p className="text-gray-600 text-sm text-center mb-6">
-              <span className="font-semibold text-blue-600">{confirmSeat.label}</span>을 선택하시겠습니까?
+          <div className="rounded-3xl shadow-2xl p-6 mx-4 w-full max-w-sm" style={{ background: 'var(--c-surface)' }}>
+            <p className="text-base font-extrabold mb-1 text-center">좌석 선택</p>
+            <p className="text-sm font-medium text-center mb-6" style={{ color: 'var(--c-muted)' }}>
+              <span className="font-extrabold" style={{ color: 'var(--c-primary)' }}>{confirmSeat.label}</span>을 선택하시겠습니까?
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmSeat(null)}
-                className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 active:bg-gray-100"
+                className="flex-1 py-3 rounded-2xl font-bold transition-colors"
+                style={{ border: '1px solid var(--c-line)', color: 'var(--c-muted)' }}
               >
                 취소
               </button>
               <button
                 onClick={handleConfirmSelect}
-                style={{ backgroundColor: '#1C71E8' }}
-                className="flex-1 py-3 rounded-xl text-white font-bold hover:opacity-90"
+                style={{ background: 'var(--c-primary)' }}
+                className="flex-1 py-3 rounded-2xl text-white font-extrabold hover:opacity-90 active:opacity-80"
               >
                 확인
               </button>
@@ -223,26 +228,29 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
         >
         <div className="flex flex-col items-center">
           {/* STAGE */}
-          <div className="w-full h-20 mb-5 rounded-t-lg rounded-b-sm bg-gray-50 border border-gray-200 shadow-sm flex items-center justify-center font-black text-lg tracking-widest text-gray-700 select-none">
+          <div
+            className="w-full h-[52px] mb-4 rounded-[14px] flex items-center justify-center font-extrabold text-[13px] tracking-[.28em] select-none"
+            style={{ background: 'linear-gradient(180deg, #F3F6FD 0%, #E8EDF9 100%)', color: 'var(--c-muted-2)' }}
+          >
             STAGE
           </div>
 
           {/* 좌석 그리드 */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5 w-fit">
+          <div className="w-fit">
             {grid.slice(1).map((row, rIdx) => {
               const rowNum = rIdx + 1;
               const hasRowAisle = aisleAfterRows.includes(rowNum);
               return (
                 <React.Fragment key={`row-${rowNum}`}>
-                  <div className="flex gap-2">
+                  <div className="flex gap-[7px]">
                     {row.slice(1).map((seat: any, cIdx: number) => {
                       const colNum = cIdx + 1;
                       const hasColAisle = aisleAfterCols.includes(colNum);
 
                       if (!seat) return (
                         <React.Fragment key={`empty-${rowNum}-${colNum}`}>
-                          <div className="w-9 h-9 bg-gray-50/50 rounded-sm shrink-0" />
-                          {hasColAisle && <div className="w-5 shrink-0" />}
+                          <div className="w-[38px] h-[38px] shrink-0" />
+                          {hasColAisle && <div className="w-[18px] shrink-0" />}
                         </React.Fragment>
                       );
 
@@ -255,38 +263,44 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                         ? (seat.manual_label ?? '')
                         : (assignedParticipant?.name ?? '');
 
-                      let seatClass = 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 cursor-pointer text-gray-700';
-                      let customStyle: React.CSSProperties = {};
+                      let seatClass = 'cursor-pointer hover:opacity-80 active:opacity-70';
+                      let customStyle: React.CSSProperties = {
+                        backgroundColor: 'var(--c-seat-empty)',
+                        color: 'var(--c-seat-empty-ink)',
+                      };
 
                       if (seat.status === 'RESERVED' || seat.status === 'AUTO_ASSIGNED') {
-                        customStyle = { backgroundColor: getSeatColor(seat) };
+                        customStyle = { backgroundColor: getSeatColor(seat), color: '#fff' };
                         if (isMySeat) {
                           // 내 자리 강조 색상
-                          customStyle = { backgroundColor: '#00C2D1' };
-                          seatClass = 'text-white shadow-lg ring-2 ring-cyan-200 scale-110 z-10 cursor-default font-extrabold';
+                          customStyle = { backgroundColor: 'var(--c-mine)', color: '#fff' };
+                          seatClass = 'shadow-lg ring-2 ring-cyan-200 scale-110 z-10 cursor-default';
                         } else if (isAdmin) {
                           if (seat.id === lastAssignedSeatId) {
                             // 관제용: 가장 최근에 배정된 좌석을 참가자 '내 자리'와 같은 색으로 강조해
                             // 방금 누가 어디를 선택했는지 즉시 확인할 수 있게 한다
-                            customStyle = { backgroundColor: '#00C2D1' };
-                            seatClass = 'text-white shadow-lg ring-2 ring-cyan-200 cursor-pointer font-extrabold hover:opacity-80 active:opacity-70';
+                            customStyle = { backgroundColor: 'var(--c-mine)', color: '#fff' };
+                            seatClass = 'shadow-lg ring-2 ring-cyan-200 cursor-pointer hover:opacity-80 active:opacity-70';
                           } else {
-                            // 참가자 화면과 동일한 명도(opacity-80)로 표시해 양쪽 색을 일치시킨다
-                            seatClass = 'text-white opacity-80 cursor-pointer hover:opacity-60 active:opacity-50';
+                            seatClass = 'cursor-pointer hover:opacity-75 active:opacity-60';
                           }
                         } else {
-                          seatClass = 'text-white opacity-80 cursor-pointer';
+                          seatClass = 'cursor-pointer';
                         }
                       } else if (seat.status === 'MANUAL') {
-                        customStyle = { backgroundColor: '#14B8A6' };
+                        customStyle = { backgroundColor: '#14B8A6', color: '#fff' };
                         seatClass = isAdmin
-                          ? 'text-white opacity-90 cursor-pointer hover:opacity-70 active:opacity-60'
-                          : 'text-white opacity-90 cursor-default';
+                          ? 'cursor-pointer hover:opacity-80 active:opacity-70'
+                          : 'cursor-default';
                       } else if (seat.status === 'FROZEN') {
-                        seatClass = 'bg-red-100 border-2 border-red-300 cursor-not-allowed text-red-800';
+                        customStyle = { backgroundColor: '#FDEDEC', color: '#B03B36' };
+                        seatClass = 'cursor-not-allowed';
                       } else if (seat.status === 'PRIVATE') {
-                        customStyle = { backgroundColor: '#BFBFBF' };
-                        seatClass = isAdmin ? 'cursor-pointer hover:opacity-80 active:opacity-60' : 'cursor-not-allowed';
+                        // 사선 패턴(.seat-private)으로 "고를 수 없는 자리"임을 색만이 아니라 무늬로도 알린다
+                        customStyle = {};
+                        seatClass = isAdmin
+                          ? 'seat-private cursor-pointer hover:opacity-80 active:opacity-70'
+                          : 'seat-private cursor-not-allowed';
                       }
 
                       const isDisabled =
@@ -311,9 +325,8 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                               }
                             }}
                             className={cn(
-                              'w-9 h-9 rounded-t-lg rounded-b-sm flex flex-col items-center justify-center',
-                              'font-bold leading-tight transition-all duration-150',
-                              'overflow-hidden shadow-sm select-none shrink-0',
+                              'w-[38px] h-[38px] rounded-[11px] flex flex-col items-center justify-center',
+                              'transition-all duration-150 overflow-hidden select-none shrink-0',
                               seatClass,
                               !isAdmin && isFrozen && 'opacity-50 cursor-not-allowed',
                               isDisabled && 'pointer-events-none',
@@ -323,29 +336,32 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                               ? `${displayName} (${seatLabelText(seat)})`
                               : seatLabelText(seat)}
                           >
+                            {/* 글자는 칸 전체 폭을 차지한 채 text-align 으로 가운데 맞춘다.
+                                (글자 상자를 flex 로 가운데 두면 글자 폭이 홀수일 때 0.5px 어긋나 한쪽으로 쏠려 보인다)
+                                줄높이도 8px·10px 정수로 고정해 위아래 여백이 딱 떨어지게 한다. */}
                             {seat.status === 'PRIVATE' ? null : displayName ? (
                               <>
-                                <span className="w-full text-center leading-none text-[6px] opacity-80">
+                                <span className="w-full text-center text-[7px] font-medium leading-[8px] opacity-75">
                                   {seatShortLabel(seat)}
                                 </span>
                                 <span className={cn(
-                                  'w-full text-center px-0.5 leading-none mt-0.5',
-                                  displayName.length <= 4 ? 'text-[8px]' : 'text-[6px]',
+                                  'w-full text-center px-0.5 box-border font-bold leading-[10px] mt-0.5',
+                                  displayName.length <= 4 ? 'text-[9px]' : 'text-[7px]',
                                 )}>
                                   {displayName}
                                 </span>
                               </>
                             ) : (
-                              <span className="text-[8px] text-gray-500">{seatShortLabel(seat)}</span>
+                              <span className="w-full text-center text-[10px] font-bold leading-[10px]">{seatShortLabel(seat)}</span>
                             )}
                           </div>
-                          {hasColAisle && <div className="w-5 shrink-0" />}
+                          {hasColAisle && <div className="w-[18px] shrink-0" />}
                         </React.Fragment>
                       );
                     })}
                   </div>
-                  {hasRowAisle && <div className="h-5" />}
-                  <div className="h-2" />
+                  {hasRowAisle && <div className="h-[18px]" />}
+                  <div className="h-[7px]" />
                 </React.Fragment>
               );
             })}
@@ -360,53 +376,69 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
       <button
         type="button"
         onClick={() => transformRef.current?.resetTransform()}
-        className="absolute right-3 bottom-12 z-10 flex items-center gap-1 bg-white/90 border border-gray-300 rounded-full px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-md hover:bg-white active:bg-gray-100 select-none"
+        className="absolute right-3 bottom-12 z-10 flex items-center gap-1.5 rounded-full px-3 py-[7px] text-xs font-bold select-none hover:opacity-80 active:opacity-70"
+        style={{
+          background: 'var(--c-surface)',
+          border: '1px solid var(--c-line)',
+          color: 'var(--c-primary)',
+          boxShadow: '0 3px 8px rgba(23,35,66,.10)',
+        }}
       >
-        ⟲ 위치 초기화
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 12a9 9 0 1 0 3-6.7" />
+          <path d="M3 4v5h5" />
+        </svg>
+        위치 초기화
       </button>
 
       {/* 범례 — 한 줄에 모두 표시 (좁은 화면에선 폰트/간격 축소) */}
       {/* 항목이 줄어 한 줄 여유가 생겨 모바일 폰트를 10px → 12px로 키움 */}
-      <div className="shrink-0 flex flex-nowrap justify-center items-center gap-x-3 sm:gap-x-4 bg-white/95 py-2 px-2 border-t border-gray-200 text-xs font-medium">
-        <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#BFBFBF' }} />선택 불가</div>
-        <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded bg-gray-200 shadow-sm shrink-0" />선택 가능</div>
+      <div
+        className="shrink-0 flex flex-nowrap justify-center items-center gap-x-3.5 sm:gap-x-4 py-2.5 px-2 text-xs font-bold"
+        style={{ background: 'var(--c-tint-2)', borderTop: '1px solid var(--c-line-soft)', color: 'var(--c-muted)' }}
+      >
+        <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><div className="seat-private w-3.5 h-3.5 rounded-[5px] shrink-0" />선택 불가</div>
+        <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 rounded-[5px] shrink-0" style={{ background: 'var(--c-seat-empty)' }} />선택 가능</div>
         {/* '내 자리'는 일반 참가자에게만 표시 — 관전 계정(turn_order 0, 추가신청자)은
             좌석이 계정과 연결되지 않으므로(수동 배정) 해당 없음 */}
-        {!isAdmin && user?.turn_order !== 0 && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#00C2D1' }} />내 자리</div>}
+        {!isAdmin && user?.turn_order !== 0 && <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 rounded-[5px] shrink-0" style={{ background: 'var(--c-mine)' }} />내 자리</div>}
         {/* 관리자에게는 같은 색을 '직전 선택' 의미로 표시 */}
-        {isAdmin && <div className="flex items-center gap-1 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded shadow-sm shrink-0" style={{ backgroundColor: '#00C2D1' }} />직전 선택</div>}
+        {isAdmin && <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><div className="w-3.5 h-3.5 rounded-[5px] shrink-0" style={{ background: 'var(--c-mine)' }} />직전 선택</div>}
       </div>
 
       {/* 관리자용 좌석 팝업 */}
       {selectedSeatInfo && (
-        <div className="absolute top-4 right-4 bg-white p-4 rounded-xl shadow-xl border border-gray-200 z-20 w-64 max-h-[80vh] overflow-y-auto">
+        <div
+          className="absolute top-4 right-4 p-4 rounded-[20px] z-20 w-64 max-h-[80vh] overflow-y-auto"
+          style={{ background: 'var(--c-surface)', boxShadow: '0 10px 24px rgba(23,35,66,.14)', border: '1px solid var(--c-line)' }}
+        >
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-bold text-gray-900">좌석 정보</h3>
-            <button onClick={() => setSelectedSeatInfo(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+            <h3 className="font-extrabold">좌석 정보</h3>
+            <button onClick={() => setSelectedSeatInfo(null)} className="text-lg leading-none hover:opacity-70" style={{ color: 'var(--c-muted-2)' }}>✕</button>
           </div>
           {selectedSeatInfo.participant ? (
             <>
-              <div className="space-y-2 text-sm text-gray-700 mb-4">
-                <p><span className="font-medium text-gray-500">그룹:</span> {selectedSeatInfo.participant.session_id}</p>
-                <p><span className="font-medium text-gray-500">이름:</span> {selectedSeatInfo.participant.name}</p>
-                <p><span className="font-medium text-gray-500">순번:</span> {selectedSeatInfo.participant.turn_order}</p>
+              <div className="space-y-2 text-sm mb-4" style={{ color: 'var(--c-ink-2)' }}>
+                <p><span className="font-medium" style={{ color: 'var(--c-muted)' }}>그룹:</span> {selectedSeatInfo.participant.session_id}</p>
+                <p><span className="font-medium" style={{ color: 'var(--c-muted)' }}>이름:</span> {selectedSeatInfo.participant.name}</p>
+                <p><span className="font-medium" style={{ color: 'var(--c-muted)' }}>순번:</span> {selectedSeatInfo.participant.turn_order}</p>
               </div>
-              <button onClick={handleForceCancel} className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors">
+              <button onClick={handleForceCancel} className="w-full py-2.5 rounded-xl text-white font-extrabold hover:opacity-90 active:opacity-80" style={{ background: 'var(--c-red)' }}>
                 강제 취소
               </button>
             </>
           ) : selectedSeatInfo.isPrivate ? (
-            <div className="space-y-3 text-sm text-gray-700">
-              <p className="font-medium text-gray-500">
+            <div className="space-y-3 text-sm" style={{ color: 'var(--c-ink-2)' }}>
+              <p className="font-medium" style={{ color: 'var(--c-muted)' }}>
                 사석 ({seatLabelText(seats.find((s: any) => s.id === selectedSeatInfo.seatId))})
               </p>
-              <button onClick={() => handleSetSeatPrivate(false)} className="w-full py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-bold transition-colors">
+              <button onClick={() => handleSetSeatPrivate(false)} className="w-full py-2.5 rounded-xl text-white font-extrabold hover:opacity-90 active:opacity-80" style={{ background: 'var(--c-muted)' }}>
                 선택 가능으로 되돌리기
               </button>
             </div>
           ) : selectedSeatInfo.isManual ? (
-            <div className="space-y-2 text-sm text-gray-700">
-              <p className="font-medium text-gray-500">
+            <div className="space-y-2 text-sm" style={{ color: 'var(--c-ink-2)' }}>
+              <p className="font-medium" style={{ color: 'var(--c-muted)' }}>
                 수동 배정 ({seatLabelText(seats.find((s: any) => s.id === selectedSeatInfo.seatId))})
               </p>
               <input
@@ -414,23 +446,23 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                 value={manualName}
                 onChange={(e) => setManualName(e.target.value)}
                 placeholder="이름 입력"
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 text-sm rounded-xl outline-none focus:border-[color:var(--c-primary)]" style={{ background: 'var(--c-tint-2)', border: '1px solid var(--c-line)' }}
               />
               <button
                 onClick={() => handleSetManual(manualName.trim() || null)}
                 disabled={!manualName.trim()}
                 style={{ backgroundColor: '#14B8A6' }}
-                className="w-full py-2 text-white rounded-lg font-bold transition-opacity text-sm hover:opacity-90 disabled:opacity-40"
+                className="w-full py-2.5 text-white rounded-xl font-extrabold transition-opacity text-sm hover:opacity-90 disabled:opacity-40"
               >
                 이름 수정
               </button>
-              <button onClick={() => handleSetManual(null)} className="w-full py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-bold transition-colors text-sm">
+              <button onClick={() => handleSetManual(null)} className="w-full py-2.5 rounded-xl text-white font-extrabold text-sm hover:opacity-90 active:opacity-80" style={{ background: 'var(--c-muted)' }}>
                 배정 삭제 (빈 좌석으로)
               </button>
             </div>
           ) : (
-            <div className="space-y-2 text-sm text-gray-700">
-              <p className="font-medium text-gray-500">
+            <div className="space-y-2 text-sm" style={{ color: 'var(--c-ink-2)' }}>
+              <p className="font-medium" style={{ color: 'var(--c-muted)' }}>
                 빈 좌석 ({seatLabelText(seats.find((s: any) => s.id === selectedSeatInfo.seatId))})
               </p>
               <input
@@ -438,30 +470,30 @@ export default function SeatMap({ forceAdmin = false }: { forceAdmin?: boolean }
                 value={manualName}
                 onChange={(e) => setManualName(e.target.value)}
                 placeholder="이름 입력 (수동 배정)"
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 text-sm rounded-xl outline-none focus:border-[color:var(--c-primary)]" style={{ background: 'var(--c-tint-2)', border: '1px solid var(--c-line)' }}
               />
               <button
                 onClick={() => handleSetManual(manualName.trim() || null)}
                 disabled={!manualName.trim()}
                 style={{ backgroundColor: '#14B8A6' }}
-                className="w-full py-2 text-white rounded-lg font-bold transition-opacity text-sm hover:opacity-90 disabled:opacity-40"
+                className="w-full py-2.5 text-white rounded-xl font-extrabold transition-opacity text-sm hover:opacity-90 disabled:opacity-40"
               >
                 수동 배정
               </button>
-              <button onClick={() => handleSetSeatPrivate(true)} className="w-full py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-bold transition-colors text-sm">
+              <button onClick={() => handleSetSeatPrivate(true)} className="w-full py-2.5 rounded-xl text-white font-extrabold text-sm hover:opacity-90 active:opacity-80" style={{ background: 'var(--c-muted)' }}>
                 사석으로 지정
               </button>
               {/* 강제 배정 대상 목록: 관전 계정(turn_order 0, 추가신청자)은 제외한다.
                   추가신청자는 항상 수동 배정(실명 입력)으로 처리하므로 이 목록에 필요 없음 */}
-              <div className="mt-2 space-y-1 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-1">
+              <div className="mt-2 space-y-1 max-h-48 overflow-y-auto rounded-xl p-1" style={{ border: '1px solid var(--c-line)' }}>
                 {participants.filter((p: any) => !p.seat_id && p.turn_order > 0).length === 0 ? (
-                  <p className="text-xs text-gray-400 text-center py-2">미배정 참가자가 없습니다.</p>
+                  <p className="text-xs text-center py-2" style={{ color: 'var(--c-placeholder)' }}>미배정 참가자가 없습니다.</p>
                 ) : (
                   participants.filter((p: any) => !p.seat_id && p.turn_order > 0).sort((a: any, b: any) => a.turn_order - b.turn_order).map((p: any) => (
                     <button key={p.id} onClick={() => handleForceAssign(p.id)}
-                      className="w-full text-left px-2 py-1.5 text-xs hover:bg-blue-50 active:bg-blue-100 rounded flex justify-between items-center border-b last:border-0 border-gray-50">
+                      className="w-full text-left px-2 py-1.5 text-xs rounded-lg flex justify-between items-center hover:bg-[color:var(--c-tint)]">
                       <span>{p.name} ({p.turn_order}번)</span>
-                      <span className="text-blue-600 font-bold px-2 py-0.5 bg-blue-100 rounded text-[10px]">배정</span>
+                      <span className="font-extrabold px-2 py-0.5 rounded-md text-[10px]" style={{ color: 'var(--c-primary)', background: '#EAEFFE' }}>배정</span>
                     </button>
                   ))
                 )}

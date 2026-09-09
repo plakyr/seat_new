@@ -1,14 +1,97 @@
+/* ── 서체 ─────────────────────────────────────────────────────────────
+   Paperlogy 세 굵기(Medium 500 / Bold 700 / ExtraBold 800)만 사용한다.
+   세 파일 모두 같은 font-family로 등록하므로 컴포넌트에서는 font-weight 로만 고른다.
+
+   ⚠️ 아래 CDN 경로는 눈누(noonnu) 배포 버전에 따라 달라진다. 눈누의 @font-face
+      주소와 다르면 이 세 줄의 url()만 바꾸면 된다. 내려받기에 실패해도
+      Pretendard로 자연스럽게 넘어가므로 화면이 깨지지는 않는다. */
+@font-face {
+  font-family: 'Paperlogy';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-5Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Paperlogy';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Paperlogy';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');
+}
+
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Paperlogy', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'Roboto Mono', monospace;
 }
 
+/* ── 색 ───────────────────────────────────────────────────────────────
+   시안(A안 · 소프트 팝)의 팔레트. 화면 곳곳에서 같은 값을 쓰므로 여기 모아둔다. */
+:root {
+  --c-bg: #EDF1F9;
+  --c-surface: #FFFFFF;
+
+  --c-ink: #171C2E;
+  --c-ink-2: #2A3350;
+  --c-muted: #6C7590;
+  --c-muted-2: #8791AB;
+  --c-placeholder: #A2AAC0;
+
+  --c-line: #DDE4F2;
+  --c-line-soft: #EBF0FA;
+  --c-tint: #F1F4FB;
+  --c-tint-2: #F7F9FE;
+  --c-tint-3: #F3F6FD;
+
+  --c-primary: #4A6BF5;
+  --c-primary-ink: #2C46B8;
+  --c-primary-soft: #E1E9FC;
+
+  --c-amber: #FFC53D;
+  --c-amber-ink: #2A1D00;
+
+  --c-seat-empty: #DDE4F2;
+  --c-seat-empty-ink: #7C86A0;
+  --c-mine: #00BFD0;
+
+  --c-orange: #ED8330;
+  --c-red: #E24B45;
+  --c-red-soft: #FF8A80;
+  --c-purple: #7B5AD1;
+  --c-green: #1BA35C;
+  --c-slate: #8791AB;
+  --c-teal: #2E9490;
+
+  --c-danger-line: #E4C4C2;
+  --c-danger-ink: #B4534E;
+
+  --sh-card: 0 2px 10px rgba(23, 35, 66, 0.06);
+  --sh-primary: 0 6px 16px rgba(74, 107, 245, 0.28);
+}
+
 body {
-  font-family: 'Pretendard', sans-serif;
+  /* Paperlogy Bold를 기본 굵기로 둔다 (본문·라벨·버튼).
+     보조 문구는 500, 제목·강조는 800을 따로 지정한다. */
+  font-family: 'Paperlogy', 'Pretendard', sans-serif;
+  font-weight: 700;
+  background: var(--c-bg);
+  color: var(--c-ink);
+}
+
+/* 좌석표에서 '선택 불가(사석)' 좌석에 쓰는 사선 패턴 */
+.seat-private {
+  background: repeating-linear-gradient(45deg, #D3D7E0, #D3D7E0 3px, #C6CBD6 3px, #C6CBD6 6px);
 }
 
 /* 시작 전 카운트다운 오버레이 팝 애니메이션 */
@@ -18,3 +101,10 @@ body {
   100% { transform: scale(1); opacity: 1; }
 }
 .countdown-pop { animation: countdownPop 0.35s ease-out; }
+
+/* 남은 시간 10초 이하일 때 타이머 깜빡임 */
+@keyframes urgentBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.urgent-timer { animation: urgentBlink 1s ease-in-out infinite; }

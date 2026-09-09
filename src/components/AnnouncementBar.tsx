@@ -12,7 +12,43 @@ interface Props {
   participants: any[];
   timerPaused: boolean;
   hasReceivedSystemState: boolean;
+  /** 보고 있는 참가자의 순번. 자기 차례인지에 따라 표시를 다르게 한다.
+   *  관리자 화면에서는 넘기지 않는다(관제용 표시). */
+  viewerTurnOrder?: number;
 }
+
+/** 상태 바(자동배정·일시정지·그룹전환·완료·대기)에 쓰는 한 줄짜리 색 바 */
+function StatusBar({ color, icon, children, pulse }: {
+  color: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  pulse?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-[20px] px-[18px] py-[15px] mb-3 flex items-center gap-2.5 text-white ${pulse ? 'animate-pulse' : ''}`}
+      style={{ background: color }}
+    >
+      <span className="shrink-0 flex">{icon}</span>
+      <span className="text-base font-extrabold leading-[1.35] min-w-0">{children}</span>
+    </div>
+  );
+}
+
+const iconProps = {
+  width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: '#ffffff',
+  strokeWidth: 2.2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
+};
+
+const ClockIcon = <svg {...iconProps}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>;
+const GearIcon = (
+  <svg {...iconProps}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+  </svg>
+);
+const PauseIcon = <svg {...iconProps} strokeWidth={2.4}><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>;
+const CheckIcon = <svg {...iconProps} strokeWidth={2.4}><path d="M20 6 9 17l-5-5" /></svg>;
 
 export default function AnnouncementBar({
   announcement,
@@ -24,6 +60,7 @@ export default function AnnouncementBar({
   participants,
   timerPaused,
   hasReceivedSystemState,
+  viewerTurnOrder,
 }: Props) {
   const [timeLeft, setTimeLeft] = useState<string>('03:00');
   const [timeLeftMs, setTimeLeftMs] = useState<number>(3 * 60 * 1000);
@@ -72,7 +109,7 @@ export default function AnnouncementBar({
   }, [currentTurnStartTime, timerPaused]);
 
   // ── 그룹 시작 전 카운트다운 ──────────────────────────────────────────
-  // 대기(SESSION_CHANGE) 상태에서 다음 그룹 시작시간(HH:MM)까지 6초 이내가 되면
+  // 대기(SESSION_CHANGE) 상태에서 다음 그룹 시작시간까지 6초 이내가 되면
   // 오버레이를 띄운다. 6~3초: 인트로 문구, 3·2·1: 큰 숫자. 서버 부하 없이 클라에서만 계산.
   const COUNTDOWN_ENABLED = true; // 끄고 싶으면 false
   const nextStartTime = announcement.nextStartTime;
@@ -105,50 +142,6 @@ export default function AnnouncementBar({
     ? participants.find(p => p.turn_order === currentTurnOrder)
     : undefined;
 
-  let bgColor = '#4a6fa5';
-  let text = '';
-  let pulse = false;
-
-  if (isFrozen) {
-    bgColor = '#E03535';
-    text = `⏸ 일시정지 중${frozenReason ? ` — ${frozenReason}` : ''}`;
-    pulse = true;
-  } else if (announcement.type === 'AUTO_ASSIGN') {
-    bgColor = '#E8771A';
-    text = '⚙️ 시스템 자동 배정 중...';
-    pulse = true;
-  } else if (announcement.type === 'SESSION_CHANGE') {
-    bgColor = '#7253C4';
-    const nextStartLabel = formatSessionTime(announcement.nextStartTime);
-    if (announcement.prevSessionId) {
-      text = nextStartLabel
-        ? `그룹 ${announcement.prevSessionId} 좌석지정 완료. 그룹 ${announcement.nextSessionId} 시작시간은 ${nextStartLabel} 입니다.`
-        : `그룹 ${announcement.prevSessionId} 좌석지정 완료. 다음 그룹을 준비 중입니다.`;
-    } else {
-      text = nextStartLabel
-        ? `그룹 ${announcement.nextSessionId} 시작시간은 ${nextStartLabel} 입니다.`
-        : '그룹 시작을 준비 중입니다.';
-    }
-  } else if (announcement.type === 'ALL_COMPLETE') {
-    bgColor = '#17A85A';
-    text = '모든 그룹 좌석 지정이 완료되었습니다.';
-  } else if (currentParticipant) {
-    bgColor = '#1C71E8';
-    // 그룹 내 순번 계산: 전체 turn_order가 아닌, 같은 그룹 안에서 몇 번째인지 표시
-    const groupMembers = participants
-      .filter(p => p.session_id === currentParticipant.session_id)
-      .sort((a, b) => a.turn_order - b.turn_order);
-    const groupIndex = groupMembers.findIndex(p => p.id === currentParticipant.id);
-    const groupOrder = groupIndex >= 0 ? groupIndex + 1 : currentParticipant.turn_order;
-    text = `현재 순서 ${currentParticipant.session_id}그룹 ${groupOrder}번째 '${currentParticipant.name}'님`;
-  } else if (!hasReceivedSystemState) {
-    bgColor = '#6b7590';
-    text = '상태 불러오는 중...';
-  } else {
-    bgColor = '#6b7590';
-    text = '대기 중';
-  }
-
   const showTimer =
     !!currentTurnStartTime &&
     !isFrozen &&
@@ -157,48 +150,141 @@ export default function AnnouncementBar({
     announcement.type !== 'AUTO_ASSIGN' &&
     announcement.type !== 'ALL_COMPLETE';
 
-  // 임박(10초 이하) 여부. 같은 턴 안에서 흰색→빨간 깜빡임으로 바뀌는 이 경계가
-  // 겹침/잔상이 보고된 지점이므로, 아래에서 이 값을 key로 걸어 강제로 새로 그린다.
+  // 임박(10초 이하)이면 타이머 숫자만 빨갛게 깜빡인다
   const isUrgent = timeLeftMs <= 10000;
 
-  return (
-    <>
-      <div
-        style={{ backgroundColor: bgColor }}
-        className={`text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-md transition-colors duration-300 ${pulse ? 'animate-pulse' : ''}`}
-      >
-        {/* 모바일에서 그룹 안내처럼 긴 문구가 잘리지 않도록, 자르는 대신 2줄까지 줄바꿈되게 한다 */}
-        <span className="font-bold text-base sm:text-lg leading-snug line-clamp-2 flex-1 min-w-0">{text}</span>
-        {showTimer && (
-          // key로 일반↔임박 전환마다 엘리먼트를 완전히 새로 그려, 이전 상태(흰 숫자)가
-          // 남은 채로 새 상태(빨간 깜빡임)와 겹쳐 보이는 것을 막는다.
-          <span
-            key={isUrgent ? 'urgent-timer' : 'normal-timer'}
-            className={`ml-4 font-mono font-bold text-xl shrink-0 tabular-nums inline-block w-[5ch] text-right ${isUrgent ? 'text-red-300 animate-pulse' : 'text-white'}`}
-          >
-            {timeLeft}
-          </span>
-        )}
-      </div>
+  const countdownOverlay = countdown && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-none px-6">
+      {countdown.kind === 'intro' ? (
+        <div className="countdown-pop text-white text-3xl sm:text-5xl font-extrabold text-center leading-snug">
+          '그룹 {announcement.nextSessionId}'<br />곧 좌석 배정 시작합니다
+        </div>
+      ) : (
+        <div
+          key={countdown.n}
+          className="countdown-pop text-white font-extrabold tabular-nums leading-none"
+          style={{ fontSize: 'min(40vw, 40vh)' }}
+        >
+          {countdown.n}
+        </div>
+      )}
+    </div>
+  );
 
-      {/* 그룹 시작 전 카운트다운 오버레이 (클릭을 막지 않도록 pointer-events-none) */}
-      {countdown && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-none px-6">
-          {countdown.kind === 'intro' ? (
-            <div className="countdown-pop text-white text-3xl sm:text-5xl font-black text-center leading-snug">
-              '그룹 {announcement.nextSessionId}'<br />곧 좌석 배정 시작합니다
-            </div>
-          ) : (
-            <div
-              key={countdown.n}
-              className="countdown-pop text-white font-black tabular-nums leading-none"
-              style={{ fontSize: 'min(40vw, 40vh)' }}
+  // ── 상태별 바 ───────────────────────────────────────────────────────
+  let bar: React.ReactNode;
+
+  if (isFrozen) {
+    bar = (
+      <StatusBar color="var(--c-red)" icon={PauseIcon} pulse>
+        일시정지 중{frozenReason ? ` — ${frozenReason}` : ' — 잠시만 기다려주세요'}
+      </StatusBar>
+    );
+  } else if (announcement.type === 'AUTO_ASSIGN') {
+    bar = <StatusBar color="var(--c-orange)" icon={GearIcon} pulse>시스템 자동 배정 중...</StatusBar>;
+  } else if (announcement.type === 'SESSION_CHANGE') {
+    const nextStartLabel = formatSessionTime(announcement.nextStartTime);
+    bar = (
+      <StatusBar color="var(--c-purple)" icon={ClockIcon}>
+        {announcement.prevSessionId && (
+          <>그룹 {announcement.prevSessionId} 좌석지정 완료<br /></>
+        )}
+        {nextStartLabel
+          ? `그룹 ${announcement.nextSessionId} 시작시간은 ${nextStartLabel} 입니다`
+          : '다음 그룹을 준비 중입니다'}
+      </StatusBar>
+    );
+  } else if (announcement.type === 'ALL_COMPLETE') {
+    bar = <StatusBar color="var(--c-green)" icon={CheckIcon}>모든 그룹 좌석 지정이 완료되었습니다</StatusBar>;
+  } else if (currentParticipant) {
+    const timer = (
+      <span className={`tabular-nums ${isUrgent ? 'urgent-timer' : ''}`} style={isUrgent ? { color: 'var(--c-red-soft)' } : undefined}>
+        {timeLeft}
+      </span>
+    );
+    const isMyTurn = viewerTurnOrder != null && viewerTurnOrder === currentTurnOrder;
+
+    // 그룹 내 순번 계산: 전체 turn_order가 아닌, 같은 그룹 안에서 몇 번째인지 표시
+    const groupMembers = participants
+      .filter(p => p.session_id === currentParticipant.session_id)
+      .sort((a, b) => a.turn_order - b.turn_order);
+    const groupIndex = groupMembers.findIndex(p => p.id === currentParticipant.id);
+    const groupOrder = groupIndex >= 0 ? groupIndex + 1 : currentParticipant.turn_order;
+    const who = `${currentParticipant.session_id}그룹 ${groupOrder}번째 ${currentParticipant.name}님`;
+
+    if (isMyTurn) {
+      // 내 차례 — 가장 강한 표시. 노란 배지와 큰 타이머로 힐끗 봐도 잡히게 한다.
+      bar = (
+        <div
+          className="rounded-[20px] px-[18px] py-4 mb-3 flex items-center justify-between gap-3 text-white"
+          style={{ background: 'var(--c-primary)', boxShadow: 'var(--sh-primary)' }}
+        >
+          <div className="min-w-0">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full text-[12.5px] font-extrabold leading-none pt-1.5 pb-[5px] px-[11px]"
+              style={{ background: 'var(--c-amber)', color: 'var(--c-amber-ink)' }}
             >
-              {countdown.n}
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-amber-ink)' }} />
+              내 차례
+            </span>
+            <div className="text-xl font-extrabold leading-[1.3] mt-2">좌석을 선택해주세요</div>
+          </div>
+          {showTimer && (
+            <div className="shrink-0 text-center rounded-2xl px-3 py-2.5 min-w-[82px]" style={{ background: 'rgba(255,255,255,.16)' }}>
+              <div className="text-[11px] font-bold opacity-85 tracking-[.04em]">남은 시간</div>
+              <div className="text-[25px] font-extrabold leading-[1.1] mt-0.5">{timer}</div>
             </div>
           )}
         </div>
-      )}
+      );
+    } else if (viewerTurnOrder != null) {
+      // 다른 사람 차례 — 색을 낮춰서, 화면을 힐끗 봐도 내 차례가 아님이 바로 보이게 한다
+      bar = (
+        <div
+          className="rounded-[20px] px-[18px] py-3.5 mb-3 flex items-center justify-between gap-3"
+          style={{ background: 'var(--c-primary-soft)', color: 'var(--c-ink-2)' }}
+        >
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 text-[11.5px] font-extrabold" style={{ color: 'var(--c-primary)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-primary)' }} />
+              진행 중
+            </div>
+            <div className="text-base font-bold leading-[1.35] mt-1 truncate">{who}</div>
+          </div>
+          {showTimer && (
+            <div className="shrink-0 text-xl font-extrabold" style={{ color: 'var(--c-muted)' }}>{timer}</div>
+          )}
+        </div>
+      );
+    } else {
+      // 관리자 관제 화면 — 누구 차례인지와 남은 시간을 한 줄로
+      bar = (
+        <div
+          className="rounded-2xl px-[18px] py-3.5 mb-3 flex items-center justify-between gap-3 text-white"
+          style={{ background: 'var(--c-primary)', boxShadow: '0 6px 16px rgba(74,107,245,.24)' }}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-1 text-xs font-extrabold shrink-0" style={{ background: 'rgba(255,255,255,.22)' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+              진행 중
+            </span>
+            <span className="text-lg font-extrabold truncate">현재 순서 {who}</span>
+          </div>
+          {showTimer && <span className="text-2xl font-extrabold shrink-0">{timer}</span>}
+        </div>
+      );
+    }
+  } else if (!hasReceivedSystemState) {
+    bar = <StatusBar color="var(--c-slate)" icon={ClockIcon}>상태 불러오는 중...</StatusBar>;
+  } else {
+    bar = <StatusBar color="var(--c-slate)" icon={ClockIcon}>대기 중</StatusBar>;
+  }
+
+  return (
+    <>
+      {bar}
+      {/* 그룹 시작 전 카운트다운 오버레이 (클릭을 막지 않도록 pointer-events-none) */}
+      {countdownOverlay}
     </>
   );
 }
