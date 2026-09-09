@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&display=swap">
+  <style>
+    body { margin: 0; font-family: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    a { color: #4A6BF5; } a:hover { color: #3450d6; }
+    @keyframes myturn-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(255,255,255,.6); }
+      70%  { box-shadow: 0 0 0 9px rgba(255,255,255,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+    }
+    .pulse-badge { animation: myturn-ring 1.8s ease-out infinite; }
+  </style>
+</helmet>
+
+<div style="width: 440px; height: 880px; background: #EDF1F9; padding: 26px 32px; box-sizing: border-box; color: #171C2E; display: flex; flex-direction: column;">
+
+  <div style="font-size: 20px; font-weight: 800; letter-spacing: -.01em;">"지금 내 차례"를 더 눈에 띄게</div>
+  <div style="font-size: 12.5px; font-weight: 500; color: #6C7590; margin-top: 5px; line-height: 1.5;">지금 배지는 흰색 22% 투명이라 파란 배경에 묻힙니다. 네 가지 방법입니다.</div>
+
+  <div style="height: 18px;"></div>
+
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+
+    <!-- 현재 -->
+    <div>
+      <div style="font-size: 12px; font-weight: 800; color: #8791AB; margin-bottom: 6px;">지금 A안</div>
+      <div style="width: 358px; background: #4A6BF5; color: #ffffff; border-radius: 20px; padding: 16px 18px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; opacity: .62;">
+        <div style="min-width: 0;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.22); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 800;">
+            <span style="width: 6px; height: 6px; border-radius: 999px; background: #ffffff;"></span>지금 내 차례
+          </div>
+          <div style="font-size: 20px; font-weight: 800; line-height: 1.3; margin-top: 8px;">좌석을 선택해주세요</div>
+        </div>
+        <div style="flex-shrink: 0; text-align: center; background: rgba(255,255,255,.16); border-radius: 16px; padding: 10px 12px; min-width: 82px;">
+          <div style="font-size: 11px; font-weight: 700; opacity: .85;">남은 시간</div>
+          <div style="font-size: 25px; font-weight: 800; line-height: 1.1; margin-top: 2px; font-variant-numeric: tabular-nums;">02:47</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top: 1px dashed #CBD5EC;"></div>
+
+    <!-- 1. 노란 배지 -->
+    <div>
+      <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 6px;">
+        <span style="background: #2A3350; color: #ffffff; border-radius: 6px; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;">1</span>
+        <span style="font-size: 13px; font-weight: 800; color: #2A3350;">배지만 노랑으로</span>
+      </div>
+      <div style="width: 358px; background: #4A6BF5; color: #ffffff; border-radius: 20px; padding: 16px 18px; box-sizing: border-box; box-shadow: 0 6px 16px rgba(74,107,245,.28); display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+        <div style="min-width: 0;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: #FFC53D; color: #2A1D00; border-radius: 999px; padding: 5px 11px; font-size: 12.5px; font-weight: 800;">
+            <span style="width: 6px; height: 6px; border-radius: 999px; background: #2A1D00;"></span>지금 내 차례
+          </div>
+          <div style="font-size: 20px; font-weight: 800; line-height: 1.3; margin-top: 8px;">좌석을 선택해주세요</div>
+        </div>
+        <div style="flex-shrink: 0; text-align: center; background: rgba(255,255,255,.16); border-radius: 16px; padding: 10px 12px; min-width: 82px;">
+          <div style="font-size: 11px; font-weight: 700; opacity: .85;">남은 시간</div>
+          <div style="font-size: 25px; font-weight: 800; line-height: 1.1; margin-top: 2px; font-variant-numeric: tabular-nums;">02:47</div>
+        </div>
+      </div>
+      <div style="font-size: 11.5px; font-weight: 500; color: #8791AB; margin-top: 6px; line-height: 1.5;">가장 작은 변경. 파랑 위의 노랑이라 대비가 가장 큽니다.</div>
+    </div>
+
+    <!-- 2. 위계 뒤집기 -->
+    <div>
+      <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 6px;">
+        <span style="background: #2A3350; color: #ffffff; border-radius: 6px; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;">2</span>
+        <span style="font-size: 13px; font-weight: 800; color: #2A3350;">"내 차례"를 제목으로 올리기</span>
+      </div>
+      <div style="width: 358px; background: #4A6BF5; color: #ffffff; border-radius: 20px; padding: 16px 18px; box-sizing: border-box; box-shadow: 0 6px 16px rgba(74,107,245,.28); display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+        <div style="min-width: 0;">
+          <div style="font-size: 25px; font-weight: 900; line-height: 1.15; letter-spacing: -.02em;">지금 내 차례!</div>
+          <div style="font-size: 13.5px; font-weight: 600; opacity: .88; margin-top: 5px;">좌석을 선택해주세요</div>
+        </div>
+        <div style="flex-shrink: 0; text-align: center; background: rgba(255,255,255,.16); border-radius: 16px; padding: 10px 12px; min-width: 82px;">
+          <div style="font-size: 11px; font-weight: 700; opacity: .85;">남은 시간</div>
+          <div style="font-size: 25px; font-weight: 800; line-height: 1.1; margin-top: 2px; font-variant-numeric: tabular-nums;">02:47</div>
+        </div>
+      </div>
+      <div style="font-size: 11.5px; font-weight: 500; color: #8791AB; margin-top: 6px; line-height: 1.5;">정작 알려야 할 말이 제일 큽니다. 색을 안 늘리고도 가장 확실합니다.</div>
+    </div>
+
+    <!-- 3. 흰 배지 + 깜빡임 -->
+    <div>
+      <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 6px;">
+        <span style="background: #2A3350; color: #ffffff; border-radius: 6px; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;">3</span>
+        <span style="font-size: 13px; font-weight: 800; color: #2A3350;">흰 배지 + 천천히 깜빡임</span>
+      </div>
+      <div style="width: 358px; background: #4A6BF5; color: #ffffff; border-radius: 20px; padding: 16px 18px; box-sizing: border-box; box-shadow: 0 6px 16px rgba(74,107,245,.28); display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+        <div style="min-width: 0;">
+          <div class="pulse-badge" style="display: inline-flex; align-items: center; gap: 6px; background: #ffffff; color: #2C46B8; border-radius: 999px; padding: 5px 11px; font-size: 12.5px; font-weight: 800;">
+            <span style="width: 6px; height: 6px; border-radius: 999px; background: #2C46B8;"></span>지금 내 차례
+          </div>
+          <div style="font-size: 20px; font-weight: 800; line-height: 1.3; margin-top: 8px;">좌석을 선택해주세요</div>
+        </div>
+        <div style="flex-shrink: 0; text-align: center; background: rgba(255,255,255,.16); border-radius: 16px; padding: 10px 12px; min-width: 82px;">
+          <div style="font-size: 11px; font-weight: 700; opacity: .85;">남은 시간</div>
+          <div style="font-size: 25px; font-weight: 800; line-height: 1.1; margin-top: 2px; font-variant-numeric: tabular-nums;">02:47</div>
+        </div>
+      </div>
+      <div style="font-size: 11.5px; font-weight: 500; color: #8791AB; margin-top: 6px; line-height: 1.5;">딴 데 보고 있어도 잡힙니다. 다만 3분 내내 움직여서 피로할 수 있습니다.</div>
+    </div>
+
+    <!-- 4. 다 합치기 -->
+    <div>
+      <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 6px;">
+        <span style="background: #2A3350; color: #ffffff; border-radius: 6px; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;">4</span>
+        <span style="font-size: 13px; font-weight: 800; color: #2A3350;">제목 + 노란 배지 (최대 강조)</span>
+      </div>
+      <div style="width: 358px; background: #4A6BF5; color: #ffffff; border-radius: 20px; padding: 15px 18px; box-sizing: border-box; box-shadow: 0 8px 20px rgba(74,107,245,.34); display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+        <div style="min-width: 0;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: #FFC53D; color: #2A1D00; border-radius: 999px; padding: 4px 10px; font-size: 11.5px; font-weight: 800;">
+            <span style="width: 6px; height: 6px; border-radius: 999px; background: #2A1D00;"></span>내 차례
+          </div>
+          <div style="font-size: 24px; font-weight: 900; line-height: 1.15; letter-spacing: -.02em; margin-top: 6px;">좌석을 선택해주세요</div>
+        </div>
+        <div style="flex-shrink: 0; text-align: center; background: #FFC53D; color: #2A1D00; border-radius: 16px; padding: 9px 12px; min-width: 82px;">
+          <div style="font-size: 10.5px; font-weight: 800;">남은 시간</div>
+          <div style="font-size: 25px; font-weight: 900; line-height: 1.1; margin-top: 1px; font-variant-numeric: tabular-nums;">02:47</div>
+        </div>
+      </div>
+      <div style="font-size: 11.5px; font-weight: 500; color: #8791AB; margin-top: 6px; line-height: 1.5;">타이머까지 노랑이라 가장 셉니다. 다만 노랑이 두 군데라 시선이 갈립니다.</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":440,"height":880}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>
