@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&display=swap">
+  <style>
+    body { margin: 0; font-family: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    a { color: #4A6BF5; } a:hover { color: #3450d6; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #EDF1F9; display: flex; flex-direction: column; justify-content: center; padding: 24px; box-sizing: border-box; overflow: hidden; color: #171C2E;">
+
+  <div style="background: #ffffff; border-radius: 24px; box-shadow: 0 2px 14px rgba(23,35,66,.07); padding: 28px 24px;">
+
+    <div style="font-size: 23px; font-weight: 900; letter-spacing: -.02em;">참가자 로그인</div>
+    <div style="font-size: 13.5px; font-weight: 500; color: #6C7590; margin-top: 6px; line-height: 1.55;">신청하실 때 제출한 정보로 입장합니다.</div>
+
+    <div style="height: 24px;"></div>
+
+    <!-- 이름 -->
+    <div>
+      <div style="font-size: 13px; font-weight: 700; color: #2A3350; margin-bottom: 7px;">이름</div>
+      <div style="height: 54px; border-radius: 15px; background: #F7F9FE; border: 1px solid #DDE4F2; display: flex; align-items: center; padding: 0 16px; font-size: 15.5px; font-weight: 600;">김서연</div>
+    </div>
+
+    <div style="height: 16px;"></div>
+
+    <!-- 비밀번호 -->
+    <div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 7px;">
+        <span style="font-size: 13px; font-weight: 700; color: #2A3350;">비밀번호</span>
+        <span style="font-size: 12px; font-weight: 600; color: #8791AB;">전화번호 뒷 4자리</span>
+      </div>
+      <div style="height: 54px; border-radius: 15px; background: #ffffff; border: 1.5px solid #4A6BF5; box-shadow: 0 0 0 4px rgba(74,107,245,.14); display: flex; align-items: center; padding: 0 16px; font-size: 15.5px; font-weight: 600; letter-spacing: .35em; color: #171C2E;">••••</div>
+    </div>
+
+    <div style="height: 24px;"></div>
+
+    <div style="height: 58px; border-radius: 18px; background: #4A6BF5; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; box-shadow: 0 6px 16px rgba(74,107,245,.28);">입장하기</div>
+
+  </div>
+
+  <div style="height: 18px;"></div>
+
+  <div style="display: flex; align-items: flex-start; gap: 8px; padding: 0 6px;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8791AB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+    <div style="font-size: 12.5px; font-weight: 500; color: #8791AB; line-height: 1.65;">이름이 같은 분이 있으면 고유 코드를 한 번 더 물어봅니다. 로그인이 안 되면 운영진에게 문의해주세요.</div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

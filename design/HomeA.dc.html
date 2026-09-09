@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&display=swap">
+  <style>
+    body { margin: 0; font-family: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    a { color: #4A6BF5; } a:hover { color: #3450d6; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #EDF1F9; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; overflow: hidden; color: #171C2E;">
+
+  <!-- 좌석표 모티프 -->
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+    <div style="width: 156px; height: 20px; border-radius: 7px; background: linear-gradient(180deg, #FFFFFF 0%, #E4EAF7 100%); display: flex; align-items: center; justify-content: center; font-size: 8.5px; font-weight: 800; letter-spacing: .3em; color: #9AA4BE;">STAGE</div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <div style="display: flex; gap: 5px;">
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #A63A4C;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #A63A4C;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #A63A4C;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #7A5AD1;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #7A5AD1;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+      </div>
+      <div style="display: flex; gap: 5px;">
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #7A5AD1;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #00BFD0;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #E8771A;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+      </div>
+      <div style="display: flex; gap: 5px;">
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: #DDE4F2;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 34px;"></div>
+
+  <!-- 타이틀 -->
+  <div style="text-align: center;">
+    <div style="font-size: 14.5px; font-weight: 800; color: #6C7590; letter-spacing: .02em;">〈공감 모임〉</div>
+    <div style="font-size: 36px; font-weight: 900; letter-spacing: -.03em; line-height: 1.2; margin-top: 6px;">좌석 지정</div>
+  </div>
+
+  <div style="height: 30px;"></div>
+
+  <!-- 버튼 -->
+  <div style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+    <div style="width: 100%; height: 58px; border-radius: 18px; background: #4A6BF5; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; box-shadow: 0 6px 16px rgba(74,107,245,.28);">참가자 로그인</div>
+    <div style="width: 100%; height: 54px; border-radius: 18px; background: #ffffff; border: 1px solid #DDE4F2; color: #6C7590; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;">관리자 로그인</div>
+  </div>
+
+  <div style="height: 20px;"></div>
+
+  <div style="font-size: 13px; font-weight: 500; color: #8791AB; text-align: center; line-height: 1.6;">안내받은 이름과 비밀번호로 입장해주세요.</div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>
