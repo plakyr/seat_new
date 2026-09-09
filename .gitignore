@@ -17,3 +17,6 @@ npm-debug.log*
 
 # OS
 .DS_Store
+
+# 디자인 시안 캔버스의 생성 결과물 (design/*.dc.html + canvas.json에서 다시 만들 수 있음)
+design/seat-app-redesign.html
