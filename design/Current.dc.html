@@ -7,8 +7,11 @@
 <body>
 <x-dc>
 <helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Roboto+Mono:wght@400;700&display=swap">
   <style>
-    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    /* 실제 앱은 Pretendard(jsDelivr CDN)를 씁니다. 이 캔버스는 Google Fonts만 불러올 수 있어
+       화면에는 대체 폰트(Noto Sans KR)로 그려집니다. 타이머의 Roboto Mono는 실제와 같습니다. */
+    body { margin: 0; font-family: Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif; }
     a { color: #1C71E8; } a:hover { color: #1554b0; }
   </style>
 </helmet>
@@ -30,7 +33,7 @@
     <!-- 공지 바 -->
     <div style="background: #1C71E8; color: #ffffff; border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
       <span style="font-weight: 700; font-size: 16px; line-height: 1.375; flex: 1; min-width: 0;">현재 순서 2그룹 5번째 '김서연'님</span>
-      <span style="margin-left: 16px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; font-size: 20px; flex-shrink: 0; width: 5ch; text-align: right; font-variant-numeric: tabular-nums;">02:47</span>
+      <span style="margin-left: 16px; font-family: 'Roboto Mono', monospace; font-weight: 700; font-size: 20px; flex-shrink: 0; width: 5ch; text-align: right; font-variant-numeric: tabular-nums;">02:47</span>
     </div>
 
     <!-- 좌석표 영역 -->
