@@ -22,7 +22,14 @@ function toDatetimeLocalValue(value: string | null | undefined): string {
 export default function Admin() {
   const { adminToken, adminUser, setAdminAuth, isFrozen, frozenReason, currentTurnOrder, currentTurnStartTime, sessionColors, participants, serverTime, announcement, timerPaused, onlineParticipantIds, hasReceivedSystemState, messages } = useStore();
   const socket = useSocket();
-  
+
+  // 로그아웃: 서버 소켓의 관리자 권한·방 가입까지 회수한 뒤 로컬 인증을 지운다.
+  // (저장값만 지우면 이 소켓이 계속 관리자 방에 남아 데이터를 받고 명령도 보낼 수 있다)
+  const handleAdminLogout = () => {
+    socket?.emit('admin:logout');
+    setAdminAuth(null, null);
+  };
+
   // Login State
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -735,7 +742,7 @@ const updateStoreWithEventData = (event: any) => {
 
         <div className="pt-3.5" style={{ borderTop: '1px solid #2A3150' }}>
           <button
-            onClick={() => setAdminAuth(null, null)}
+            onClick={handleAdminLogout}
             className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-[10px] text-[13px] font-bold text-left text-[#8791AB] hover:text-white hover:bg-[#232A44] transition-colors"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
@@ -834,7 +841,7 @@ const updateStoreWithEventData = (event: any) => {
                     비밀번호 변경
                   </button>
                   <button
-                    onClick={() => setAdminAuth(null, null)}
+                    onClick={handleAdminLogout}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold"
                     style={{ border: '1.5px solid var(--c-line)', color: 'var(--c-muted)' }}
                   >

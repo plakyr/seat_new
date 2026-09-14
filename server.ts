@@ -59,6 +59,16 @@ const requireAdmin = (req: any, res: any, next: any) => {
 };
 
 async function startServer() {
+  // 최후의 안전망: 어딘가에서 놓친 예외/rejection 이 있어도 프로세스를 죽이지 않는다.
+  // 행사 중에는 한 요청의 실패로 서버가 내려가 70명 전원이 끊기는 것이 가장 나쁘다.
+  // (개별 요청 오류는 위 소켓 래퍼·라우트 try/catch 에서 이미 가둔다. 이건 그물망.)
+  process.on('unhandledRejection', (reason) => {
+    console.error('[unhandledRejection] 처리되지 않은 Promise 거부:', reason);
+  });
+  process.on('uncaughtException', (err) => {
+    console.error('[uncaughtException] 처리되지 않은 예외:', err);
+  });
+
   const app = express();
   const httpServer = createServer(app);
 
@@ -960,12 +970,25 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   // Socket.io logic
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
-    
+
+    // 소켓 이벤트 핸들러 공통 래퍼.
+    // 비동기 핸들러에서 던진 예외(주로 DB 일시 오류)가 처리되지 않은 Promise
+    // rejection 이 되어 프로세스를 죽이는 것을 막는다. 오류는 로그로 남기고,
+    // 실패를 그 요청 하나로 가둔다(다른 참가자 연결·진행은 유지). handler 는
+    // socket.on 대신 이 on() 으로 등록한다.
+    const on = (event: string, handler: (...args: any[]) => any) => {
+      socket.on(event, (...args: any[]) => {
+        Promise.resolve()
+          .then(() => handler(...args))
+          .catch(err => console.error(`[socket:${event}] 처리 중 오류:`, err));
+      });
+    };
+
     // Send initial server time
     socket.emit('time:sync', { serverTime: new Date().toISOString() });
 
     // Authenticate participant socket
-    socket.on('participant:auth', async (data: { participantId: string, sessionToken: string }) => {
+    on('participant:auth', async (data: { participantId: string, sessionToken: string }) => {
       const { participantId, sessionToken } = data;
 
       // 토큰이 빈 문자열/null/비문자열이면 즉시 거절한다. 이 검사가 없으면,
@@ -1014,6 +1037,14 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       console.log(`Participant ${participant.name} authenticated on socket ${socket.id}`);
       broadcastOnlineParticipants(participant.event_id);
 
+      // 재연결/새로고침 시 '본인'의 최신 상태를 다시 내려보낸다.
+      // 끊겨 있는 동안 자동배정되거나 관리자가 좌석을 취소·변경하면 그때의
+      // participant:update 가 갈 소켓이 없어 유실된다. 초기 상태(좌석·턴·채팅)만으로는
+      // 클라이언트의 user(로컬 저장값)가 갱신되지 않아, 이미 배정됐는데 미배정으로
+      // 보이거나 취소됐는데 완료로 남는 어긋남이 생긴다. 여기서 DB의 최신 본인
+      // 레코드를 보내면 클라이언트가 setUser 로 자기 상태를 맞춘다.
+      socket.emit('participant:update', { participant });
+
       // 인증 완료 시점에 초기 상태를 전송한다.
       // (클라이언트가 접속 직후 participant:auth와 seat:request_init를 함께 보내는데,
       //  auth가 비동기 처리되는 동안 seat:request_init가 먼저 도착하면 아직 인증 전이라
@@ -1022,7 +1053,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     // Authenticate admin socket
-    socket.on('admin:auth', async (data: { token: string }) => {
+    on('admin:auth', async (data: { token: string }) => {
       try {
         const decoded = jwt.verify(data.token, JWT_SECRET) as any;
         if (decoded.role === 'admin') {
@@ -1051,6 +1082,23 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       }
     });
 
+    // Admin logout: 서버 소켓에 남은 관리자 권한과 방 가입을 회수한다.
+    // 클라이언트 로그아웃이 저장값만 지우면, 이 소켓은 계속 관리자 방에 남아
+    // 관리자 데이터를 수신하고 관리자 명령도 보낼 수 있다(verifyAdminSocket 통과).
+    // 로그아웃 시 클라이언트가 이 이벤트를 보내 서버 쪽 권한도 확실히 내린다.
+    on('admin:logout', () => {
+      const eid = socket.data.adminEventId;
+      if (eid) {
+        socket.leave(`admin:event:${eid}`);
+        socket.leave(`event:${eid}`);
+      }
+      socket.data.isAdmin = false;
+      socket.data.adminToken = null;
+      socket.data.adminId = null;
+      socket.data.adminEventId = null;
+      console.log(`Admin logged out on socket ${socket.id}`);
+    });
+
     // 관리자 소켓 검증: admin:auth 때 저장해 둔 토큰을 요청마다 다시 검증한다.
     // (한 번 인증됐다고 소켓이 살아있는 동안 무기한 관리자 권한이 유지되지 않도록.
     //  HTTP 라우트의 requireAdmin은 매 요청 검증하지만 소켓은 그동안 최초 1회뿐이었다)
@@ -1069,7 +1117,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     };
 
     // Admin request event details (seats + participants)
-    socket.on('admin:request_event', async (data: { eventId: string }) => {
+    on('admin:request_event', async (data: { eventId: string }) => {
       if (!verifyAdminSocket()) return;
 
       // 이벤트를 전환할 때 이전에 선택했던 이벤트의 방에서 나간다.
@@ -1140,7 +1188,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     // Admin freeze/unfreeze system
-    socket.on('admin:toggle_freeze', async (data: { eventId: string, isFrozen: boolean, reason?: string }) => {
+    on('admin:toggle_freeze', async (data: { eventId: string, isFrozen: boolean, reason?: string }) => {
       if (!verifyAdminSocket()) return;
 
       const now = new Date();
@@ -1186,7 +1234,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     // Admin force cancel seat
-    socket.on('admin:cancel_seat', async (data: { seatId: string, eventId: string }) => {
+    on('admin:cancel_seat', async (data: { seatId: string, eventId: string }) => {
       if (!verifyAdminSocket()) return;
       // 자동배정 시퀀스와 동시에 같은 좌석/참가자를 건드리지 않도록 잠금을 공유한다.
       if (autoAssignInProgress.has(data.eventId)) {
@@ -1249,7 +1297,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
     // Admin force assign seat
     // 관리자: 좌석을 '사석'으로 지정하거나 다시 선택 가능 상태로 되돌리기
-    socket.on('admin:set_seat_private', async (data: { seatId: string, eventId: string, isPrivate: boolean }) => {
+    on('admin:set_seat_private', async (data: { seatId: string, eventId: string, isPrivate: boolean }) => {
       if (!verifyAdminSocket()) return;
       if (autoAssignInProgress.has(data.eventId)) {
         return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
@@ -1278,7 +1326,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     // Admin: 수동 배정 (참가자 계정 없이 좌석에 이름만 표기)
-    socket.on('admin:set_manual_seat', async (data: { seatId: string, eventId: string, label: string | null }) => {
+    on('admin:set_manual_seat', async (data: { seatId: string, eventId: string, label: string | null }) => {
       if (!verifyAdminSocket()) return;
       if (autoAssignInProgress.has(data.eventId)) {
         return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
@@ -1309,7 +1357,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       }
     });
 
-    socket.on('admin:force_assign', async (data: { seatId: string, participantId: string, eventId: string }) => {
+    on('admin:force_assign', async (data: { seatId: string, participantId: string, eventId: string }) => {
       if (!verifyAdminSocket()) return;
       if (autoAssignInProgress.has(data.eventId)) {
         return socket.emit('admin:error', { error: '자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
@@ -1378,7 +1426,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     // Admin: 현재 선택자 좌석 자동배정 후 다음 턴으로 넘기기
-    socket.on('admin:next_turn', async (data: { eventId: string }) => {
+    on('admin:next_turn', async (data: { eventId: string }) => {
       if (!verifyAdminSocket()) return;
 
       try {
@@ -1389,7 +1437,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     // Admin: 좌석 배정 없이 현재 참가자를 건너뛰고 다음 턴으로 (불참/오류 대응)
-    socket.on('admin:skip_turn', async (data: { eventId: string }) => {
+    on('admin:skip_turn', async (data: { eventId: string }) => {
       if (!verifyAdminSocket()) return;
 
       try {
@@ -1400,7 +1448,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     // Admin: 전체 참가자 화면 강제 새로고침 신호 전송 (화면 멈춤 복구용)
-    socket.on('admin:force_reload', async (data: { eventId: string }) => {
+    on('admin:force_reload', async (data: { eventId: string }) => {
       if (!verifyAdminSocket()) return;
       io.to(`event:${data.eventId}`).emit('force_reload', {});
       socket.emit('admin:info', { message: '전체 참가자 화면에 새로고침 신호를 보냈습니다.' });
@@ -1409,7 +1457,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     // Request initial seats
     // 참가자 소켓 전용: 클라이언트가 보낸 eventId를 신뢰하지 않고 인증된 소켓의 eventId만 사용한다.
     // 인증되지 않은 소켓이거나 다른 이벤트를 요청하면 조용히 무시한다.
-    socket.on('seat:request_init', async (data: { eventId: string }) => {
+    on('seat:request_init', async (data: { eventId: string }) => {
       const eventId = socket.data.eventId;
       if (!socket.data.participantId || !eventId) return; // 인증되지 않은 소켓 거절
       if (data.eventId && data.eventId !== eventId) return; // 다른 이벤트 요청 거절
@@ -1418,7 +1466,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     // Handle seat selection
-    socket.on('seat:select', async (data: { seatId: string }) => {
+    on('seat:select', async (data: { seatId: string }) => {
       const participantId = socket.data.participantId;
       if (!participantId) {
         return socket.emit('seat:error', { error: '로그인이 필요합니다.' });
@@ -1538,7 +1586,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       }
     });
 
-    socket.on('chat:send', async (data: { eventId: string, content: string }) => {
+    on('chat:send', async (data: { eventId: string, content: string }) => {
       try {
         const { content } = data;
         if (!content || !content.trim()) return;
@@ -1621,7 +1669,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
     // 참가자 명시적 로그아웃: presence(접속자 수)에서 즉시 제거하고 세션 토큰을 무효화한다.
     // (기존엔 클라이언트 상태만 지워져서, 소켓이 끊길 때까지 관리자 화면에 '접속 중'으로 남았다)
-    socket.on('participant:logout', async () => {
+    on('participant:logout', async () => {
       const pid = socket.data.participantId;
       const eid = socket.data.eventId;
       if (!pid) return;
@@ -1637,7 +1685,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       }
     });
 
-    socket.on('disconnect', () => {
+    on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
       if (socket.data.participantId) {
         if (activeSockets.get(socket.data.participantId) === socket.id) {
@@ -2159,9 +2207,20 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           const userSocketId = activeSockets.get(currentParticipant.id);
           if (userSocketId) io.to(userSocketId).emit('participant:update', { participant: result.updatedParticipant });
           console.log(`[AutoAssign] ${currentParticipant.name} → ${targetSeat.row}행 ${targetSeat.col}열 완료`);
-        } catch (assignErr) {
-          // 좌석 배정이 충돌로 실패한 경우 참가자를 좌석 없이 방치하지 않고 만료 처리한다.
-          // (is_final도 true로 하여 전체 완료 판단에서 미완료로 남지 않게 함)
+        } catch (assignErr: any) {
+          // 실패 원인을 구분한다.
+          //  · P2025 = 위 update 의 where(status:'EMPTY')에 맞는 행이 없음
+          //    → 이 좌석이 실제로 다른 경로로 이미 찼다는 뜻(진짜 충돌). 만료 확정.
+          //  · 그 외(트랜잭션 타임아웃·DB 일시 오류 등) = 일시적 실패.
+          //    → 참가자를 확정하지 않고 턴도 넘기지 않은 채 함수를 빠져나가,
+          //      1초 스케줄러의 다음 틱에서 같은 참가자로 자동 재시도되게 한다.
+          //      (빈 좌석이 남아 있는데 DB가 잠깐 튀었다는 이유로 좌석 없이
+          //       최종 완료 처리되던 문제를 막는다.)
+          const isRealConflict = assignErr?.code === 'P2025';
+          if (!isRealConflict) {
+            console.error(`[AutoAssign] 일시적 오류 - ${currentParticipant.name} 배정 보류, 다음 틱에서 재시도:`, assignErr);
+            return; // 턴 유지 · 미확정. 잠금은 finally 에서 해제된다.
+          }
           console.error(`[AutoAssign] 좌석 배정 충돌 - ${currentParticipant.name} 만료 처리:`, assignErr);
           const expiredParticipant = await prisma.participant.update({
             where: { id: currentParticipant.id },
