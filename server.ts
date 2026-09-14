@@ -419,9 +419,11 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           where: { layout: { event_id: eventId } },
           data: { status: 'EMPTY', assigned_to: null, session_id: null }
         });
+        // session_token 은 지우지 않는다: 접속 중인 참가자가 재로그인 없이 그대로
+        // 이어서 진행하도록(정책: 접속 유지 + 화면 갱신) 세션을 살려 둔다.
         await tx.participant.updateMany({
           where: { event_id: eventId },
-          data: { seat_id: null, is_final: false, turn_status: 'WAITING', session_token: null }
+          data: { seat_id: null, is_final: false, turn_status: 'WAITING' }
         });
         await tx.systemState.upsert({
           where: { event_id: eventId },
@@ -454,6 +456,15 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       // 접속 중인 모든 화면의 채팅창을 즉시 비운다 (관리자는 admin:event_data의 messages: []로도 반영됨)
       io.to(`event:${eventId}`).emit('chat:history', { messages: [] });
       io.to(`admin:event:${eventId}`).emit('chat:history', { messages: [] });
+
+      // 접속 중인 각 참가자에게 초기화된 '본인' 상태를 내려보낸다.
+      // seat:init(좌석 비움)만으로는 클라이언트의 user(is_final·turn_status)가 갱신되지
+      // 않아, 완료했던 참가자가 이전 is_final 때문에 다시 선택하지 못하고 막힌다.
+      // 세션을 유지하는 정책이므로 재로그인 없이 여기서 화면 상태만 맞춘다.
+      for (const p of participants) {
+        const sid = activeSockets.get(p.id);
+        if (sid) io.to(sid).emit('participant:update', { participant: p });
+      }
 
       io.to(`admin:event:${eventId}`).emit('admin:event_data', {
         eventId, // 클라이언트가 지금 선택한 이벤트의 응답인지 대조하는 용도
