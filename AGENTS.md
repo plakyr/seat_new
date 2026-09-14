@@ -21,14 +21,14 @@ Preserve the existing architecture and behavior whenever possible.
 - Node.js
 - Vite
 - Prisma
-- Socket.IO / realtime functionality where applicable
+- Realtime functionality where applicable
 
 Important project files and directories include:
 
 - `server.ts`
-- `api/`
 - `src/`
-- `prisma/schema.prisma`
+- `prisma/`
+- `design/`
 
 ## Review Priorities
 
