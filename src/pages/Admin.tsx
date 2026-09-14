@@ -633,64 +633,114 @@ const updateStoreWithEventData = (event: any) => {
           <button
             onClick={() => setIsSidebarOpen(true)}
             title="메뉴 펼치기"
-            className="text-gray-300 hover:text-white text-xl leading-none"
+            aria-label="메뉴 펼치기"
+            className="flex items-center justify-center w-7 h-7 rounded-[9px] bg-[#242B46] text-[#8791AB] hover:text-white transition-colors"
           >
-            »
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m13 17 5-5-5-5" />
+              <path d="m6 17 5-5-5-5" />
+            </svg>
           </button>
         </div>
       )}
       {isSidebarOpen && (
-      <aside className="w-64 text-white p-6 hidden md:flex flex-col md:sticky md:top-0 md:h-screen shrink-0" style={{ background: '#1A1F35' }}>
-        <div className="flex items-start justify-between mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">관리자 메뉴</h1>
+      <aside className="w-64 text-white hidden md:flex flex-col md:sticky md:top-0 md:h-screen shrink-0 px-4 py-5" style={{ background: '#1A1F35' }}>
+        {/* 머리말: 제목은 메뉴보다 작게 두어 메뉴가 먼저 읽히게 한다 */}
+        <div className="flex items-center justify-between px-1 mb-[18px]">
+          <h1 className="text-[17px] font-extrabold tracking-[-0.02em]">관리자 메뉴</h1>
           <button
             onClick={() => setIsSidebarOpen(false)}
             title="메뉴 접기 (좌석표 넓게 보기)"
-            className="text-[color:var(--c-muted-2)] hover:text-white text-xl leading-none mt-1"
+            aria-label="메뉴 접기"
+            className="flex items-center justify-center w-7 h-7 rounded-[9px] bg-[#242B46] text-[#8791AB] hover:text-white transition-colors"
           >
-            «
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m11 17-5-5 5-5" />
+              <path d="m18 17-5-5 5-5" />
+            </svg>
           </button>
         </div>
-        <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #2A3150' }}>
-          <p className="text-xs font-bold" style={{ color: '#7A85A8' }}>접속 계정</p>
-          <p className="font-bold text-[17px] mt-0.5">{adminUser?.username}</p>
-          <div className="mt-2 flex flex-col items-start gap-1">
-            <button
-              onClick={openPwModal}
-              className="text-xs text-[color:var(--c-muted-2)] hover:text-white underline underline-offset-2 transition-colors"
-            >
-              비밀번호 변경
-            </button>
-            <button
-              onClick={openResetModal}
-              className="text-xs text-[color:var(--c-muted-2)] hover:text-white underline underline-offset-2 transition-colors"
-            >
-              관리자 비밀번호 초기화
-            </button>
+
+        {/* 접속 계정 카드 */}
+        <div className="flex items-center gap-2.5 p-[13px] rounded-[14px] bg-[#232A44] mb-2">
+          <div className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0 text-[15px] font-extrabold text-white" style={{ background: 'var(--c-primary)' }}>
+            {adminUser?.username?.trim().charAt(0) || '?'}
+          </div>
+          <div className="flex flex-col gap-px min-w-0">
+            <span className="text-[11px] font-bold text-[#7A85A8]">접속 계정</span>
+            <span className="text-[15px] font-extrabold truncate">{adminUser?.username}</span>
           </div>
         </div>
-        <nav className="space-y-2 flex-1">
+
+        {/* 계정 관련 동작. 초기화는 전체 관리자에게 영향을 주므로 색을 달리해 구분한다 */}
+        <div className="flex flex-col gap-0.5">
+          <button
+            onClick={openPwModal}
+            className="flex items-center gap-[9px] px-2.5 py-2 rounded-[10px] text-[12.5px] font-bold text-left text-[#8993B4] hover:text-white hover:bg-[#232A44] transition-colors"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <circle cx="8" cy="12" r="3.5" />
+              <path d="M11.5 12H21" />
+              <path d="M17.5 12v3" />
+              <path d="M20.2 12v2.4" />
+            </svg>
+            <span>비밀번호 변경</span>
+          </button>
+          <button
+            onClick={openResetModal}
+            className="flex items-center gap-[9px] px-2.5 py-2 rounded-[10px] text-[12.5px] font-bold text-left text-[#9A6A72] hover:text-[#E9A0A4] hover:bg-[#2A2136] transition-colors"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <path d="M3.6 12a8.4 8.4 0 1 0 2.6-6.1" />
+              <path d="M3.6 4.6V10h5.4" />
+            </svg>
+            <span>관리자 비밀번호 초기화</span>
+          </button>
+        </div>
+
+        {/* 계정 영역과 화면 전환 탭을 가르는 선 */}
+        <div className="h-px mx-1 my-3.5" style={{ background: '#2A3150' }} />
+
+        <nav className="flex flex-col gap-1.5 flex-1">
           <button
             onClick={() => setActiveTab('MONITOR')}
-            className="w-full text-left py-2.5 px-4 rounded-xl text-sm font-bold transition-colors"
-            style={activeTab === 'MONITOR' ? { background: 'var(--c-primary)', color: '#fff' } : { color: '#8993B4' }}
+            className={`flex items-center gap-2.5 px-3.5 py-[11px] rounded-[13px] text-sm text-left transition-colors ${activeTab === 'MONITOR' ? 'font-extrabold text-white' : 'font-bold text-[#8993B4] hover:text-white hover:bg-[#232A44]'}`}
+            style={activeTab === 'MONITOR' ? { background: 'var(--c-primary)', boxShadow: 'var(--sh-primary)' } : undefined}
           >
-            실시간 관제
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <rect x="2.8" y="4" width="18.4" height="13" rx="2.6" />
+              <path d="M6.6 11.2 9 8.8l2.4 3.2 2.4-3.6 2.6 2.8" />
+              <path d="M9.5 20.5h5" />
+            </svg>
+            <span>실시간 관제</span>
           </button>
           <button
             onClick={() => setActiveTab('UPLOAD')}
-            className="w-full text-left py-2.5 px-4 rounded-xl text-sm font-bold transition-colors"
-            style={activeTab === 'UPLOAD' ? { background: 'var(--c-primary)', color: '#fff' } : { color: '#8993B4' }}
+            className={`flex items-center gap-2.5 px-3.5 py-[11px] rounded-[13px] text-sm text-left transition-colors ${activeTab === 'UPLOAD' ? 'font-extrabold text-white' : 'font-bold text-[#8993B4] hover:text-white hover:bg-[#232A44]'}`}
+            style={activeTab === 'UPLOAD' ? { background: 'var(--c-primary)', boxShadow: 'var(--sh-primary)' } : undefined}
           >
-            대시보드 / 업로드
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <path d="M12 15.2V3.6" />
+              <path d="m7.6 8 4.4-4.4L16.4 8" />
+              <path d="M4 15v3.6A1.6 1.6 0 0 0 5.6 20.2h12.8a1.6 1.6 0 0 0 1.6-1.6V15" />
+            </svg>
+            <span>대시보드 / 업로드</span>
           </button>
         </nav>
-        <button
-          onClick={() => setAdminAuth(null, null)}
-          className="mt-auto py-2 px-4 text-left text-[color:var(--c-muted-2)] hover:text-white transition-colors"
-        >
-          로그아웃
-        </button>
+
+        <div className="pt-3.5" style={{ borderTop: '1px solid #2A3150' }}>
+          <button
+            onClick={() => setAdminAuth(null, null)}
+            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-[10px] text-[13px] font-bold text-left text-[#8791AB] hover:text-white hover:bg-[#232A44] transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <path d="M13.6 20.2H6.4a1.6 1.6 0 0 1-1.6-1.6V5.4a1.6 1.6 0 0 1 1.6-1.6h7.2" />
+              <path d="m17 15.2 4-3.2-4-3.2" />
+              <path d="M21 12H10.2" />
+            </svg>
+            <span>로그아웃</span>
+          </button>
+        </div>
       </aside>
       )}
 
@@ -1048,7 +1098,9 @@ const updateStoreWithEventData = (event: any) => {
                         </svg>
                         <span className="text-xs font-bold [writing-mode:vertical-rl]">채팅 열기</span>
                         {chatUnread > 0 && (
-                          <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                          // z-50: 공지 바가 sticky z-40 이라, 이보다 낮으면 버튼 위로
+                          //       삐져나온 뱃지가 공지 바 뒤로 가려진다
+                          <span className="absolute -top-2 -right-2 z-50 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
                             {chatUnread > 99 ? '99+' : chatUnread}
                           </span>
                         )}

@@ -291,7 +291,8 @@ export default function AnnouncementBar({
               <span className="w-1.5 h-1.5 rounded-full bg-white" />
               진행 중
             </span>
-            <span className="text-lg font-extrabold truncate">현재 순서 {who}</span>
+            {/* '진행 중' 표시가 왼쪽에 있으므로 '현재 순서'를 덧붙이지 않는다 */}
+            <span className="text-lg font-extrabold truncate">{who}</span>
           </div>
           {showTimer && <span className="text-2xl font-extrabold shrink-0">{timer}</span>}
         </Shell>
