@@ -1098,9 +1098,10 @@ const updateStoreWithEventData = (event: any) => {
                         </svg>
                         <span className="text-xs font-bold [writing-mode:vertical-rl]">채팅 열기</span>
                         {chatUnread > 0 && (
-                          // z-50: 공지 바가 sticky z-40 이라, 이보다 낮으면 버튼 위로
-                          //       삐져나온 뱃지가 공지 바 뒤로 가려진다
-                          <span className="absolute -top-2 -right-2 z-50 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                          // 뱃지를 버튼 아래쪽에 둔다. 위쪽에 두면 상단 고정 공지 바와
+                          // 겹쳐 가려지는데, z-index 로는 해결되지 않는다 — 버튼의
+                          // hover:opacity-80 이 쌓임 맥락을 만들어 그 안에 갇히기 때문.
+                          <span className="absolute -bottom-2 -right-2 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
                             {chatUnread > 99 ? '99+' : chatUnread}
                           </span>
                         )}
