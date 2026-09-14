@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 import { useSocket } from '../store/useSocket';
 
 export default function ChatWindow({ eventId }: { eventId: string }) {
-  const { messages, user, isAdmin, adminUser, currentTurnOrder, participants } = useStore();
+  const { messages, user, isAdmin, currentTurnOrder, participants } = useStore();
   const socket = useSocket();
   const [inputValue, setInputValue] = useState('');
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -36,25 +36,51 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="border-b border-gray-200 px-4 py-3" style={{ backgroundColor: '#FEE500' }}>
-        <h3 className="text-base font-bold text-gray-800">실시간 채팅</h3>
+    <div
+      className="flex flex-col h-full rounded-[20px] overflow-hidden"
+      style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)' }}
+    >
+      <div
+        className="px-4 py-3 flex items-center gap-[7px] shrink-0"
+        style={{ background: 'var(--c-tint-3)', borderBottom: '1px solid #E9EFFA' }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--c-primary)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.8-.4L3 21l1.6-4.6A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />
+        </svg>
+        <h3 className="text-[15px] font-extrabold" style={{ color: 'var(--c-ink-2)' }}>실시간 채팅</h3>
       </div>
-      
-      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+
+      {/* 아래쪽 기준으로 쌓아 최신 메시지가 항상 보이게 한다 */}
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-3.5 flex flex-col justify-end gap-3"
+      >
         {messages.map((msg) => {
           const isMe = isAdmin ? msg.sender_type === 'ADMIN' : (user && msg.sender_name === user.name && msg.sender_type === 'USER');
+          const isAdminMsg = msg.sender_type === 'ADMIN';
           return (
-            <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-sm font-semibold text-gray-700">
-                  {msg.sender_type === 'ADMIN' ? '👑 관리자' : msg.sender_name}
-                </span>
-                <span className="text-xs text-gray-400">
+            <div key={msg.id} className={`flex flex-col shrink-0 ${isMe ? 'items-end' : 'items-start'}`}>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                {isAdminMsg ? (
+                  <span
+                    className="inline-flex items-center rounded-full px-[7px] py-0.5 text-[11px] font-extrabold"
+                    style={{ background: '#FFF0E6', color: '#D2652C' }}
+                  >
+                    관리자
+                  </span>
+                ) : (
+                  <span className="text-xs font-bold" style={{ color: 'var(--c-muted)' }}>{msg.sender_name}</span>
+                )}
+                <span className="text-[11px] font-medium" style={{ color: 'var(--c-placeholder)' }}>
                   {new Date(msg.timestamp).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-              <div className={`px-3 py-2 rounded-lg text-base max-w-[85%] ${isMe ? 'bg-gray-900 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
+              <div
+                className="px-3.5 py-2.5 text-sm font-medium max-w-[86%] leading-[1.45] whitespace-pre-wrap break-words"
+                style={isMe
+                  ? { background: 'var(--c-primary)', color: '#fff', borderRadius: '14px 14px 4px 14px' }
+                  : { background: 'var(--c-tint)', color: 'var(--c-ink-2)', borderRadius: '14px 14px 14px 4px' }}
+              >
                 {msg.content}
               </div>
             </div>
@@ -62,23 +88,29 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
         })}
       </div>
 
-      <div className="p-3 border-t border-gray-200 bg-gray-50">
-        <form onSubmit={handleSendMessage} className="flex gap-2">
+      <div className="px-3 py-2.5 shrink-0 flex gap-2 items-center" style={{ borderTop: '1px solid var(--c-line-soft)' }}>
+        <form onSubmit={handleSendMessage} className="flex gap-2 items-center w-full">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             maxLength={500}
             disabled={!canChat}
-            placeholder={canChat ? "메시지를 입력하세요..." : "그룹 진행 중에만 채팅이 가능합니다."}
-            className="flex-1 min-w-0 px-3 py-2 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-100 disabled:text-gray-500"
+            placeholder={canChat ? '메시지를 입력하세요...' : '그룹 진행 중에만 채팅이 가능합니다.'}
+            className="flex-1 min-w-0 px-3.5 py-2.5 text-sm font-medium rounded-full outline-none focus:shadow-[0_0_0_3px_rgba(74,107,245,.14)] transition-shadow disabled:opacity-70"
+            style={{ background: 'var(--c-tint)', color: 'var(--c-ink)' }}
           />
           <button
             type="submit"
             disabled={!canChat || !inputValue.trim()}
-            className="flex-shrink-0 whitespace-nowrap px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
+            aria-label="전송"
+            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:opacity-80 transition-opacity"
+            style={{ background: 'var(--c-primary)' }}
           >
-            전송
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4.5 12h14" />
+              <path d="M12.5 5.5 19 12l-6.5 6.5" />
+            </svg>
           </button>
         </form>
       </div>

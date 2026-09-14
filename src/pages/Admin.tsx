@@ -461,36 +461,41 @@ const updateStoreWithEventData = (event: any) => {
 
   if (!adminToken) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-          <h1 className="text-2xl font-bold text-center mb-8 text-gray-900">관리자 로그인</h1>
+      <div className="min-h-screen min-h-dvh flex items-center justify-center p-6" style={{ background: 'var(--c-bg)', color: 'var(--c-ink)' }}>
+        <div className="max-w-sm w-full rounded-3xl px-6 py-7" style={{ background: 'var(--c-surface)', boxShadow: '0 2px 14px rgba(23,35,66,.07)' }}>
+          <h1 className="text-[23px] font-extrabold tracking-[-.02em] mb-6">관리자 로그인</h1>
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">아이디</label>
+              <label className="block text-[13px] font-bold mb-[7px]" style={{ color: 'var(--c-ink-2)' }}>아이디</label>
               <input 
                 type="text" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
+                className="w-full h-[54px] rounded-[15px] px-4 text-[15.5px] font-bold outline-none focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] transition-shadow"
+                style={{ background: 'var(--c-tint-2)', border: '1px solid var(--c-line)' }}
                 placeholder="admin1"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
+              <label className="block text-[13px] font-bold mb-[7px]" style={{ color: 'var(--c-ink-2)' }}>비밀번호</label>
               <input 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
+                className="w-full h-[54px] rounded-[15px] px-4 text-[15.5px] font-bold outline-none focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] transition-shadow"
+                style={{ background: 'var(--c-tint-2)', border: '1px solid var(--c-line)' }}
                 placeholder="••••••••"
                 required
               />
             </div>
-            {loginError && <p className="text-red-500 text-sm font-medium">{loginError}</p>}
-            <button 
+            {loginError && (
+              <p className="text-[13px] font-bold rounded-[15px] px-3.5 py-3" style={{ background: '#FDEDEC', border: '1px solid #F6D2CF', color: '#B03B36' }}>{loginError}</p>
+            )}
+            <button
               type="submit"
-              className="w-full py-4 bg-gray-900 hover:bg-black text-white rounded-xl font-bold text-lg transition-colors mt-6 shadow-md"
+              className="w-full h-[58px] rounded-[18px] text-white text-[17px] font-extrabold transition-opacity mt-2 hover:opacity-90 active:opacity-80"
+              style={{ background: 'var(--c-primary)', boxShadow: 'var(--sh-primary)' }}
             >
               로그인
             </button>
@@ -501,14 +506,14 @@ const updateStoreWithEventData = (event: any) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen flex" style={{ background: 'var(--c-bg)', color: 'var(--c-ink)' }}>
       {/* 비밀번호 변경 모달 */}
       {isPwModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+          <div className="bg-[color:var(--c-surface)] rounded-3xl shadow-2xl p-6 w-full max-w-sm">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900">비밀번호 변경 <span className="text-sm font-medium text-gray-400">({adminUser?.username})</span></h3>
-              <button onClick={() => setIsPwModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+              <h3 className="text-lg font-bold text-[color:var(--c-ink)]">비밀번호 변경 <span className="text-sm font-medium text-[color:var(--c-muted-2)]">({adminUser?.username})</span></h3>
+              <button onClick={() => setIsPwModalOpen(false)} className="text-[color:var(--c-muted-2)] hover:opacity-70 text-lg leading-none">✕</button>
             </div>
             <form onSubmit={handleChangePassword} className="space-y-3">
               <input
@@ -517,7 +522,7 @@ const updateStoreWithEventData = (event: any) => {
                 onChange={(e) => setCurPw(e.target.value)}
                 placeholder="현재 비밀번호"
                 required
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                className="w-full px-4 py-3 rounded-xl border border-[color:var(--c-line)] focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none"
               />
               <input
                 type="password"
@@ -526,7 +531,7 @@ const updateStoreWithEventData = (event: any) => {
                 placeholder="새 비밀번호 (8자 이상)"
                 required
                 minLength={8}
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                className="w-full px-4 py-3 rounded-xl border border-[color:var(--c-line)] focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none"
               />
               <input
                 type="password"
@@ -534,18 +539,18 @@ const updateStoreWithEventData = (event: any) => {
                 onChange={(e) => setNewPw2(e.target.value)}
                 placeholder="새 비밀번호 확인"
                 required
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                className="w-full px-4 py-3 rounded-xl border border-[color:var(--c-line)] focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none"
               />
               {pwError && <p className="text-red-500 text-sm font-medium">{pwError}</p>}
               <button
                 type="submit"
                 disabled={pwSaving}
-                className="w-full py-3 bg-gray-900 hover:bg-black text-white rounded-xl font-bold disabled:opacity-50 transition-colors"
+                className="w-full py-3 bg-[color:var(--c-primary)] hover:opacity-90 active:opacity-80 text-white rounded-xl font-bold disabled:opacity-50 transition-colors"
               >
                 {pwSaving ? '변경 중...' : '변경하기'}
               </button>
             </form>
-            <p className="mt-3 text-xs text-gray-400 leading-relaxed">
+            <p className="mt-3 text-xs text-[color:var(--c-muted-2)] leading-relaxed">
               본인 계정의 비밀번호만 변경됩니다. 변경 후에도 현재 로그인은 유지되며, 다른 관리자 계정에는 영향이 없습니다.
             </p>
             <button
@@ -561,26 +566,26 @@ const updateStoreWithEventData = (event: any) => {
       {/* 관리자 비밀번호 초기화 모달 */}
       {isResetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+          <div className="bg-[color:var(--c-surface)] rounded-3xl shadow-2xl p-6 w-full max-w-sm">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900">관리자 비밀번호 초기화</h3>
-              <button onClick={() => setIsResetModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+              <h3 className="text-lg font-bold text-[color:var(--c-ink)]">관리자 비밀번호 초기화</h3>
+              <button onClick={() => setIsResetModalOpen(false)} className="text-[color:var(--c-muted-2)] hover:opacity-70 text-lg leading-none">✕</button>
             </div>
             {resetResult ? (
               <div className="space-y-4">
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-[color:var(--c-ink-2)]">
                   <span className="font-bold">{resetTarget}</span> 계정의 임시 비밀번호가 발급되었습니다:
                 </p>
-                <div className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-center">
+                <div className="bg-[color:var(--c-tint-2)] border border-[color:var(--c-line)] rounded-xl px-4 py-3 text-center">
                   <span className="font-mono font-bold text-2xl tracking-widest select-all">{resetResult}</span>
                 </div>
-                <p className="text-xs text-gray-400 leading-relaxed">
+                <p className="text-xs text-[color:var(--c-muted-2)] leading-relaxed">
                   이 값은 지금 한 번만 표시됩니다. 동료에게 안전한 방법으로 전달하고,
                   로그인 후 반드시 "비밀번호 변경"으로 본인만 아는 비밀번호로 바꾸도록 안내해주세요.
                 </p>
                 <button
                   onClick={() => setIsResetModalOpen(false)}
-                  className="w-full py-3 bg-gray-900 hover:bg-black text-white rounded-xl font-bold transition-colors"
+                  className="w-full py-3 bg-[color:var(--c-primary)] hover:opacity-90 active:opacity-80 text-white rounded-xl font-bold transition-colors"
                 >
                   확인
                 </button>
@@ -591,7 +596,7 @@ const updateStoreWithEventData = (event: any) => {
                   value={resetTarget}
                   onChange={(e) => setResetTarget(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none bg-white"
+                  className="w-full px-4 py-3 rounded-xl border border-[color:var(--c-line)] focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none bg-white"
                 >
                   <option value="">-- 초기화할 계정 선택 --</option>
                   {adminList.map(u => <option key={u} value={u}>{u}</option>)}
@@ -602,17 +607,17 @@ const updateStoreWithEventData = (event: any) => {
                   onChange={(e) => setResetMyPw(e.target.value)}
                   placeholder="본인 비밀번호 (확인용)"
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                  className="w-full px-4 py-3 rounded-xl border border-[color:var(--c-line)] focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none"
                 />
                 {resetError && <p className="text-red-500 text-sm font-medium">{resetError}</p>}
                 <button
                   type="submit"
                   disabled={resetSaving}
-                  className="w-full py-3 bg-gray-900 hover:bg-black text-white rounded-xl font-bold disabled:opacity-50 transition-colors"
+                  className="w-full py-3 bg-[color:var(--c-primary)] hover:opacity-90 active:opacity-80 text-white rounded-xl font-bold disabled:opacity-50 transition-colors"
                 >
                   {resetSaving ? '발급 중...' : '임시 비밀번호 발급'}
                 </button>
-                <p className="text-xs text-gray-400 leading-relaxed">
+                <p className="text-xs text-[color:var(--c-muted-2)] leading-relaxed">
                   선택한 계정의 비밀번호가 임시 비밀번호로 교체됩니다. 도용 방지를 위해 본인 비밀번호를 다시 확인합니다.
                 </p>
               </form>
@@ -624,7 +629,7 @@ const updateStoreWithEventData = (event: any) => {
           버튼이 항상 같은 자리에 보이게 한다.
           좁은 화면에서 좌석표를 넓게 쓸 수 있도록 접기/펼치기를 지원한다 */}
       {!isSidebarOpen && (
-        <div className="hidden md:flex flex-col items-center bg-gray-900 text-white w-10 py-4 md:sticky md:top-0 md:h-screen shrink-0">
+        <div className="hidden md:flex flex-col items-center text-white w-10 py-4 md:sticky md:top-0 md:h-screen shrink-0" style={{ background: '#1A1F35' }}>
           <button
             onClick={() => setIsSidebarOpen(true)}
             title="메뉴 펼치기"
@@ -635,30 +640,30 @@ const updateStoreWithEventData = (event: any) => {
         </div>
       )}
       {isSidebarOpen && (
-      <aside className="w-64 bg-gray-900 text-white p-6 hidden md:flex flex-col md:sticky md:top-0 md:h-screen shrink-0">
+      <aside className="w-64 text-white p-6 hidden md:flex flex-col md:sticky md:top-0 md:h-screen shrink-0" style={{ background: '#1A1F35' }}>
         <div className="flex items-start justify-between mb-8">
           <h1 className="text-2xl font-bold tracking-tight">관리자 메뉴</h1>
           <button
             onClick={() => setIsSidebarOpen(false)}
             title="메뉴 접기 (좌석표 넓게 보기)"
-            className="text-gray-400 hover:text-white text-xl leading-none mt-1"
+            className="text-[color:var(--c-muted-2)] hover:text-white text-xl leading-none mt-1"
           >
             «
           </button>
         </div>
-        <div className="mb-6 pb-6 border-b border-gray-800">
-          <p className="text-sm text-gray-400">접속 계정</p>
-          <p className="font-medium text-lg">{adminUser?.username}</p>
+        <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #2A3150' }}>
+          <p className="text-xs font-bold" style={{ color: '#7A85A8' }}>접속 계정</p>
+          <p className="font-bold text-[17px] mt-0.5">{adminUser?.username}</p>
           <div className="mt-2 flex flex-col items-start gap-1">
             <button
               onClick={openPwModal}
-              className="text-xs text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
+              className="text-xs text-[color:var(--c-muted-2)] hover:text-white underline underline-offset-2 transition-colors"
             >
               비밀번호 변경
             </button>
             <button
               onClick={openResetModal}
-              className="text-xs text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
+              className="text-xs text-[color:var(--c-muted-2)] hover:text-white underline underline-offset-2 transition-colors"
             >
               관리자 비밀번호 초기화
             </button>
@@ -667,20 +672,22 @@ const updateStoreWithEventData = (event: any) => {
         <nav className="space-y-2 flex-1">
           <button
             onClick={() => setActiveTab('MONITOR')}
-            className={`w-full text-left py-2.5 px-4 rounded-lg font-medium transition-colors ${activeTab === 'MONITOR' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            className="w-full text-left py-2.5 px-4 rounded-xl text-sm font-bold transition-colors"
+            style={activeTab === 'MONITOR' ? { background: 'var(--c-primary)', color: '#fff' } : { color: '#8993B4' }}
           >
             실시간 관제
           </button>
           <button
             onClick={() => setActiveTab('UPLOAD')}
-            className={`w-full text-left py-2.5 px-4 rounded-lg font-medium transition-colors ${activeTab === 'UPLOAD' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            className="w-full text-left py-2.5 px-4 rounded-xl text-sm font-bold transition-colors"
+            style={activeTab === 'UPLOAD' ? { background: 'var(--c-primary)', color: '#fff' } : { color: '#8993B4' }}
           >
             대시보드 / 업로드
           </button>
         </nav>
         <button
           onClick={() => setAdminAuth(null, null)}
-          className="mt-auto py-2 px-4 text-left text-gray-400 hover:text-white transition-colors"
+          className="mt-auto py-2 px-4 text-left text-[color:var(--c-muted-2)] hover:text-white transition-colors"
         >
           로그아웃
         </button>
@@ -698,13 +705,13 @@ const updateStoreWithEventData = (event: any) => {
           <div className="flex md:hidden gap-2 mb-6">
             <button
               onClick={() => setActiveTab('MONITOR')}
-              className={`flex-1 py-2.5 rounded-lg font-bold text-sm ${activeTab === 'MONITOR' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
+              className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${activeTab === 'MONITOR' ? 'bg-[color:var(--c-primary)] text-white' : 'bg-white text-[color:var(--c-muted)] border border-[color:var(--c-line)]'}`}
             >
               실시간 관제
             </button>
             <button
               onClick={() => setActiveTab('UPLOAD')}
-              className={`flex-1 py-2.5 rounded-lg font-bold text-sm ${activeTab === 'UPLOAD' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
+              className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${activeTab === 'UPLOAD' ? 'bg-[color:var(--c-primary)] text-white' : 'bg-white text-[color:var(--c-muted)] border border-[color:var(--c-line)]'}`}
             >
               대시보드 / 업로드
             </button>
@@ -712,30 +719,30 @@ const updateStoreWithEventData = (event: any) => {
             <button
               onClick={openPwModal}
               title="비밀번호 변경"
-              className="px-3 py-2.5 rounded-lg text-sm font-bold bg-white text-gray-600 border border-gray-300"
+              className="px-3 py-2.5 rounded-xl text-sm font-bold bg-white text-[color:var(--c-muted)] border border-[color:var(--c-line)]"
             >
               🔒
             </button>
             {/* 모바일용 로그아웃 (사이드바가 숨겨지므로) */}
             <button
               onClick={() => setAdminAuth(null, null)}
-              className="px-3 py-2.5 rounded-lg text-sm font-bold bg-white text-gray-600 border border-gray-300 whitespace-nowrap"
+              className="px-3 py-2.5 rounded-xl text-sm font-bold bg-white text-[color:var(--c-muted)] border border-[color:var(--c-line)] whitespace-nowrap"
             >
               로그아웃
             </button>
           </div>
           {activeTab === 'UPLOAD' && (
             <div className="w-full lg:max-w-4xl">
-              <h2 className="text-3xl font-bold mb-8 text-gray-900">이벤트 및 참가자 정보 업로드</h2>
-              <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+              <h2 className="text-3xl font-bold mb-8 text-[color:var(--c-ink)]">이벤트 및 참가자 정보 업로드</h2>
+              <div className="bg-white p-8 rounded-2xl shadow-sm">
                 <form onSubmit={handleUpload} className="space-y-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">이벤트명</label>
+                    <label className="block text-sm font-semibold text-[color:var(--c-ink-2)] mb-2">이벤트명</label>
                     <input 
                       type="text" 
                       value={eventName}
                       onChange={(e) => setEventName(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
+                      className="w-full px-4 py-3 border border-[color:var(--c-line)] rounded-xl focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none transition-all"
                       placeholder="예: 2026년 공감 신년모임"
                       required
                     />
@@ -743,19 +750,19 @@ const updateStoreWithEventData = (event: any) => {
                   
                   {/* 좌석표 생성 방식 선택 */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">좌석표 생성 방식</label>
+                    <label className="block text-sm font-semibold text-[color:var(--c-ink-2)] mb-2">좌석표 생성 방식</label>
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setLayoutMode('simple')}
-                        className={`px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${layoutMode === 'simple' ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}`}
+                        className={`px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${layoutMode === 'simple' ? 'border-[color:var(--c-primary)] bg-[color:var(--c-primary)] text-white' : 'border-[color:var(--c-line)] bg-white text-[color:var(--c-muted)] hover:opacity-80'}`}
                       >
                         기존 방식 (행/열 + 통로)
                       </button>
                       <button
                         type="button"
                         onClick={() => setLayoutMode('grid')}
-                        className={`px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${layoutMode === 'grid' ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}`}
+                        className={`px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${layoutMode === 'grid' ? 'border-[color:var(--c-primary)] bg-[color:var(--c-primary)] text-white' : 'border-[color:var(--c-line)] bg-white text-[color:var(--c-muted)] hover:opacity-80'}`}
                       >
                         격자 CSV 업로드
                       </button>
@@ -766,23 +773,23 @@ const updateStoreWithEventData = (event: any) => {
                     <>
                       <div className="grid grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">좌석 행(Row) 수</label>
+                          <label className="block text-sm font-semibold text-[color:var(--c-ink-2)] mb-2">좌석 행(Row) 수</label>
                           <input
                             type="number"
                             value={rows}
                             onChange={(e) => setRows(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
+                            className="w-full px-4 py-3 border border-[color:var(--c-line)] rounded-xl focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none transition-all"
                             required
                             min="1"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">좌석 열(Col) 수</label>
+                          <label className="block text-sm font-semibold text-[color:var(--c-ink-2)] mb-2">좌석 열(Col) 수</label>
                           <input
                             type="number"
                             value={cols}
                             onChange={(e) => setCols(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all"
+                            className="w-full px-4 py-3 border border-[color:var(--c-line)] rounded-xl focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none transition-all"
                             required
                             min="1"
                           />
@@ -790,29 +797,29 @@ const updateStoreWithEventData = (event: any) => {
                       </div>
 
                       {/* 복도 설정 */}
-                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                        <p className="text-sm font-semibold text-gray-700">통로 위치 설정 <span className="font-normal text-gray-400">(선택사항)</span></p>
+                      <div className="bg-[color:var(--c-tint-2)] p-4 rounded-xl border border-[color:var(--c-line)] space-y-4">
+                        <p className="text-sm font-semibold text-[color:var(--c-ink-2)]">통로 위치 설정 <span className="font-normal text-[color:var(--c-muted-2)]">(선택사항)</span></p>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            가로 통로 — 해당 행 <span className="text-gray-900 font-bold">뒤</span>에 통로를 추가할 행 번호 (쉼표로 구분)
+                          <label className="block text-xs font-medium text-[color:var(--c-muted)] mb-1">
+                            가로 통로 — 해당 행 <span className="text-[color:var(--c-ink)] font-bold">뒤</span>에 통로를 추가할 행 번호 (쉼표로 구분)
                           </label>
                           <input
                             type="text"
                             value={aisleAfterRows}
                             onChange={(e) => setAisleAfterRows(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                            className="w-full px-3 py-2 border border-[color:var(--c-line)] rounded-xl text-sm focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none"
                             placeholder="예: 3, 6  →  3행과 4행 사이, 6행과 7행 사이에 통로"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            세로 통로 — 해당 열 <span className="text-gray-900 font-bold">뒤</span>에 통로를 추가할 열 번호 (쉼표로 구분)
+                          <label className="block text-xs font-medium text-[color:var(--c-muted)] mb-1">
+                            세로 통로 — 해당 열 <span className="text-[color:var(--c-ink)] font-bold">뒤</span>에 통로를 추가할 열 번호 (쉼표로 구분)
                           </label>
                           <input
                             type="text"
                             value={aisleAfterCols}
                             onChange={(e) => setAisleAfterCols(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                            className="w-full px-3 py-2 border border-[color:var(--c-line)] rounded-xl text-sm focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] outline-none"
                             placeholder="예: 4, 8  →  4열과 5열 사이, 8열과 9열 사이에 통로"
                           />
                         </div>
@@ -820,43 +827,43 @@ const updateStoreWithEventData = (event: any) => {
                     </>
                   ) : (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">좌석 배치 (격자 CSV)</label>
-                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-3">
-                        <p className="text-xs text-gray-600 leading-relaxed">
-                          엑셀 격자에 <span className="font-bold text-gray-900">좌석 번호</span>를 그대로 적고, <span className="font-bold text-gray-900">빈 칸</span>은 통로/여백으로 둡니다.<br/>
+                      <label className="block text-sm font-semibold text-[color:var(--c-ink-2)] mb-2">좌석 배치 (격자 CSV)</label>
+                      <div className="bg-[color:var(--c-tint-2)] p-4 rounded-xl border border-[color:var(--c-line)] mb-3">
+                        <p className="text-xs text-[color:var(--c-muted)] leading-relaxed">
+                          엑셀 격자에 <span className="font-bold text-[color:var(--c-ink)]">좌석 번호</span>를 그대로 적고, <span className="font-bold text-[color:var(--c-ink)]">빈 칸</span>은 통로/여백으로 둡니다.<br/>
                           한 칸 = 좌석 1개. 화면에는 적으신 번호가 그대로 표시됩니다.<br/>
-                          <span className="text-gray-400 mt-1 block font-mono">예: 1,2,3,,4,5  →  3번 뒤에 통로</span>
+                          <span className="text-[color:var(--c-muted-2)] mt-1 block font-mono">예: 1,2,3,,4,5  →  3번 뒤에 통로</span>
                         </p>
                       </div>
                       <input
                         type="file"
                         accept=".csv"
                         onChange={(e) => setSeatFile(e.target.files?.[0] || null)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-900 file:text-white hover:file:bg-gray-800 cursor-pointer"
+                        className="w-full px-4 py-3 border border-[color:var(--c-line)] rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[color:var(--c-primary)] file:text-white hover:file:opacity-90 cursor-pointer"
                       />
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">참가자 명단 (CSV)</label>
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-3">
-                      <p className="text-xs text-gray-600 font-mono">
+                    <label className="block text-sm font-semibold text-[color:var(--c-ink-2)] mb-2">참가자 명단 (CSV)</label>
+                    <div className="bg-[color:var(--c-tint-2)] p-4 rounded-xl border border-[color:var(--c-line)] mb-3">
+                      <p className="text-xs text-[color:var(--c-muted)] font-mono">
                         필수 컬럼: group_id, participant_name, password_4, order_in_group<br/>
-                        <span className="text-gray-400 mt-1 block">예시: 1, 이충주, 0827, 1</span>
+                        <span className="text-[color:var(--c-muted-2)] mt-1 block">예시: 1, 이충주, 0827, 1</span>
                       </p>
                     </div>
                     <input 
                       type="file" 
                       accept=".csv"
                       onChange={(e) => setFile(e.target.files?.[0] || null)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-900 file:text-white hover:file:bg-gray-800 cursor-pointer"
+                      className="w-full px-4 py-3 border border-[color:var(--c-line)] rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[color:var(--c-primary)] file:text-white hover:file:opacity-90 cursor-pointer"
                       required
                     />
                   </div>
 
                   <button 
                     type="submit"
-                    className="w-full py-4 bg-gray-900 hover:bg-black text-white rounded-xl font-bold text-lg transition-colors shadow-md mt-4"
+                    className="w-full py-4 bg-[color:var(--c-primary)] hover:opacity-90 active:opacity-80 text-white rounded-xl font-bold text-lg transition-colors shadow-md mt-4"
                   >
                     업로드 및 생성
                   </button>
@@ -873,13 +880,14 @@ const updateStoreWithEventData = (event: any) => {
 
           {activeTab === 'MONITOR' && (
             <div className="flex flex-col h-full space-y-3">
-              <h2 className="text-3xl font-bold text-gray-900">실시간 관제</h2>
+              <h2 className="text-[27px] font-extrabold tracking-[-.02em]">실시간 관제</h2>
               
-              <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex-1 w-full">
-                  <label className="block text-base font-semibold text-gray-700 mb-2">이벤트 선택</label>
-                  <select 
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none focus:ring-2 focus:ring-gray-900"
+              <div className="flex flex-col gap-3.5 rounded-[20px] px-[22px] py-[18px]" style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)' }}>
+                <div className="w-full md:max-w-md">
+                  <label className="block text-[13px] font-bold mb-[7px]" style={{ color: 'var(--c-muted)' }}>이벤트 선택</label>
+                  <select
+                    className="w-full px-3.5 py-3 rounded-[13px] text-sm font-bold outline-none focus:border-[color:var(--c-primary)]"
+                    style={{ background: 'var(--c-tint-2)', border: '1px solid var(--c-line)' }}
                     value={selectedEventId || ''}
                     onChange={(e) => setSelectedEventId(e.target.value)}
                   >
@@ -891,19 +899,19 @@ const updateStoreWithEventData = (event: any) => {
                   {selectedEvent && (
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                       {selectedEvent.is_active ? (
-                        <span className="text-sm font-semibold text-green-600 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span className="text-[12.5px] font-bold flex items-center gap-1.5" style={{ color: '#17A85A' }}>
+                          <span className="w-[7px] h-[7px] rounded-full" style={{ background: '#17A85A' }}></span>
                           참가자가 해당 이벤트로 접속합니다
                         </span>
                       ) : (
                         <>
-                          <span className="text-sm font-semibold text-gray-400 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                          <span className="text-[12.5px] font-bold flex items-center gap-1.5" style={{ color: 'var(--c-muted-2)' }}>
+                            <span className="w-[7px] h-[7px] rounded-full" style={{ background: 'var(--c-muted-2)' }}></span>
                             참가자 접속 불가
                           </span>
                           <button
                             onClick={handleActivateEvent}
-                            className="text-xs font-bold px-3 py-1.5 rounded-lg text-white shadow-sm hover:opacity-90"
+                            className="text-xs font-extrabold px-3 py-1.5 rounded-xl text-white hover:opacity-90 active:opacity-80"
                             style={{ backgroundColor: '#17A85A' }}
                           >
                             활성 전환
@@ -915,18 +923,18 @@ const updateStoreWithEventData = (event: any) => {
                 </div>
                 
                 {selectedEventId && (
-                  <div className="w-full md:w-auto mt-4 md:mt-0 md:self-center flex flex-wrap gap-2">
+                  <div className="w-full flex flex-wrap items-center gap-2">
                     <button
                       onClick={handleToggleLoginOpen}
-                      style={{ backgroundColor: selectedEvent?.login_open ? '#6b7590' : '#17A85A' }}
-                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      style={{ backgroundColor: selectedEvent?.login_open ? '#6C7590' : '#17A85A' }}
+                      className="w-[120px] py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 active:opacity-80"
                     >
                       {selectedEvent?.login_open ? '입장 차단' : '입장 허용'}
                     </button>
                     <button
                       onClick={handleNextTurn}
                       style={{ backgroundColor: '#E8771A' }}
-                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      className="w-[120px] py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 active:opacity-80"
                     >
                       자동배정
                     </button>
@@ -934,45 +942,46 @@ const updateStoreWithEventData = (event: any) => {
                       onClick={handleSkipTurn}
                       title="현재 참가자에게 좌석을 주지 않고 다음 턴으로 넘깁니다 (불참/오류 대응)"
                       style={{ backgroundColor: '#E8771A' }}
-                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      className="w-[120px] py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 active:opacity-80"
                     >
                       턴넘김
                     </button>
                     <button
                       onClick={handleToggleFreeze}
                       style={{ backgroundColor: isFrozen ? '#3d9e6a' : '#E03535' }}
-                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      className="w-[120px] py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 active:opacity-80"
                     >
                       {isFrozen ? '재개' : '일시정지'}
                     </button>
                     <button
                       onClick={handleForceReload}
                       title="전체 참가자 화면에 강제 새로고침 신호를 보냅니다 (화면 멈춤 복구용)"
-                      style={{ backgroundColor: '#2f8f8f' }}
-                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      style={{ backgroundColor: '#2E9490' }}
+                      className="w-[120px] py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 active:opacity-80"
                     >
                       새로고침(참가자)
                     </button>
                     <button
                       onClick={handleReloadState}
                       title="관리자 화면의 좌석·참가자·공지·채팅 상태만 서버에서 다시 받아옵니다 (참가자에게는 영향 없음)"
-                      style={{ backgroundColor: '#2f8f8f' }}
-                      className="w-[120px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      style={{ backgroundColor: '#2E9490' }}
+                      className="w-[120px] py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 active:opacity-80"
                     >
                       새로고침(관리자)
                     </button>
+                    <div className="hidden md:block flex-1" />
                     <button
                       onClick={handleResetEvent}
                       title="테스트용: 모든 좌석 배정을 초기화합니다"
-                      style={{ backgroundColor: '#2d3142' }}
-                      className="w-[96px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      style={{ border: '1.5px solid var(--c-danger-line)', color: 'var(--c-danger-ink)', background: 'var(--c-surface)' }}
+                      className="w-[96px] py-[10px] rounded-xl text-sm font-bold transition-opacity hover:opacity-80 active:opacity-70"
                     >
                       초기화
                     </button>
                     <button
                       onClick={handleDeleteEvent}
-                      style={{ backgroundColor: '#2d3142' }}
-                      className="w-[96px] py-3 rounded-lg text-base font-bold text-white transition-opacity shadow-sm hover:opacity-90"
+                      style={{ border: '1.5px solid var(--c-danger-line)', color: 'var(--c-danger-ink)', background: 'var(--c-surface)' }}
+                      className="w-[96px] py-[10px] rounded-xl text-sm font-bold transition-opacity hover:opacity-80 active:opacity-70"
                     >
                       삭제
                     </button>
@@ -981,7 +990,7 @@ const updateStoreWithEventData = (event: any) => {
               </div>
 
               {selectedEventId ? (
-                <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col relative min-h-[500px]">
+                <div className="flex-1 rounded-[20px] p-6 flex flex-col relative min-h-[500px]" style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)' }}>
                   {/* 현재 좌석지정자 및 남은 시간 표시.
                       턴/공지 상태가 바뀔 때마다 컴포넌트를 완전히 새로 마운트해,
                       내부 타이머 상태(timeLeft 등)까지 깨끗하게 초기화한다.
@@ -1007,10 +1016,10 @@ const updateStoreWithEventData = (event: any) => {
 
                   <div className="flex-1 flex gap-4 min-w-0">
                     <div className="flex-[2] flex flex-col min-w-0">
-                      <div className="flex-1 border border-gray-200 rounded-xl overflow-hidden bg-gray-50 min-h-[400px]">
+                      <div className="flex-1 border border-[color:var(--c-line)] rounded-xl overflow-hidden bg-[color:var(--c-tint-2)] min-h-[400px]">
   <SeatMap forceAdmin={true} />
 </div>
-                      <p className="text-sm text-gray-500 mt-4 text-center font-medium">
+                      <p className="text-[13px] mt-2.5 text-center font-medium" style={{ color: 'var(--c-muted-2)' }}>
                         선택된 좌석을 클릭하면 참가자 정보를 확인하고 강제 취소할 수 있습니다.
                       </p>
                     </div>
@@ -1021,7 +1030,7 @@ const updateStoreWithEventData = (event: any) => {
                         <button
                           onClick={() => setIsChatOpen(false)}
                           title="채팅 접기 (좌석표 넓게 보기)"
-                          className="absolute top-2.5 right-2 z-10 px-2 py-0.5 rounded-md text-lg font-bold text-gray-700 hover:bg-black/10 leading-none"
+                          className="absolute top-2.5 right-2 z-10 px-2 py-0.5 rounded-md text-lg font-bold text-[color:var(--c-ink-2)] hover:bg-black/10 leading-none"
                         >
                           »
                         </button>
@@ -1031,7 +1040,7 @@ const updateStoreWithEventData = (event: any) => {
                       <button
                         onClick={() => setIsChatOpen(true)}
                         title="채팅 펼치기"
-                        className="relative self-start shrink-0 flex flex-col items-center gap-2 rounded-lg border border-gray-300 bg-white px-2.5 py-4 text-gray-700 shadow-sm hover:bg-gray-50"
+                        className="relative self-start shrink-0 flex flex-col items-center gap-2 rounded-xl border border-[color:var(--c-line)] bg-white px-2.5 py-4 text-[color:var(--c-ink-2)] shadow-sm hover:opacity-80"
                       >
                         <span className="text-lg">💬</span>
                         <span className="text-xs font-bold [writing-mode:vertical-rl]">채팅 열기</span>
@@ -1045,16 +1054,16 @@ const updateStoreWithEventData = (event: any) => {
                   </div>
 
                   {/* Session Info Panel */}
-                  <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="mt-3.5 px-5 py-3.5 rounded-[20px]" style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)' }}>
                     <button
                       onClick={() => setIsSessionPanelOpen(prev => !prev)}
-                      className="w-full flex items-center justify-between text-base font-bold text-gray-700"
+                      className="w-full flex items-center justify-between text-[15px] font-extrabold"
                     >
                       <span>그룹별 현황 및 시간 설정</span>
-                      <span className="text-gray-400">{isSessionPanelOpen ? '▲ 접기' : '▼ 펼치기'}</span>
+                      <span className="text-[13px] font-bold" style={{ color: 'var(--c-muted-2)' }}>{isSessionPanelOpen ? '▲ 접기' : '▼ 펼치기'}</span>
                     </button>
                     {isSessionPanelOpen && (
-                    <div className="flex flex-col gap-3 mt-3">
+                    <div className="flex flex-col gap-[7px] mt-2.5">
                       {[...sessionColors]
                         .sort((a, b) => (Number(a.session_id) - Number(b.session_id)) || String(a.session_id).localeCompare(String(b.session_id)))
                         .map(sc => {
@@ -1063,22 +1072,48 @@ const updateStoreWithEventData = (event: any) => {
                         const totalCount = sessionParticipants.length;
                         const onlineCount = sessionParticipants.filter(p => onlineParticipantIds.includes(p.id)).length;
                         const isEditing = editingSessionId === sc.id;
+                        // 이 그룹이 지금 진행 중인지 = 현재 차례 참가자가 이 그룹 소속인지
+                        const isRunning = participants.some(
+                          p => p.session_id === sc.session_id && p.turn_order === currentTurnOrder
+                        );
+                        const isDone = totalCount > 0 && completedCount === totalCount;
+                        const badgeLabel = isDone
+                          ? `완료 ${completedCount}/${totalCount}`
+                          : isRunning
+                            ? `진행 중 ${completedCount}/${totalCount}`
+                            : `대기 ${completedCount}/${totalCount}`;
+                        const badgeStyle: React.CSSProperties = isDone
+                          ? { background: '#E4F6EC', color: '#17843F' }
+                          : isRunning
+                            ? { background: 'var(--c-primary)', color: '#fff' }
+                            : { background: '#EDF0F7', color: 'var(--c-muted)' };
                         
                         return (
-                          <div key={sc.session_id} className="relative group flex items-center justify-between bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
+                          <div
+                            key={sc.session_id}
+                            className="relative group flex items-center justify-between px-[15px] py-[9px] rounded-[13px]"
+                            style={isRunning
+                              ? { background: '#EEF2FE', border: '1.5px solid #C9D6FB' }
+                              : { background: 'var(--c-tint-2)' }}
+                          >
                             <div className="flex items-center gap-3">
-                              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: sc.color }}></div>
-                              <span className="text-base font-semibold text-gray-800">그룹 {sc.session_id}</span>
-                              <span className="text-sm text-gray-500">({completedCount}/{totalCount}명 완료)</span>
-                              <span className="flex items-center gap-1 text-sm text-green-600">
-                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                {onlineCount}명 접속
+                              <div className="w-[13px] h-[13px] rounded-full shrink-0" style={{ backgroundColor: sc.color }}></div>
+                              <span className="text-[14.5px] font-extrabold shrink-0 whitespace-nowrap min-w-[62px]">그룹 {sc.session_id}</span>
+                              {/* 완료/진행 중/대기를 색이 다른 배지로 구분해, 여러 줄을 훑을 때 상태가 먼저 읽히게 한다 */}
+                              <span className="inline-flex items-center rounded-full px-2.5 py-[3px] text-xs font-extrabold shrink-0" style={badgeStyle}>
+                                {badgeLabel}
                               </span>
+                              {onlineCount > 0 && (
+                                <span className="flex items-center gap-1.5 text-[12.5px] font-bold" style={{ color: '#17843F' }}>
+                                  <span className="w-[7px] h-[7px] rounded-full" style={{ background: '#17A85A' }}></span>
+                                  {onlineCount}명 접속
+                                </span>
+                              )}
                             </div>
                             {/* 마우스 오버 시 그룹 참가자 명단 (순서대로) */}
                             {totalCount > 0 && (
-                              <div className="absolute left-4 bottom-full mb-2 z-30 hidden group-hover:block bg-gray-900 text-white text-sm rounded-lg shadow-xl p-3 min-w-[200px]">
-                                <p className="font-bold mb-2 text-gray-300">그룹 {sc.session_id} 참가자 순서</p>
+                              <div className="absolute left-4 bottom-full mb-2 z-30 hidden group-hover:block text-white text-sm rounded-xl shadow-xl p-3 min-w-[200px]" style={{ background: 'var(--c-ink)' }}>
+                                <p className="font-extrabold mb-2" style={{ color: '#B7BFD4' }}>그룹 {sc.session_id} 참가자 순서</p>
                                 {/* 관전 그룹(추가)은 전원 turn_order 0이라 이름순(숫자 인식)으로 2차 정렬해
                                     로그인 등으로 DB 행 순서가 바뀌어도 표시 순서를 고정한다 */}
                                 {[...sessionParticipants]
@@ -1089,7 +1124,7 @@ const updateStoreWithEventData = (event: any) => {
                                         <span className={`w-1.5 h-1.5 rounded-full ${onlineParticipantIds.includes(p.id) ? 'bg-green-400' : 'bg-gray-600'}`}></span>
                                         {i + 1}. {p.name}
                                       </span>
-                                      <span className={p.seat_id ? 'text-green-400' : 'text-gray-400'}>{p.seat_id ? '완료' : '대기'}</span>
+                                      <span className={p.seat_id ? 'text-green-400' : 'text-[color:var(--c-muted-2)]'}>{p.seat_id ? '완료' : '대기'}</span>
                                     </div>
                                   ))}
                               </div>
@@ -1099,38 +1134,38 @@ const updateStoreWithEventData = (event: any) => {
                               {/* '추가' 그룹은 관전용이라 시간 설정이 동작에 영향을 주지 않으므로
                                   혼동하지 않도록 시간 설정 UI를 숨긴다 */}
                               {sc.session_id === '추가' ? (
-                                <span className="text-sm text-gray-400">관전용 — 시간 설정 없음</span>
+                                <span className="text-sm text-[color:var(--c-muted-2)]">관전용 — 시간 설정 없음</span>
                               ) : isEditing ? (
                                 <>
                                   <input 
                                     type="datetime-local"
                                     value={editStartTime} 
                                     onChange={e => setEditStartTime(e.target.value)}
-                                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                                    className="border border-[color:var(--c-line)] rounded px-2 py-1 text-sm"
                                   />
-                                  <span className="text-gray-500">-</span>
+                                  <span className="text-[color:var(--c-muted)]">-</span>
                                   <input 
                                     type="datetime-local"
                                     value={editEndTime} 
                                     onChange={e => setEditEndTime(e.target.value)}
-                                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                                    className="border border-[color:var(--c-line)] rounded px-2 py-1 text-sm"
                                   />
                                   <button 
                                     onClick={() => handleSaveSession(sc)}
-                                    className="ml-2 bg-gray-900 text-white px-3 py-1 rounded text-sm hover:bg-gray-800"
+                                    className="ml-2 bg-[color:var(--c-primary)] text-white px-3 py-1 rounded text-sm hover:bg-gray-800"
                                   >
                                     저장
                                   </button>
                                   <button 
                                     onClick={() => setEditingSessionId(null)}
-                                    className="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-300"
+                                    className="bg-[color:var(--c-line)] text-[color:var(--c-ink-2)] px-3 py-1 rounded text-sm hover:bg-gray-300"
                                   >
                                     취소
                                   </button>
                                 </>
                               ) : (
                                 <>
-                                  <span className="text-sm text-gray-600 font-mono">
+                                  <span className="text-sm text-[color:var(--c-muted)] font-mono">
                                     {formatSessionTime(sc.start_time) || '--:--'} ~ {formatSessionTime(sc.end_time) || '--:--'}
                                   </span>
                                   <button
@@ -1139,7 +1174,7 @@ const updateStoreWithEventData = (event: any) => {
                                       setEditStartTime(toDatetimeLocalValue(sc.start_time));
                                       setEditEndTime(toDatetimeLocalValue(sc.end_time));
                                     }}
-                                    className="ml-4 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border border-gray-300 transition-colors"
+                                    className="ml-4 text-xs bg-[color:var(--c-tint)] hover:opacity-80 text-[color:var(--c-ink-2)] px-2 py-1 rounded border border-[color:var(--c-line)] transition-colors"
                                   >
                                     수정
                                   </button>
@@ -1154,7 +1189,7 @@ const updateStoreWithEventData = (event: any) => {
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-500 min-h-[500px]">
+                <div className="flex-1 flex items-center justify-center rounded-[20px] min-h-[500px]" style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)', color: 'var(--c-muted)' }}>
                   <p className="text-lg font-medium">상단에서 이벤트를 선택해주세요.</p>
                 </div>
               )}
