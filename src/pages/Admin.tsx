@@ -1042,7 +1042,10 @@ const updateStoreWithEventData = (event: any) => {
                         title="채팅 펼치기"
                         className="relative self-start shrink-0 flex flex-col items-center gap-2 rounded-xl border border-[color:var(--c-line)] bg-white px-2.5 py-4 text-[color:var(--c-ink-2)] shadow-sm hover:opacity-80"
                       >
-                        <span className="text-lg">💬</span>
+                        {/* 채팅창 헤더('실시간 채팅')와 같은 말풍선 아이콘 */}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c-primary)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.8-.4L3 21l1.6-4.6A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />
+                        </svg>
                         <span className="text-xs font-bold [writing-mode:vertical-rl]">채팅 열기</span>
                         {chatUnread > 0 && (
                           <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
