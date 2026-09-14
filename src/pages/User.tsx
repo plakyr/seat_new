@@ -155,7 +155,7 @@ export default function User() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full h-[54px] rounded-[15px] px-4 text-[15.5px] font-bold outline-none focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] transition-shadow"
+                  className="w-full h-[54px] rounded-[15px] px-4 text-base font-bold outline-none focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] transition-shadow"
                   style={fieldStyle}
                   required
                 />
@@ -174,7 +174,7 @@ export default function User() {
                   maxLength={20}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full h-[54px] rounded-[15px] px-4 text-[15.5px] font-bold tracking-[.35em] outline-none focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] transition-shadow"
+                  className="w-full h-[54px] rounded-[15px] px-4 text-base font-bold tracking-[.35em] outline-none focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] transition-shadow"
                   style={fieldStyle}
                   required
                 />
@@ -190,7 +190,7 @@ export default function User() {
                     type="text"
                     value={uniqueCode}
                     onChange={(e) => setUniqueCode(e.target.value)}
-                    className="w-full h-[54px] rounded-[15px] px-4 text-[15.5px] font-bold outline-none focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] transition-shadow"
+                    className="w-full h-[54px] rounded-[15px] px-4 text-base font-bold outline-none focus:border-[color:var(--c-primary)] focus:shadow-[0_0_0_4px_rgba(74,107,245,.14)] transition-shadow"
                     style={fieldStyle}
                     required
                   />

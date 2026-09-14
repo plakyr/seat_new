@@ -45,7 +45,7 @@ function StatusBar({ color, icon, children, pulse, minH }: {
   return (
     <Shell minH={minH} style={{ background: color }} className={`gap-2.5 text-white ${pulse ? 'animate-pulse' : ''}`}>
       <span className="shrink-0 flex">{icon}</span>
-      <span className="text-base font-extrabold leading-[1.35] min-w-0">{children}</span>
+      <span className="text-[17px] font-extrabold leading-[1.35] min-w-0">{children}</span>
     </Shell>
   );
 }
@@ -271,7 +271,7 @@ export default function AnnouncementBar({
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-primary)' }} />
               진행 중
             </div>
-            <div className="text-base font-bold leading-[1.35] mt-1 truncate">{who}</div>
+            <div className="text-[17px] font-bold leading-[1.35] mt-1 truncate">{who}</div>
           </div>
           {showTimer && (
             <div className="shrink-0 text-xl font-extrabold" style={{ color: 'var(--c-muted)' }}>{timer}</div>

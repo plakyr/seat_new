@@ -97,7 +97,10 @@ export default function ChatWindow({ eventId }: { eventId: string }) {
             maxLength={500}
             disabled={!canChat}
             placeholder={canChat ? '메시지를 입력하세요...' : '그룹 진행 중에만 채팅이 가능합니다.'}
-            className="flex-1 min-w-0 px-3.5 py-2.5 text-sm font-medium rounded-full outline-none focus:shadow-[0_0_0_3px_rgba(74,107,245,.14)] transition-shadow disabled:opacity-70"
+            /* 휴대폰에서는 16px 로 둔다. iOS 사파리는 16px 미만 입력칸에 포커스가 가면
+               화면을 제멋대로 확대하고 잘 되돌리지 않는다. 폭이 좁은 데스크톱 채팅
+               칸(370px)에서는 기존 14px 를 유지한다 */
+            className="flex-1 min-w-0 px-3.5 py-2.5 text-base lg:text-sm font-medium rounded-full outline-none focus:shadow-[0_0_0_3px_rgba(74,107,245,.14)] transition-shadow disabled:opacity-70"
             style={{ background: 'var(--c-tint)', color: 'var(--c-ink)' }}
           />
           <button
