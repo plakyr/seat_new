@@ -967,9 +967,20 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     // Authenticate participant socket
     socket.on('participant:auth', async (data: { participantId: string, sessionToken: string }) => {
       const { participantId, sessionToken } = data;
+
+      // 토큰이 빈 문자열/null/비문자열이면 즉시 거절한다. 이 검사가 없으면,
+      // 아직 로그인한 적 없거나 로그아웃한 참가자(DB의 session_token === null)의 ID로
+      // sessionToken: null 을 보낼 때 null === null 로 통과해 다른 참가자로 접속할 수 있다.
+      // (/api/seats 응답에 참가자 ID가 노출되므로 남의 ID를 알 수 있다.) 908행 HTTP 경로와 동일한 가드.
+      if (typeof participantId !== 'string' || !participantId ||
+          typeof sessionToken !== 'string' || !sessionToken) {
+        socket.emit('session:expired', { reason: '유효하지 않은 세션입니다. 다시 로그인해주세요.' });
+        return;
+      }
+
       const participant = await prisma.participant.findUnique({ where: { id: participantId } });
-      
-      if (!participant || participant.session_token !== sessionToken) {
+
+      if (!participant || !participant.session_token || participant.session_token !== sessionToken) {
         socket.emit('session:expired', { reason: '유효하지 않은 세션입니다. 다시 로그인해주세요.' });
         return;
       }
