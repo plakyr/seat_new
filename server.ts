@@ -456,6 +456,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       io.to(`admin:event:${eventId}`).emit('chat:history', { messages: [] });
 
       io.to(`admin:event:${eventId}`).emit('admin:event_data', {
+        eventId, // 클라이언트가 지금 선택한 이벤트의 응답인지 대조하는 용도
         seats: layout?.seats || [],
         layout: layout ? {
           rows: layout.rows,
@@ -810,9 +811,23 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   app.post('/api/admin/sessions', requireAdmin, async (req, res) => {
     try {
       const { eventId, sessions } = req.body;
-      
+
+      if (!Array.isArray(sessions)) {
+        return res.status(400).json({ error: '세션 목록이 올바르지 않습니다.' });
+      }
+
+      // 시작·종료 시각을 저장 전에 검증한다. 형식·범위 검증 없이 저장하면,
+      // "13:99" 같은 값이 Date 정규화로 엉뚱한 시각에 진행되거나, 아예 파싱 불가한
+      // 값이 isSessionStartTimeReached 에서 '이미 시작됨'으로 처리돼 대기를 건너뛴다.
+      // (빈 값/null 은 '시간 제한 없음'을 뜻하므로 허용한다.)
+      for (const s of sessions) {
+        if (!isValidSessionTimeInput(s?.start_time) || !isValidSessionTimeInput(s?.end_time)) {
+          return res.status(400).json({ error: '시작/종료 시각 형식이 올바르지 않습니다. (HH:MM 또는 YYYY-MM-DDTHH:MM)' });
+        }
+      }
+
       await prisma.$transaction(
-        sessions.map((s: any) => 
+        sessions.map((s: any) =>
           prisma.sessionColor.update({
             where: { id: s.id },
             data: { start_time: s.start_time, end_time: s.end_time }
@@ -1158,6 +1173,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       messages.reverse();
 
       socket.emit('admin:event_data', {
+        eventId: data.eventId, // 클라이언트가 지금 선택한 이벤트의 응답인지 대조하는 용도
         seats: layout?.seats || [],
         layout: layout ? {
           rows: layout.rows,
@@ -1750,6 +1766,25 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     m = value.match(/^(\d{1,2}):(\d{2})$/);
     if (m) return { hh: Number(m[1]), mm: Number(m[2]) };
     return null;
+  }
+
+  // 저장 전 세션 시각 입력 검증. 빈 값/null 은 '제한 없음'으로 허용하고,
+  // 값이 있으면 형식 + 실제 존재하는 날짜·시각인지(월 1-12, 시 0-23, 2/30 같은
+  // 없는 날짜 배제)까지 확인한다. parseSessionTime 의 정규식은 "13"월·"25"시도
+  // 통과시키므로 범위 검사를 여기서 따로 한다.
+  function isValidSessionTimeInput(value: unknown): boolean {
+    if (value === null || value === undefined || value === '') return true; // 제한 없음
+    if (typeof value !== 'string') return false;
+    const t = parseSessionTime(value);
+    if (!t) return false;
+    if (t.hh < 0 || t.hh > 23 || t.mm < 0 || t.mm > 59) return false;
+    if (t.y !== undefined) {
+      if (t.mo! < 1 || t.mo! > 12 || t.d! < 1 || t.d! > 31) return false;
+      // 실제 달력에 있는 날짜인지 확인 (예: 2/30, 4/31 배제)
+      const dt = new Date(t.y, t.mo! - 1, t.d!, t.hh, t.mm);
+      if (dt.getFullYear() !== t.y || dt.getMonth() !== t.mo! - 1 || dt.getDate() !== t.d!) return false;
+    }
+    return true;
   }
 
   // 안내 문구용: 날짜가 있으면 "7/20 14:00", 없으면 "14:00"

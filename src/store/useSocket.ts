@@ -112,9 +112,13 @@ export const useSocket = () => {
     });
 
     socketInstance.on('admin:event_data', (data: {
-      seats: Seat[]; layout?: any; participants: User[];
+      eventId?: string; seats: Seat[]; layout?: any; participants: User[];
       systemState: any; sessionColors?: any[]; messages?: any[]
     }) => {
+      // 이벤트를 A→B로 빠르게 전환하면 A의 응답이 늦게 도착해 B 화면을 A 데이터로
+      // 덮을 수 있다. 응답에 실린 eventId가 지금 선택한 이벤트와 다르면 버린다.
+      const currentEventId = storeRef.current.adminEventId;
+      if (data.eventId && currentEventId && data.eventId !== currentEventId) return;
       storeRef.current.setSeats(data.seats);
       if (data.layout) storeRef.current.setLayout(data.layout);
       storeRef.current.setParticipants(data.participants);
