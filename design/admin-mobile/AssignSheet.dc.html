@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; }
+    a { color: #4A6BF5; } a:hover { color: #2C46B8; }
+    .seat { width: 34px; height: 34px; border-radius: 10px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; box-sizing: border-box; }
+    .sn { width: 100%; text-align: center; font-size: 7px; font-weight: 500; line-height: 8px; opacity: .75; }
+    .snm { width: 100%; text-align: center; font-size: 8px; font-weight: 700; line-height: 9px; margin-top: 2px; }
+    .row { display: flex; gap: 6px; align-items: center; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 390px; height: 844px; background: #EDF1F9; overflow: hidden;">
+
+  <!-- 뒤에 깔린 좌석표 (어둡게) -->
+  <div style="padding: 14px;">
+    <div style="padding: 12px 10px; border-radius: 20px; background: #FFFFFF;">
+      <div style="height: 30px; border-radius: 10px; background: #EEF2FB; margin-bottom: 11px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+        <div class="row">
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">A-1</span></div>
+          <div class="seat" style="background:#8E2C43;color:#fff;"><span class="sn">A-2</span><span class="snm">강태현</span></div>
+          <div class="seat" style="background:#8E2C43;color:#fff;"><span class="sn">A-3</span><span class="snm">정우진</span></div>
+          <div class="seat" style="background:#8E2C43;color:#fff;"><span class="sn">A-4</span><span class="snm">이준호</span></div>
+          <div style="width:16px;"></div>
+          <div class="seat" style="background:#4A6BF5;color:#fff;box-shadow:0 0 0 3px #B9C8FB;"><span class="sn">A-5</span></div>
+          <div class="seat" style="background:#7B5AD1;color:#fff;"><span class="sn">A-6</span><span class="snm">윤소희</span></div>
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">A-7</span></div>
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">A-8</span></div>
+        </div>
+        <div class="row">
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">B-1</span></div>
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">B-2</span></div>
+          <div class="seat" style="background:#8E2C43;color:#fff;"><span class="sn">B-3</span><span class="snm">김서연</span></div>
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">B-4</span></div>
+          <div style="width:16px;"></div>
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">B-5</span></div>
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">B-6</span></div>
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">B-7</span></div>
+          <div class="seat" style="background:#DDE4F2;color:#7C86A0;"><span class="sn">B-8</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 어둡게 덮기 -->
+  <div style="position: absolute; inset: 0; background: rgba(16,22,40,.42);"></div>
+
+  <!-- 아래에서 올라오는 시트 -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 10px 18px 26px; box-sizing: border-box; box-shadow: 0 -8px 28px rgba(16,22,40,.18);">
+
+    <div style="width: 38px; height: 4px; border-radius: 2px; background: #DDE4F2; margin: 0 auto 14px;"></div>
+
+    <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 4px;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 26px; padding: 0 9px; box-sizing: border-box; border-radius: 9px; background: #E1E9FC; color: #2C46B8; font-size: 13px; font-weight: 800;">A-5</span>
+      <span style="font-size: 16px; font-weight: 800; color: #171C2E;">빈 좌석</span>
+    </div>
+    <p style="margin: 0 0 16px; font-size: 12.5px; font-weight: 500; color: #8791AB;">추가신청자는 이름을 직접 적어 배정합니다</p>
+
+    <label style="display: block; font-size: 12.5px; font-weight: 700; color: #2A3350; margin-bottom: 7px;">참가자 이름</label>
+    <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+      <div style="flex-grow: 1; height: 50px; border-radius: 14px; background: #F7F9FE; border: 1px solid #DDE4F2; display: flex; align-items: center; padding: 0 15px; font-size: 16px; font-weight: 700; color: #A2AAC0;">이름 입력</div>
+      <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0 20px; height: 50px; border-radius: 14px; background: #4A6BF5; color: #fff; font-size: 14.5px; font-weight: 800; box-shadow: 0 6px 16px rgba(74,107,245,.28);">배정</div>
+    </div>
+
+    <p style="margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: .06em; color: #8791AB;">미배정 참가자</p>
+    <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px;">
+      <div style="display: flex; align-items: center; height: 46px; padding: 0 14px; border-radius: 13px; background: #F7F9FE; border: 1px solid #EBF0FA;">
+        <span style="flex-grow: 1; font-size: 14px; font-weight: 700; color: #2A3350;">최유나 <span style="font-weight:500;color:#8791AB;">· 1그룹 5번</span></span>
+        <span style="padding: 5px 12px; border-radius: 9px; background: #E1E9FC; color: #2C46B8; font-size: 12px; font-weight: 800;">배정</span>
+      </div>
+      <div style="display: flex; align-items: center; height: 46px; padding: 0 14px; border-radius: 13px; background: #F7F9FE; border: 1px solid #EBF0FA;">
+        <span style="flex-grow: 1; font-size: 14px; font-weight: 700; color: #2A3350;">한지우 <span style="font-weight:500;color:#8791AB;">· 2그룹 4번</span></span>
+        <span style="padding: 5px 12px; border-radius: 9px; background: #E1E9FC; color: #2C46B8; font-size: 12px; font-weight: 800;">배정</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: center; height: 46px; border-radius: 13px; border: 1px solid #DDE4F2; color: #6C7590; font-size: 13.5px; font-weight: 700;">사석으로 지정</div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
