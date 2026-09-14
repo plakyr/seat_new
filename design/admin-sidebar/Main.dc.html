@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; }
+    a { color: #4A6BF5; } a:hover { color: #2C46B8; }
+  </style>
+</helmet>
+
+<div style="display: flex; width: 320px; height: 760px; background: #EDF1F9;">
+
+  <aside style="display: flex; flex-direction: column; width: 256px; height: 760px; box-sizing: border-box; padding: 20px 16px; background: #1A1F35; color: #ffffff;">
+
+    <!-- 머리말 -->
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px; margin-bottom: 18px;">
+      <h1 style="margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff;">관리자 메뉴</h1>
+      <div style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 9px; background: #242B46; color: #8791AB;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m11 17-5-5 5-5" />
+          <path d="m18 17-5-5 5-5" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- 계정 카드 -->
+    <div style="display: flex; align-items: center; gap: 10px; padding: 13px; border-radius: 14px; background: #232A44; margin-bottom: 8px;">
+      <div style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 12px; background: #4A6BF5; color: #ffffff; font-size: 15px; font-weight: 800; flex-shrink: 0;">박</div>
+      <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+        <span style="font-size: 11px; font-weight: 700; color: #7A85A8;">접속 계정</span>
+        <span style="font-size: 15px; font-weight: 800; color: #ffffff;">박은진</span>
+      </div>
+    </div>
+
+    <!-- 계정 관련 동작 -->
+    <div style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 18px;">
+      <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; font-weight: 700; color: #8993B4;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+          <circle cx="8" cy="12" r="3.5" />
+          <path d="M11.5 12H21" />
+          <path d="M17.5 12v3" />
+          <path d="M20.2 12v2.4" />
+        </svg>
+        <span>비밀번호 변경</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; font-weight: 700; color: #9A6A72;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+          <path d="M3.6 12a8.4 8.4 0 1 0 2.6-6.1" />
+          <path d="M3.6 4.6V10h5.4" />
+        </svg>
+        <span>관리자 비밀번호 초기화</span>
+      </div>
+    </div>
+
+    <!-- 메뉴 -->
+    <nav style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 13px; font-size: 14px; font-weight: 800; background: #4A6BF5; color: #ffffff; box-shadow: 0 6px 16px rgba(74, 107, 245, 0.28);">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+          <rect x="2.8" y="4" width="18.4" height="13" rx="2.6" />
+          <path d="M6.6 11.2 9 8.8l2.4 3.2 2.4-3.6 2.6 2.8" />
+          <path d="M9.5 20.5h5" />
+        </svg>
+        <span>실시간 관제</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 13px; font-size: 14px; font-weight: 700; color: #8993B4;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+          <path d="M12 15.2V3.6" />
+          <path d="m7.6 8 4.4-4.4L16.4 8" />
+          <path d="M4 15v3.6A1.6 1.6 0 0 0 5.6 20.2h12.8a1.6 1.6 0 0 0 1.6-1.6V15" />
+        </svg>
+        <span>대시보드 / 업로드</span>
+      </div>
+    </nav>
+
+    <!-- 로그아웃 -->
+    <div style="padding-top: 14px; border-top: 1px solid #2A3150;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; font-size: 13px; font-weight: 700; color: #8791AB;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+          <path d="M13.6 20.2H6.4a1.6 1.6 0 0 1-1.6-1.6V5.4a1.6 1.6 0 0 1 1.6-1.6h7.2" />
+          <path d="m17 15.2 4-3.2-4-3.2" />
+          <path d="M21 12H10.2" />
+        </svg>
+        <span>로그아웃</span>
+      </div>
+    </div>
+
+  </aside>
+
+</div>
+</x-dc>
+</body>
+</html>

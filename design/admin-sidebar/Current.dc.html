@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; }
+    a { color: #4A6BF5; } a:hover { color: #2C46B8; }
+  </style>
+</helmet>
+
+<div style="display: flex; width: 320px; height: 760px; background: #EDF1F9;">
+
+  <aside style="display: flex; flex-direction: column; width: 256px; height: 760px; box-sizing: border-box; padding: 24px; background: #1A1F35; color: #ffffff;">
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px;">
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.025em; color: #ffffff;">관리자 메뉴</h1>
+      <span style="font-size: 20px; line-height: 1; margin-top: 4px; color: #8791AB;">«</span>
+    </div>
+
+    <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid #2A3150;">
+      <p style="margin: 0; font-size: 12px; font-weight: 700; color: #7A85A8;">접속 계정</p>
+      <p style="margin: 2px 0 0 0; font-size: 17px; font-weight: 700; color: #ffffff;">박은진</p>
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 8px;">
+        <span style="font-size: 12px; color: #8791AB; text-decoration: underline; text-underline-offset: 2px;">비밀번호 변경</span>
+        <span style="font-size: 12px; color: #8791AB; text-decoration: underline; text-underline-offset: 2px;">관리자 비밀번호 초기화</span>
+      </div>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 8px; flex-grow: 1;">
+      <div style="padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 700; background: #4A6BF5; color: #ffffff;">실시간 관제</div>
+      <div style="padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 700; color: #8993B4;">대시보드 / 업로드</div>
+    </nav>
+
+    <div style="padding: 8px 16px; font-size: 14px; font-weight: 700; color: #8791AB;">로그아웃</div>
+
+  </aside>
+
+</div>
+</x-dc>
+</body>
+</html>

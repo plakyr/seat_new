@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; }
+    a { color: #4A6BF5; } a:hover { color: #2C46B8; }
+  </style>
+</helmet>
+
+<div style="display: flex; width: 320px; height: 760px; background: #EDF1F9;">
+
+  <aside style="display: flex; flex-direction: column; width: 256px; height: 760px; box-sizing: border-box; padding: 16px 12px; background: #1A1F35; color: #ffffff;">
+
+    <!-- 머리말: 계정과 한 줄로 합침 -->
+    <div style="display: flex; align-items: center; gap: 9px; padding: 6px 8px; margin-bottom: 4px;">
+      <div style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: #4A6BF5; color: #ffffff; font-size: 13px; font-weight: 800; flex-shrink: 0;">박</div>
+      <span style="font-size: 14.5px; font-weight: 800; color: #ffffff; flex-grow: 1;">박은진</span>
+      <div style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: #6E7896;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m11 17-5-5 5-5" />
+          <path d="m18 17-5-5 5-5" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- 계정 동작: 아이콘만 -->
+    <div style="display: flex; gap: 4px; padding: 0 8px; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: #232A44; color: #8993B4;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="12" r="3.5" />
+          <path d="M11.5 12H21" />
+          <path d="M17.5 12v3" />
+          <path d="M20.2 12v2.4" />
+        </svg>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: #232A44; color: #9A6A72;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3.6 12a8.4 8.4 0 1 0 2.6-6.1" />
+          <path d="M3.6 4.6V10h5.4" />
+        </svg>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: #232A44; color: #8993B4;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13.6 20.2H6.4a1.6 1.6 0 0 1-1.6-1.6V5.4a1.6 1.6 0 0 1 1.6-1.6h7.2" />
+          <path d="m17 15.2 4-3.2-4-3.2" />
+          <path d="M21 12H10.2" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- 메뉴: 채워진 알약 대신 왼쪽 표시선 -->
+    <nav style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-left: 3px solid #4A6BF5; background: #212842; font-size: 14px; font-weight: 800; color: #ffffff;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6E8CFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+          <rect x="2.8" y="4" width="18.4" height="13" rx="2.6" />
+          <path d="M6.6 11.2 9 8.8l2.4 3.2 2.4-3.6 2.6 2.8" />
+          <path d="M9.5 20.5h5" />
+        </svg>
+        <span>실시간 관제</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-left: 3px solid transparent; font-size: 14px; font-weight: 700; color: #8993B4;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+          <path d="M12 15.2V3.6" />
+          <path d="m7.6 8 4.4-4.4L16.4 8" />
+          <path d="M4 15v3.6A1.6 1.6 0 0 0 5.6 20.2h12.8a1.6 1.6 0 0 0 1.6-1.6V15" />
+        </svg>
+        <span>대시보드 / 업로드</span>
+      </div>
+    </nav>
+
+  </aside>
+
+</div>
+</x-dc>
+</body>
+</html>
