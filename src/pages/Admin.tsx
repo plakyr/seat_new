@@ -302,14 +302,16 @@ const updateStoreWithEventData = (event: any) => {
   const handleNextTurn = () => {
     if (!selectedEventId || !socket) return;
     if (confirm('현재 선택자의 좌석을 자동배정하고 다음 턴으로 넘기시겠습니까?')) {
-      socket.emit('admin:next_turn', { eventId: selectedEventId });
+      // 화면에 보이는 순번을 함께 보낸다. 그 사이 순번이 넘어갔으면 서버가 거절해,
+      // 지연/중복 클릭이 다음 참가자까지 처리하는 것을 막는다.
+      socket.emit('admin:next_turn', { eventId: selectedEventId, expectedTurnOrder: currentTurnOrder });
     }
   };
 
   const handleSkipTurn = () => {
     if (!selectedEventId || !socket) return;
     if (confirm('현재 참가자에게 좌석을 배정하지 않고 건너뛰시겠습니까?\n(불참/오류 시 사용 — 좌석 없이 다음 턴으로 넘어갑니다)')) {
-      socket.emit('admin:skip_turn', { eventId: selectedEventId });
+      socket.emit('admin:skip_turn', { eventId: selectedEventId, expectedTurnOrder: currentTurnOrder });
     }
   };
 

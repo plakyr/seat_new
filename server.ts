@@ -59,14 +59,23 @@ const requireAdmin = (req: any, res: any, next: any) => {
 };
 
 async function startServer() {
-  // 최후의 안전망: 어딘가에서 놓친 예외/rejection 이 있어도 프로세스를 죽이지 않는다.
-  // 행사 중에는 한 요청의 실패로 서버가 내려가 70명 전원이 끊기는 것이 가장 나쁘다.
-  // (개별 요청 오류는 위 소켓 래퍼·라우트 try/catch 에서 이미 가둔다. 이건 그물망.)
+  // 처리되지 않은 Promise 거부: 로그만 남기고 계속 실행한다.
+  // 대부분 개별 비동기 작업의 .catch() 누락이라 프로세스 상태를 망가뜨리지 않는다.
+  // (소켓 핸들러는 위 on() 래퍼, 라우트는 try/catch 로 이미 요청 단위로 가둔다.
+  //  이건 그 그물을 빠져나간 것에 대한 최후 로깅.)
   process.on('unhandledRejection', (reason) => {
     console.error('[unhandledRejection] 처리되지 않은 Promise 거부:', reason);
   });
+
+  // 처리되지 않은 '동기' 예외: 이 시점의 프로세스는 상태가 깨졌을 수 있어(Node 공식
+  // 권고) 계속 실행하면 안 된다. 로그를 남기고 정상 종료해, Render 가 깨끗한 새
+  // 프로세스로 재시작하게 한다. Socket.IO 클라이언트는 자동 재연결하고, 재연결 시
+  // participant:auth 로 최신 상태를 다시 받으므로 잠깐의 끊김만 발생한다.
+  // (요청 하나의 실패로 죽지 않게 하는 것과, 상태가 깨진 채로 잘못된 좌석배정을
+  //  계속하는 위험을 피하는 것은 다른 문제다. 후자는 재시작이 안전하다.)
   process.on('uncaughtException', (err) => {
-    console.error('[uncaughtException] 처리되지 않은 예외:', err);
+    console.error('[uncaughtException] 처리되지 않은 예외 — 안전을 위해 재시작:', err);
+    process.exit(1);
   });
 
   const app = express();
@@ -1055,6 +1064,20 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         }
       }
 
+      // 참가자당 활성 연결은 하나로 유지한다. 같은 참가자로 다른 연결이 이미
+      // 인증돼 있으면(다른 기기·다른 탭, 또는 재로그인) 이전 연결을 만료시켜
+      // 권한을 회수한다. 이렇게 하지 않으면 이전 연결이 계속 참가자로 행세하거나,
+      // 그 연결의 로그아웃이 새 세션 토큰까지 무효화할 수 있다.
+      const prevSocketId = activeSockets.get(participantId);
+      if (prevSocketId && prevSocketId !== socket.id) {
+        const prev = io.sockets.sockets.get(prevSocketId);
+        if (prev) {
+          prev.emit('session:expired', { reason: '다른 기기에서 접속되어 이 연결이 해제되었습니다.' });
+          prev.data.participantId = null;
+          prev.data.eventId = null;
+        }
+      }
+
       // Register active socket
       activeSockets.set(participantId, socket.id);
       socket.data.participantId = participantId;
@@ -1271,9 +1294,13 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
       try {
         const result = await prisma.$transaction(async (tx) => {
-          const seat = await tx.seat.findUnique({ where: { id: data.seatId } });
+          const seat = await tx.seat.findUnique({ where: { id: data.seatId }, include: { layout: true } });
           if (!seat || (seat.status !== 'RESERVED' && seat.status !== 'AUTO_ASSIGNED') || !seat.assigned_to) {
             throw new Error('취소할 수 없는 좌석입니다.');
+          }
+          // 좌석이 요청한 이벤트에 속하는지 확인 (다른 이벤트 좌석 취소 방지)
+          if (seat.layout.event_id !== data.eventId) {
+            throw new Error('이 이벤트의 좌석이 아닙니다.');
           }
 
           const participantId = seat.assigned_to;
@@ -1393,7 +1420,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
       try {
         const result = await prisma.$transaction(async (tx) => {
-          const seat = await tx.seat.findUnique({ where: { id: data.seatId } });
+          const seat = await tx.seat.findUnique({ where: { id: data.seatId }, include: { layout: true } });
           if (!seat || seat.status !== 'EMPTY') {
             throw new Error('선택할 수 없는 좌석입니다.');
           }
@@ -1401,6 +1428,13 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
           const participant = await tx.participant.findUnique({ where: { id: data.participantId } });
           if (!participant) {
             throw new Error('참가자를 찾을 수 없습니다.');
+          }
+
+          // 좌석과 참가자가 모두 요청한 이벤트에 속하는지 확인한다.
+          // (이벤트 전환 중 이전 좌석 ID가 섞이거나 잘못 조합된 요청이 오면,
+          //  다른 행사 좌석에 엉뚱한 참가자가 배정되고 잠금·방송도 엉뚱한 이벤트로 간다.)
+          if (seat.layout.event_id !== data.eventId || participant.event_id !== data.eventId) {
+            throw new Error('좌석 또는 참가자가 이 이벤트에 속하지 않습니다.');
           }
 
           // If participant already has a seat, free it
@@ -1453,22 +1487,22 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     });
 
     // Admin: 현재 선택자 좌석 자동배정 후 다음 턴으로 넘기기
-    on('admin:next_turn', async (data: { eventId: string }) => {
+    on('admin:next_turn', async (data: { eventId: string, expectedTurnOrder?: number }) => {
       if (!verifyAdminSocket()) return;
 
       try {
-        await forceAssignAndAdvanceTurn(data.eventId);
+        await forceAssignAndAdvanceTurn(data.eventId, data.expectedTurnOrder);
       } catch (error: any) {
         socket.emit('admin:error', { error: error.message });
       }
     });
 
     // Admin: 좌석 배정 없이 현재 참가자를 건너뛰고 다음 턴으로 (불참/오류 대응)
-    on('admin:skip_turn', async (data: { eventId: string }) => {
+    on('admin:skip_turn', async (data: { eventId: string, expectedTurnOrder?: number }) => {
       if (!verifyAdminSocket()) return;
 
       try {
-        await skipCurrentTurn(data.eventId);
+        await skipCurrentTurn(data.eventId, data.expectedTurnOrder);
       } catch (error: any) {
         socket.emit('admin:error', { error: error.message });
       }
@@ -1700,10 +1734,15 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       const pid = socket.data.participantId;
       const eid = socket.data.eventId;
       if (!pid) return;
-      try {
-        await prisma.participant.update({ where: { id: pid }, data: { session_token: null } });
-      } catch { /* 이미 삭제된 참가자 등은 무시 */ }
-      if (activeSockets.get(pid) === socket.id) activeSockets.delete(pid);
+      // 이 소켓이 현재 활성 연결일 때만 DB 토큰을 지운다. 다른 기기 재로그인 등으로
+      // 이미 새 연결이 활성이면, 뒤늦은 이 소켓의 로그아웃이 새 세션 토큰을 무효화하면 안 된다.
+      const isCurrentActive = activeSockets.get(pid) === socket.id;
+      if (isCurrentActive) {
+        try {
+          await prisma.participant.update({ where: { id: pid }, data: { session_token: null } });
+        } catch { /* 이미 삭제된 참가자 등은 무시 */ }
+        activeSockets.delete(pid);
+      }
       socket.data.participantId = null;
       socket.data.eventId = null;
       if (eid) {
@@ -1941,7 +1980,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   }
 
   // 관리자가 "다음 턴으로 넘기기"를 누르면, 현재 선택자의 좌석을 자동배정 기준에 맞춰 즉시 배정한 뒤 다음 턴으로 전환
-  async function forceAssignAndAdvanceTurn(eventId: string) {
+  async function forceAssignAndAdvanceTurn(eventId: string, expectedTurnOrder?: number) {
     // 자동배정 타이머 및 다른 관리자의 동시 클릭과의 경합 방지:
     // 자동 경로(runAutoAssignIfExpired)와 동일한 잠금을 공유하여 직렬화한다.
     if (autoAssignInProgress.has(eventId)) {
@@ -1951,6 +1990,13 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     try {
     const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
     if (!systemState) throw new Error('시스템 상태를 찾을 수 없습니다.');
+
+    // 화면에 보이던 순번과 현재 순번이 다르면 거절한다. 관리자 두 명이 같은
+    // 참가자를 보고 각자 누르거나, 지연된 중복 클릭이 뒤늦게 도착하면 이미 넘어간
+    // '다음 참가자'까지 배정·진행되는 것을 막는다. (버튼을 누른 그 순번에만 적용)
+    if (expectedTurnOrder != null && systemState.current_turn_order !== expectedTurnOrder) {
+      throw new Error('화면의 순서와 현재 순서가 다릅니다. 새로고침 후 다시 시도해주세요.');
+    }
 
     // 그룹 시작 전 / 그룹 간 대기 / 전원 완료 상태에서는 수동 진행 불가 (시작 시간 엄수)
     const flow = await getFlowAnnouncement(eventId);
@@ -2025,7 +2071,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
   // 관리자가 "건너뛰기"를 누르면, 현재 참가자에게 좌석을 배정하지 않고
   // turn_status를 EXPIRED로만 표시한 뒤 다음 턴으로 넘긴다. (불참/오류 대응)
-  async function skipCurrentTurn(eventId: string) {
+  async function skipCurrentTurn(eventId: string, expectedTurnOrder?: number) {
     if (autoAssignInProgress.has(eventId)) {
       throw new Error('이미 자동배정이 진행 중입니다. 잠시 후 다시 시도해주세요.');
     }
@@ -2033,6 +2079,11 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     try {
       const systemState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
       if (!systemState) throw new Error('시스템 상태를 찾을 수 없습니다.');
+
+      // 화면 순번과 현재 순번이 다르면 거절 (중복/지연 클릭이 다음 참가자를 건너뛰는 것 방지)
+      if (expectedTurnOrder != null && systemState.current_turn_order !== expectedTurnOrder) {
+        throw new Error('화면의 순서와 현재 순서가 다릅니다. 새로고침 후 다시 시도해주세요.');
+      }
 
       // 그룹 시작 전 / 그룹 간 대기 / 전원 완료 상태에서는 진행 불가
       const flow = await getFlowAnnouncement(eventId);
@@ -2212,6 +2263,19 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
       // 2) 0.7초 후 좌석 자동배정
       await delay(AUTO_ASSIGN_NOTICE_MS);
+
+      // 대기(0.7초) 동안 관리자가 일시정지·초기화를 했을 수 있다. 이 둘은 자동배정
+      // 잠금을 공유하지 않으므로, 배정 직전에 상태를 다시 읽어 확인한다. 정지됐거나,
+      // 순번이 바뀌었거나(초기화=1로 리셋), 그 참가자가 이미 확정/교체됐으면 배정을
+      // 건너뛴다. (정지 중 좌석이 배정되거나, 초기화 직후 이전 참가자가 다시 배정되는 것 방지)
+      const recheck = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+      const recheckP = await prisma.participant.findUnique({ where: { id: currentParticipant.id } });
+      if (!recheck || recheck.is_frozen ||
+          recheck.current_turn_order !== systemState.current_turn_order ||
+          !recheckP || recheckP.is_final) {
+        console.log(`[AutoAssign] 대기 중 상태 변경 감지 - ${currentParticipant.name} 배정 취소`);
+        return; // 잠금은 finally 에서 해제
+      }
 
       const layout = await prisma.venueLayout.findFirst({
         where: { event_id: eventId },
