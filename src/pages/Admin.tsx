@@ -47,6 +47,9 @@ export default function Admin() {
   // 레이아웃 접기 상태: 좁은 화면에서 좌석표를 넓게 보기 위한 토글
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(true);
+  // 모바일에서 관리 버튼 묶음을 접어둔다. 밖에서 쓸 일은 채팅 확인과
+  // 추가 좌석 지정뿐이고, 초기화·삭제를 손가락으로 잘못 누르면 되돌리기 어렵다
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
   // 채팅이 접혀 있는 동안 도착한 새 메시지 수 (펼치면 초기화)
   const [chatUnread, setChatUnread] = useState(0);
   const chatSeenCountRef = useRef(0);
@@ -973,7 +976,20 @@ const updateStoreWithEventData = (event: any) => {
                 </div>
                 
                 {selectedEventId && (
-                  <div className="w-full flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setIsToolsOpen(prev => !prev)}
+                    className="md:hidden w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold"
+                    style={{ background: 'var(--c-tint)', color: 'var(--c-ink-2)' }}
+                  >
+                    <span>관리 도구</span>
+                    <span className="text-[13px] font-bold" style={{ color: 'var(--c-muted-2)' }}>
+                      {isToolsOpen ? '▲ 접기' : '▼ 펼치기'}
+                    </span>
+                  </button>
+                )}
+
+                {selectedEventId && (
+                  <div className={`w-full flex-wrap items-center gap-2 ${isToolsOpen ? 'flex' : 'hidden'} md:flex`}>
                     <button
                       onClick={handleToggleLoginOpen}
                       style={{ backgroundColor: selectedEvent?.login_open ? '#6C7590' : '#17A85A' }}
@@ -1064,9 +1080,11 @@ const updateStoreWithEventData = (event: any) => {
                     </React.Fragment>
                   </div>
 
-                  <div className="flex-1 flex gap-4 min-w-0">
-                    <div className="flex-[2] flex flex-col min-w-0">
-                      <div className="flex-1 border border-[color:var(--c-line)] rounded-xl overflow-hidden bg-[color:var(--c-tint-2)] min-h-[400px]">
+                  {/* 모바일에서는 좌석표와 채팅을 위아래로 쌓아 둘 다 한눈에 본다.
+                      (밖에서 채팅을 보고 바로 좌석을 눌러야 하는 흐름) */}
+                  <div className="flex-1 flex flex-col md:flex-row gap-4 min-w-0">
+                    <div className="w-full md:w-auto md:flex-[2] flex flex-col min-w-0">
+                      <div className="flex-1 border border-[color:var(--c-line)] rounded-xl overflow-hidden bg-[color:var(--c-tint-2)] min-h-[340px] md:min-h-[400px]">
   <SeatMap forceAdmin={true} />
 </div>
                       <p className="text-[13px] mt-2.5 text-center font-medium" style={{ color: 'var(--c-muted-2)' }}>
@@ -1075,22 +1093,21 @@ const updateStoreWithEventData = (event: any) => {
                     </div>
                     {/* 채팅창 접기: 좁은 화면에서 좌석표를 넓게 쓰기 위한 토글.
                         접혀 있는 동안 새 메시지가 오면 개수 뱃지를 표시한다 */}
-                    {isChatOpen ? (
-                      <div className="relative flex-1 lg:flex-none lg:w-[370px] lg:shrink-0 flex flex-col min-w-0 h-[50vh] lg:h-[70vh]">
-                        <button
-                          onClick={() => setIsChatOpen(false)}
-                          title="채팅 접기 (좌석표 넓게 보기)"
-                          className="absolute top-2.5 right-2 z-10 px-2 py-0.5 rounded-md text-lg font-bold text-[color:var(--c-ink-2)] hover:bg-black/10 leading-none"
-                        >
-                          »
-                        </button>
-                        <ChatWindow eventId={selectedEventId} />
-                      </div>
-                    ) : (
+                    <div className={`relative w-full md:w-auto md:flex-1 lg:flex-none lg:w-[370px] lg:shrink-0 flex flex-col min-w-0 h-[46vh] md:h-[50vh] lg:h-[70vh] ${isChatOpen ? 'md:flex' : 'md:hidden'}`}>
+                      <button
+                        onClick={() => setIsChatOpen(false)}
+                        title="채팅 접기 (좌석표 넓게 보기)"
+                        className="hidden md:block absolute top-2.5 right-2 z-10 px-2 py-0.5 rounded-md text-lg font-bold text-[color:var(--c-ink-2)] hover:bg-black/10 leading-none"
+                      >
+                        »
+                      </button>
+                      <ChatWindow eventId={selectedEventId} />
+                    </div>
+                    {!isChatOpen && (
                       <button
                         onClick={() => setIsChatOpen(true)}
                         title="채팅 펼치기"
-                        className="relative self-start shrink-0 flex flex-col items-center gap-2 rounded-xl border border-[color:var(--c-line)] bg-white px-2.5 py-4 text-[color:var(--c-ink-2)] shadow-sm hover:opacity-80"
+                        className="hidden md:flex relative self-start shrink-0 flex-col items-center gap-2 rounded-xl border border-[color:var(--c-line)] bg-white px-2.5 py-4 text-[color:var(--c-ink-2)] shadow-sm hover:opacity-80"
                       >
                         {/* 채팅창 헤더('실시간 채팅')와 같은 말풍선 아이콘 */}
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c-primary)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
