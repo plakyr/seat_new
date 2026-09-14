@@ -1155,7 +1155,7 @@ const updateStoreWithEventData = (event: any) => {
                     </div>
                     {/* 채팅창 접기: 좁은 화면에서 좌석표를 넓게 쓰기 위한 토글.
                         접혀 있는 동안 새 메시지가 오면 개수 뱃지를 표시한다 */}
-                    <div className={`relative w-full md:w-auto md:flex-1 lg:flex-none lg:w-[370px] lg:shrink-0 flex flex-col min-w-0 h-[46vh] md:h-[50vh] lg:h-[70vh] ${isChatOpen ? 'md:flex' : 'md:hidden'}`}>
+                    <div className={`relative w-full md:w-auto md:flex-1 lg:flex-none lg:w-[370px] lg:shrink-0 flex flex-col min-w-0 h-[276px] md:h-[50vh] lg:h-[70vh] ${isChatOpen ? 'md:flex' : 'md:hidden'}`}>
                       <button
                         onClick={() => setIsChatOpen(false)}
                         title="채팅 접기 (좌석표 넓게 보기)"
