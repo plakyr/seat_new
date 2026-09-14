@@ -50,6 +50,8 @@ export default function Admin() {
   // 모바일에서 관리 버튼 묶음을 접어둔다. 밖에서 쓸 일은 채팅 확인과
   // 추가 좌석 지정뿐이고, 초기화·삭제를 손가락으로 잘못 누르면 되돌리기 어렵다
   const [isToolsOpen, setIsToolsOpen] = useState(false);
+  // 모바일 상단 묶음(화면 전환·이벤트 선택·계정)을 «⋯» 뒤로 접는다
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // 채팅이 접혀 있는 동안 도착한 새 메시지 수 (펼치면 초기화)
   const [chatUnread, setChatUnread] = useState(0);
   const chatSeenCountRef = useRef(0);
@@ -754,35 +756,93 @@ const updateStoreWithEventData = (event: any) => {
           창 폭에 맞게 줄어들게 한다 (없으면 페이지에 가로 스크롤이 생김) */}
       <main className="flex-1 min-w-0 p-8">
         <div className="max-w-5xl lg:max-w-none mx-auto h-full flex flex-col">
-          {/* 모바일 전용 탭 전환 바 (사이드바가 숨겨지므로) */}
-          <div className="flex md:hidden gap-2 mb-6">
-            <button
-              onClick={() => setActiveTab('MONITOR')}
-              className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${activeTab === 'MONITOR' ? 'bg-[color:var(--c-primary)] text-white' : 'bg-white text-[color:var(--c-muted)] border border-[color:var(--c-line)]'}`}
-            >
-              실시간 관제
-            </button>
-            <button
-              onClick={() => setActiveTab('UPLOAD')}
-              className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${activeTab === 'UPLOAD' ? 'bg-[color:var(--c-primary)] text-white' : 'bg-white text-[color:var(--c-muted)] border border-[color:var(--c-line)]'}`}
-            >
-              대시보드 / 업로드
-            </button>
-            {/* 모바일용 비밀번호 변경 (사이드바가 숨겨지므로) */}
-            <button
-              onClick={openPwModal}
-              title="비밀번호 변경"
-              className="px-3 py-2.5 rounded-xl text-sm font-bold bg-white text-[color:var(--c-muted)] border border-[color:var(--c-line)]"
-            >
-              🔒
-            </button>
-            {/* 모바일용 로그아웃 (사이드바가 숨겨지므로) */}
-            <button
-              onClick={() => setAdminAuth(null, null)}
-              className="px-3 py-2.5 rounded-xl text-sm font-bold bg-white text-[color:var(--c-muted)] border border-[color:var(--c-line)] whitespace-nowrap"
-            >
-              로그아웃
-            </button>
+          {/* 모바일 전용 머리말. 화면 전환·이벤트 선택·계정은 밖에서 쓸 일이 거의
+              없으므로 «⋯» 뒤로 접어두고, 지금 어떤 이벤트를 보고 있는지만 남긴다 */}
+          <div className="md:hidden mb-3">
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-[16px]" style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)' }}>
+              <div className="flex items-center justify-center w-[30px] h-[30px] rounded-[10px] shrink-0 text-[13px] font-extrabold text-white" style={{ background: 'var(--c-primary)' }}>
+                {adminUser?.username?.trim().charAt(0) || '?'}
+              </div>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-[13.5px] font-extrabold truncate">{selectedEvent?.name || '이벤트를 선택하세요'}</span>
+                <span className="text-[10.5px] font-bold" style={{ color: selectedEvent?.is_active ? '#17A85A' : 'var(--c-muted-2)' }}>
+                  {selectedEvent ? (selectedEvent.is_active ? '● 활성 · 참가자 접속 중' : '● 비활성 · 참가자 접속 불가') : '\u00A0'}
+                </span>
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(prev => !prev)}
+                aria-label="메뉴"
+                aria-expanded={isMobileMenuOpen}
+                className="flex items-center justify-center w-[34px] h-[34px] rounded-[11px] shrink-0"
+                style={{ background: isMobileMenuOpen ? 'var(--c-primary-soft)' : 'var(--c-tint)', color: isMobileMenuOpen ? 'var(--c-primary-ink)' : 'var(--c-muted)' }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="5" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="12" cy="19" r="1.4" />
+                </svg>
+              </button>
+            </div>
+
+            {isMobileMenuOpen && (
+              <div className="mt-2 p-3.5 rounded-[16px] flex flex-col gap-3.5" style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)' }}>
+                <div>
+                  <p className="text-[11px] font-extrabold tracking-[.06em] mb-1.5" style={{ color: 'var(--c-muted-2)' }}>화면</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setActiveTab('MONITOR'); setIsMobileMenuOpen(false); }}
+                      className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${activeTab === 'MONITOR' ? 'bg-[color:var(--c-primary)] text-white' : 'bg-[color:var(--c-tint)] text-[color:var(--c-muted)]'}`}
+                    >
+                      실시간 관제
+                    </button>
+                    <button
+                      onClick={() => { setActiveTab('UPLOAD'); setIsMobileMenuOpen(false); }}
+                      className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${activeTab === 'UPLOAD' ? 'bg-[color:var(--c-primary)] text-white' : 'bg-[color:var(--c-tint)] text-[color:var(--c-muted)]'}`}
+                    >
+                      대시보드 / 업로드
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-extrabold tracking-[.06em] mb-1.5" style={{ color: 'var(--c-muted-2)' }}>이벤트</p>
+                  <select
+                    className="w-full px-3.5 py-3 rounded-[13px] text-base font-bold outline-none focus:border-[color:var(--c-primary)]"
+                    style={{ background: 'var(--c-tint-2)', border: '1px solid var(--c-line)' }}
+                    value={selectedEventId || ''}
+                    onChange={(e) => setSelectedEventId(e.target.value)}
+                  >
+                    <option value="">-- 이벤트를 선택하세요 --</option>
+                    {events.map(ev => (
+                      <option key={ev.id} value={ev.id}>{ev.name} (참가자 {ev._count?.participants || 0}명){ev.is_active ? ' • 활성 •' : ''}</option>
+                    ))}
+                  </select>
+                  {selectedEvent && !selectedEvent.is_active && (
+                    <button
+                      onClick={handleActivateEvent}
+                      className="mt-2 w-full py-2.5 rounded-xl text-sm font-extrabold text-white hover:opacity-90 active:opacity-80"
+                      style={{ backgroundColor: '#17A85A' }}
+                    >
+                      활성 전환
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-3" style={{ borderTop: '1px solid var(--c-line-soft)' }}>
+                  <button
+                    onClick={() => { setIsMobileMenuOpen(false); openPwModal(); }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-[color:var(--c-tint)] text-[color:var(--c-ink-2)]"
+                  >
+                    비밀번호 변경
+                  </button>
+                  <button
+                    onClick={() => setAdminAuth(null, null)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                    style={{ border: '1.5px solid var(--c-line)', color: 'var(--c-muted)' }}
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           {activeTab === 'UPLOAD' && (
             <div className="w-full lg:max-w-4xl">
@@ -933,10 +993,12 @@ const updateStoreWithEventData = (event: any) => {
 
           {activeTab === 'MONITOR' && (
             <div className="flex flex-col h-full space-y-3">
-              <h2 className="text-[27px] font-extrabold tracking-[-.02em]">실시간 관제</h2>
+              <h2 className="hidden md:block text-[27px] font-extrabold tracking-[-.02em]">실시간 관제</h2>
               
-              <div className="flex flex-col gap-3.5 rounded-[20px] px-[22px] py-[18px]" style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)' }}>
-                <div className="w-full md:max-w-md">
+              {/* 모바일에서는 이벤트 선택이 머리말의 «⋯» 로 옮겨가, 이 카드에 남는 건
+                  «관리 도구» 뿐이다. 고를 이벤트가 없으면 빈 카드가 되므로 감춘다 */}
+              <div className={`flex-col gap-3.5 rounded-[20px] p-3.5 md:px-[22px] md:py-[18px] ${selectedEventId ? 'flex' : 'hidden md:flex'}`} style={{ background: 'var(--c-surface)', boxShadow: 'var(--sh-card)' }}>
+                <div className="hidden md:block w-full md:max-w-md">
                   <label className="block text-[13px] font-bold mb-[7px]" style={{ color: 'var(--c-muted)' }}>이벤트 선택</label>
                   <select
                     className="w-full px-3.5 py-3 rounded-[13px] text-sm font-bold outline-none focus:border-[color:var(--c-primary)]"
