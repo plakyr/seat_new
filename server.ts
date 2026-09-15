@@ -2242,17 +2242,20 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       autoAssignInProgress.add(eventId);
       holdingAssignLock = true;
 
-      // 잠금을 잡는 사이 상태가 바뀌었을 수 있으므로 최신 상태를 다시 확인한다.
+      // 잠금 획득 전 상태는 낡았을 수 있으므로, 잡은 뒤 최신 상태로 다시 판단한다.
+      const freshState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+      if (!freshState || freshState.is_frozen) return;
+
       const latest = await prisma.participant.findFirst({
-        where: { event_id: eventId, turn_order: systemState.current_turn_order }
+        where: { event_id: eventId, turn_order: freshState.current_turn_order }
       });
-      if (latest && !latest.is_final) return; // 그 사이 미완료 참가자로 바뀜 → 이번 틱은 넘김
+      if (latest && !latest.is_final) return; // 그 사이 미완료 참가자로 바뀜(초기화 포함) → 이번 틱은 넘김
 
       const maxTurnResult = await prisma.participant.aggregate({
         where: { event_id: eventId }, _max: { turn_order: true }
       });
       const maxTurn = maxTurnResult._max.turn_order || 0;
-      const nextTurnOrder = systemState.current_turn_order + 1;
+      const nextTurnOrder = freshState.current_turn_order + 1;
       if (nextTurnOrder > maxTurn) return; // 더 진행할 순번 없음 (전원 완료는 위 flow에서 처리)
 
       const gap = await checkSessionGap(eventId);
@@ -2261,11 +2264,15 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         io.to(`admin:event:${eventId}`).emit('system:session_change', gap);
         return;
       }
-      const updated = await prisma.systemState.update({
-        where: { event_id: eventId },
+      // 조건부 전환: 최신으로 읽은 그 순번에서 아직 안 움직였을 때만 넘긴다.
+      const advanced = await prisma.systemState.updateMany({
+        where: { event_id: eventId, current_turn_order: freshState.current_turn_order },
         data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
       });
-      await notifyTurnAdvance(eventId, updated);
+      if (advanced.count > 0) {
+        const updated = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+        if (updated) await notifyTurnAdvance(eventId, updated);
+      }
       return;
     }
 
@@ -2284,9 +2291,18 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     // (그 사이 초기화됨) 배정·턴 전환을 취소한다. 같은 순번으로 초기화돼도 잡아낸다.
     const genAtStart = resetGeneration.get(eventId) ?? 0;
 
-    // 잠금을 잡는 사이에 참가자가 직접 좌석을 선택했을 수 있으므로 최신 상태로 다시 읽는다.
+    // 잠금 획득 전에 읽은 systemState 는, 잠금을 기다리는 사이 초기화(공통 잠금 보유)나
+    // 타이머 재정렬로 낡았을 수 있다. 잠금을 잡은 뒤 최신 상태로 다시 읽어 만료 여부·현재
+    // 순번을 재판단하고, 이후 로직은 이 최신 값(freshState)만 쓴다. (낡은 시작 시각으로
+    // '만료됐다'고 판단해, 방금 새 3분을 받은 참가자를 즉시 자동배정하던 문제를 막는다.)
+    const freshState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+    if (!freshState || freshState.is_frozen) return;
+    if (Date.now() - new Date(freshState.current_turn_start_time).getTime() < TURN_DURATION_MS) {
+      return; // 초기화·재정렬로 새 3분을 받은 상태 → 지금 배정하면 안 된다.
+    }
+
     const currentParticipant = await prisma.participant.findFirst({
-      where: { event_id: eventId, turn_order: systemState.current_turn_order }
+      where: { event_id: eventId, turn_order: freshState.current_turn_order }
     });
 
     const maxTurnResult = await prisma.participant.aggregate({
@@ -2294,7 +2310,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       _max: { turn_order: true }
     });
     const maxTurn = maxTurnResult._max.turn_order || 0;
-    const nextTurnOrder = systemState.current_turn_order + 1;
+    const nextTurnOrder = freshState.current_turn_order + 1;
 
     // 이미 완료됐거나 참가자 없으면 (자동배정 문구 없이) 조용히 다음 턴으로
     if (!currentParticipant || currentParticipant.is_final) {
@@ -2330,7 +2346,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       const recheck = await prisma.systemState.findUnique({ where: { event_id: eventId } });
       const recheckP = await prisma.participant.findUnique({ where: { id: currentParticipant.id } });
       if (!recheck || recheck.is_frozen ||
-          recheck.current_turn_order !== systemState.current_turn_order ||
+          recheck.current_turn_order !== freshState.current_turn_order ||
           (resetGeneration.get(eventId) ?? 0) !== genAtStart ||
           !recheckP || recheckP.is_final) {
         console.log(`[AutoAssign] 대기 중 상태 변경 감지 - ${currentParticipant.name} 배정 취소`);
@@ -2420,7 +2436,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         } else {
           // 조건부 전환: 우리가 배정한 그 순번에서 아직 안 움직였을 때만 다음으로 넘긴다.
           const advanced = await prisma.systemState.updateMany({
-            where: { event_id: eventId, current_turn_order: systemState.current_turn_order },
+            where: { event_id: eventId, current_turn_order: freshState.current_turn_order },
             data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
           });
           if (advanced.count > 0) {
