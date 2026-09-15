@@ -236,17 +236,24 @@ export const useStore = create<AppState>((set) => ({
   }),
   setRows: (rows) => set({ rows }),
   setCols: (cols) => set({ cols }),
-  updateSeat: (updatedSeat) => set((state) => ({
-    seats: state.seats.map(seat => {
-      if (seat.id !== updatedSeat.id) return seat;
-      // 더 오래된 갱신이면 무시 (지연 도착한 옛 seat:update 가 최신을 덮는 것 방지)
-      if (seat.updated_at && updatedSeat.updated_at &&
-          Date.parse(seat.updated_at) > Date.parse(updatedSeat.updated_at)) {
-        return seat;
-      }
-      return updatedSeat;
-    })
-  })),
+  updateSeat: (updatedSeat) => set((state) => {
+    const exists = state.seats.some(seat => seat.id === updatedSeat.id);
+    // 아직 초기 좌석 목록이 도착하기 전이라 목록에 없는 좌석이면, 버리지 않고 넣어 둔다.
+    // (초기 목록보다 먼저 온 예약 갱신이 유실돼, 뒤늦게 온 예약 전 목록이 빈자리로
+    //  덮던 문제. 넣어 두면 나중에 setSeats 가 updated_at 비교로 최신을 유지한다.)
+    if (!exists) return { seats: [...state.seats, updatedSeat] };
+    return {
+      seats: state.seats.map(seat => {
+        if (seat.id !== updatedSeat.id) return seat;
+        // 더 오래된 갱신이면 무시 (지연 도착한 옛 seat:update 가 최신을 덮는 것 방지)
+        if (seat.updated_at && updatedSeat.updated_at &&
+            Date.parse(seat.updated_at) > Date.parse(updatedSeat.updated_at)) {
+          return seat;
+        }
+        return updatedSeat;
+      })
+    };
+  }),
   setLastAssignedSeatId: (seatId) => set({ lastAssignedSeatId: seatId }),
   setParticipants: (participants) => set({ participants }),
   setOnlineParticipantIds: (ids) => set({ onlineParticipantIds: ids }),

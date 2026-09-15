@@ -422,7 +422,16 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   // 테스트용: 이벤트의 모든 좌석/참가자 상태를 초기화
   app.post('/api/admin/events/:eventId/reset', requireAdmin, async (req, res) => {
     const { eventId } = req.params;
+    // 진행 중인 자동배정·수동배정이 끝날 때까지 기다렸다가 잠금을 잡는다.
+    // 이렇게 하면 초기화의 DB 변경이 배정 시퀀스와 절대 겹치지 않아,
+    // "검사 통과 후 조회하는 사이 초기화" 같은 경합 구간이 사라진다.
+    const locked = await acquireEventLock(eventId);
+    if (!locked) {
+      return res.status(409).json({ error: '배정 작업이 진행 중입니다. 잠시 후 다시 시도해주세요.' });
+    }
     try {
+      // 세대를 먼저 올려, 혹시 이 잠금을 놓친 배정 경로가 있어도 변경을 취소하게 한다.
+      bumpResetGeneration(eventId);
       await prisma.$transaction(async (tx) => {
         await tx.seat.updateMany({
           where: { layout: { event_id: eventId } },
@@ -443,11 +452,8 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         await tx.chatMessage.deleteMany({ where: { event_id: eventId } });
       });
 
-      // 진행 흐름 상태 초기화 (공지 캐시)
+      // 진행 흐름 상태 초기화 (공지 캐시). 세대는 위에서 이미 올렸다.
       flowAnnounced.delete(eventId);
-      // 초기화 세대를 올린다. 진행 중이던 자동배정 시퀀스가 대기 후 깨어나면
-      // 세대 불일치를 보고 배정·턴 전환을 취소한다. (같은 순번 1로 초기화돼도 구분됨)
-      bumpResetGeneration(eventId);
 
       const layout = await prisma.venueLayout.findFirst({ where: { event_id: eventId }, include: { seats: true } });
       const participants = await prisma.participant.findMany({ where: { event_id: eventId } });
@@ -513,6 +519,8 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: '이벤트 초기화에 실패했습니다.' });
+    } finally {
+      releaseEventLock(eventId);
     }
   });
 
@@ -1244,6 +1252,9 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       });
 
       const flow = await getFlowAnnouncement(data.eventId);
+      // getFlowAnnouncement 대기 중 다른 이벤트로 전환했을 수 있으니 다시 확인한다.
+      // (옛 이벤트의 완료·턴 공지가 새 화면에 적용되는 것을 막는 두 번째 검사)
+      if (socket.data.adminEventId !== data.eventId) return;
       if (flow) {
         socket.emit(flow.event, flow.payload);
       } else if (systemState) {
@@ -1811,6 +1822,21 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   const AUTO_ASSIGN_NOTICE_MS = 700; // 자동배정 문구 표시 후 좌석 배정까지
   const AUTO_ASSIGN_NEXT_MS = 800;   // 좌석 배정 후 다음 턴 전환까지 (총 1.5초)
   const delay = (ms: number) => new Promise<void>(res => setTimeout(res, ms));
+
+  // 이벤트 단위 배정 잠금 획득/해제. 초기화가 진행 중인 자동배정·수동배정과
+  // 겹치지 않도록, 초기화도 이 잠금을 잡고 처리한다. (검사만으로는 검사와 DB 변경
+  // 사이에 경합 구간이 다시 생기므로, 아예 겹치지 않게 직렬화한다.)
+  // 획득/해제 사이에 await 가 없어(단일 스레드 이벤트 루프) has→add 는 원자적이다.
+  const acquireEventLock = async (eventId: string, timeoutMs = 5000): Promise<boolean> => {
+    const start = Date.now();
+    while (autoAssignInProgress.has(eventId)) {
+      if (Date.now() - start > timeoutMs) return false;
+      await delay(50);
+    }
+    autoAssignInProgress.add(eventId);
+    return true;
+  };
+  const releaseEventLock = (eventId: string) => autoAssignInProgress.delete(eventId);
   // 실제 배정(자동 시퀀스/수동 강제배정/건너뛰기)이 진행 중인 이벤트.
   // 이 잠금이 있을 때만 참가자 seat:select를 막는다.
   const autoAssignInProgress = new Set<string>();
