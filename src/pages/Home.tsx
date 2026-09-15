@@ -39,7 +39,7 @@ export default function Home() {
         <div className="h-[34px]" />
 
         <div className="text-center">
-          <div className="text-[17.5px] font-extrabold tracking-[.02em]" style={{ color: 'var(--c-muted)' }}>
+          <div className="text-[19.5px] font-extrabold tracking-[.02em]" style={{ color: 'var(--c-muted)' }}>
             〈공감 모임〉
           </div>
           <h1 className="text-4xl font-extrabold tracking-[-.03em] leading-tight mt-1.5">좌석 지정</h1>
