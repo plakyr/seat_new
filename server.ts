@@ -445,6 +445,9 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
 
       // 진행 흐름 상태 초기화 (공지 캐시)
       flowAnnounced.delete(eventId);
+      // 초기화 세대를 올린다. 진행 중이던 자동배정 시퀀스가 대기 후 깨어나면
+      // 세대 불일치를 보고 배정·턴 전환을 취소한다. (같은 순번 1로 초기화돼도 구분됨)
+      bumpResetGeneration(eventId);
 
       const layout = await prisma.venueLayout.findFirst({ where: { event_id: eventId }, include: { seats: true } });
       const participants = await prisma.participant.findMany({ where: { event_id: eventId } });
@@ -1067,12 +1070,24 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       // 참가자당 활성 연결은 하나로 유지한다. 같은 참가자로 다른 연결이 이미
       // 인증돼 있으면(다른 기기·다른 탭, 또는 재로그인) 이전 연결을 만료시켜
       // 권한을 회수한다. 이렇게 하지 않으면 이전 연결이 계속 참가자로 행세하거나,
-      // 그 연결의 로그아웃이 새 세션 토큰까지 무효화할 수 있다.
+      // 등록 직전에 토큰을 다시 확인한다. 위의 event 조회 등 await 를 기다리는 사이
+      // 다른 기기에서 재로그인해 토큰이 교체됐을 수 있다. 그 경우 이 인증은 옛 토큰
+      // 기준이므로, 뒤늦게 완료돼 새 연결을 밀어내면 안 된다. 지금 DB 토큰과 이 인증이
+      // 쓴 토큰이 다르면 옛 인증으로 보고 중단한다. (교체된 토큰이 이기게 한다)
+      const fresh = await prisma.participant.findUnique({ where: { id: participantId } });
+      if (!fresh || !fresh.session_token || fresh.session_token !== sessionToken) {
+        socket.emit('session:expired', { reason: '세션이 만료되었습니다. 다시 로그인해주세요.' });
+        return;
+      }
+
+      // 참가자당 활성 연결은 하나로 유지: 이전 연결이 남아 있으면 만료시키고
+      // 행사 방에서도 내보낸다(방에 남으면 만료 후에도 좌석·채팅 방송을 계속 받는다).
       const prevSocketId = activeSockets.get(participantId);
       if (prevSocketId && prevSocketId !== socket.id) {
         const prev = io.sockets.sockets.get(prevSocketId);
         if (prev) {
           prev.emit('session:expired', { reason: '다른 기기에서 접속되어 이 연결이 해제되었습니다.' });
+          if (prev.data.eventId) prev.leave(`event:${prev.data.eventId}`);
           prev.data.participantId = null;
           prev.data.eventId = null;
         }
@@ -1205,6 +1220,13 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
         take: 100
       });
       messages.reverse();
+
+      // 위 DB 조회를 기다리는 사이 관리자가 다른 이벤트로 전환했다면(같은 소켓에서
+      // 더 최근의 request_event 가 adminEventId 를 바꿈) 이 응답은 낡은 것이므로
+      // 아무것도 보내지 않고 버린다. admin:event_data 뿐 아니라 뒤이어 보내는
+      // system:turn·session_change·all_complete 까지 함께 막아, 옛 이벤트의 턴·완료
+      // 공지가 새 화면에 적용되는 것을 방지한다.
+      if (socket.data.adminEventId !== data.eventId) return;
 
       socket.emit('admin:event_data', {
         eventId: data.eventId, // 클라이언트가 지금 선택한 이벤트의 응답인지 대조하는 용도
@@ -1359,8 +1381,9 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       autoAssignInProgress.add(data.eventId);
 
       try {
-        const seat = await prisma.seat.findUnique({ where: { id: data.seatId } });
+        const seat = await prisma.seat.findUnique({ where: { id: data.seatId }, include: { layout: true } });
         if (!seat) throw new Error('좌석을 찾을 수 없습니다.');
+        if (seat.layout.event_id !== data.eventId) throw new Error('이 이벤트의 좌석이 아닙니다.');
         if (seat.status !== 'EMPTY' && seat.status !== 'PRIVATE') {
           throw new Error('이미 배정된 좌석은 변경할 수 없습니다.');
         }
@@ -1388,8 +1411,9 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       autoAssignInProgress.add(data.eventId);
 
       try {
-        const seat = await prisma.seat.findUnique({ where: { id: data.seatId } });
+        const seat = await prisma.seat.findUnique({ where: { id: data.seatId }, include: { layout: true } });
         if (!seat) throw new Error('좌석을 찾을 수 없습니다.');
+        if (seat.layout.event_id !== data.eventId) throw new Error('이 이벤트의 좌석이 아닙니다.');
         if (seat.status !== 'EMPTY' && seat.status !== 'MANUAL') {
           throw new Error('빈 좌석 또는 수동 배정 좌석만 변경할 수 있습니다.');
         }
@@ -1792,6 +1816,12 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   const autoAssignInProgress = new Set<string>();
   // 1초 스케줄러의 평가(evaluation) 중복 실행만 막는 용도. seat:select는 막지 않는다.
   const autoEvalInProgress = new Set<string>();
+  // 초기화 세대(generation): 초기화할 때마다 1씩 올린다. 자동배정 시퀀스는 시작 시점의
+  // 세대를 기억해 두고, 대기 후 배정·턴 전환 직전에 세대가 바뀌었는지 확인한다.
+  // 순번 비교만으로는 "같은 순번(1)으로 초기화"된 경우를 구분할 수 없어 세대로 구분한다.
+  const resetGeneration = new Map<string, number>();
+  const bumpResetGeneration = (eventId: string) =>
+    resetGeneration.set(eventId, (resetGeneration.get(eventId) ?? 0) + 1);
 
   function emitTurn(eventId: string, state: { current_turn_order: number; current_turn_start_time: Date }) {
     const payload = {
@@ -2224,6 +2254,9 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     if (autoAssignInProgress.has(eventId)) return;
     autoAssignInProgress.add(eventId);
     holdingAssignLock = true;
+    // 이 배정 시퀀스가 근거로 삼는 초기화 세대. 대기 후 이 값이 바뀌어 있으면
+    // (그 사이 초기화됨) 배정·턴 전환을 취소한다. 같은 순번으로 초기화돼도 잡아낸다.
+    const genAtStart = resetGeneration.get(eventId) ?? 0;
 
     // 잠금을 잡는 사이에 참가자가 직접 좌석을 선택했을 수 있으므로 최신 상태로 다시 읽는다.
     const currentParticipant = await prisma.participant.findFirst({
@@ -2272,6 +2305,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       const recheckP = await prisma.participant.findUnique({ where: { id: currentParticipant.id } });
       if (!recheck || recheck.is_frozen ||
           recheck.current_turn_order !== systemState.current_turn_order ||
+          (resetGeneration.get(eventId) ?? 0) !== genAtStart ||
           !recheckP || recheckP.is_final) {
         console.log(`[AutoAssign] 대기 중 상태 변경 감지 - ${currentParticipant.name} 배정 취소`);
         return; // 잠금은 finally 에서 해제
@@ -2345,17 +2379,28 @@ app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
       // 3) 0.8초 후 다음 턴으로 전환 (다음 사람 정확히 3:00 시작)
       await delay(AUTO_ASSIGN_NEXT_MS);
 
+      // 이 두 번째 대기 동안 초기화가 일어났다면 턴을 건드리지 않는다.
+      // (초기화가 순번을 1로 되돌렸는데 여기서 stale nextTurnOrder 로 다시 밀어
+      //  미배정 참가자들을 건너뛰던 문제)
+      if ((resetGeneration.get(eventId) ?? 0) !== genAtStart) {
+        return; // 잠금은 finally 에서 해제
+      }
+
       if (nextTurnOrder <= maxTurn) {
         const gap = await checkSessionGap(eventId);
         if (gap) {
           io.to(`event:${eventId}`).emit('system:session_change', gap);
           io.to(`admin:event:${eventId}`).emit('system:session_change', gap);
         } else {
-          const updatedState = await prisma.systemState.update({
-            where: { event_id: eventId },
+          // 조건부 전환: 우리가 배정한 그 순번에서 아직 안 움직였을 때만 다음으로 넘긴다.
+          const advanced = await prisma.systemState.updateMany({
+            where: { event_id: eventId, current_turn_order: systemState.current_turn_order },
             data: { current_turn_order: nextTurnOrder, current_turn_start_time: new Date() }
           });
-          await notifyTurnAdvance(eventId, updatedState);
+          if (advanced.count > 0) {
+            const updatedState = await prisma.systemState.findUnique({ where: { event_id: eventId } });
+            if (updatedState) await notifyTurnAdvance(eventId, updatedState);
+          }
         }
       } else {
         // 마지막 참가자까지 완료 → 전원 완료 여부를 다시 확인해 정확한 상태를 알린다.

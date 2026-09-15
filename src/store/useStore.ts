@@ -23,6 +23,7 @@ export interface Seat {
   session_id: string | null;
   seat_label?: string | null;
   manual_label?: string | null;
+  updated_at?: string; // 서버 DB의 갱신 시각(ISO). 오래된 응답이 최신 좌석을 덮지 않게 비교에 쓴다
 }
 
 export interface LayoutInfo {
@@ -211,7 +212,23 @@ export const useStore = create<AppState>((set) => ({
   setSystemState: (isFrozen, reason) => set({ isFrozen, frozenReason: reason }),
   setSystemTurn: (order, startTime) => set({ currentTurnOrder: order, currentTurnStartTime: startTime, hasReceivedSystemState: true }),
   setSystemReady: () => set({ hasReceivedSystemState: true }),
-  setSeats: (seats) => set({ seats }),
+  // 좌석 목록을 통째로 넣을 때, 이미 갖고 있는 좌석보다 '오래된' 좌석으로 덮지 않는다.
+  // (초기 조회 응답이 그 사이 도착한 seat:update 보다 늦게 오면, 예약된 좌석이 다시
+  //  빈자리로 되돌아 보이던 문제. DB updated_at 으로 최신 여부를 판별한다.)
+  setSeats: (seats) => set((state) => {
+    if (state.seats.length === 0) return { seats };
+    const prevById = new Map(state.seats.map(s => [s.id, s]));
+    const t = (s?: Seat) => (s?.updated_at ? Date.parse(s.updated_at) : NaN);
+    const merged = seats.map(incoming => {
+      const existing = prevById.get(incoming.id);
+      // 기존 좌석의 갱신 시각이 더 최신이면 기존 것을 유지 (둘 다 시각이 있을 때만 비교)
+      if (existing && !Number.isNaN(t(existing)) && !Number.isNaN(t(incoming)) && t(existing) > t(incoming)) {
+        return existing;
+      }
+      return incoming;
+    });
+    return { seats: merged };
+  }),
   setLayout: (layout) => set({
     layout,
     rows: layout?.rows ?? 10,
@@ -220,7 +237,15 @@ export const useStore = create<AppState>((set) => ({
   setRows: (rows) => set({ rows }),
   setCols: (cols) => set({ cols }),
   updateSeat: (updatedSeat) => set((state) => ({
-    seats: state.seats.map(seat => seat.id === updatedSeat.id ? updatedSeat : seat)
+    seats: state.seats.map(seat => {
+      if (seat.id !== updatedSeat.id) return seat;
+      // 더 오래된 갱신이면 무시 (지연 도착한 옛 seat:update 가 최신을 덮는 것 방지)
+      if (seat.updated_at && updatedSeat.updated_at &&
+          Date.parse(seat.updated_at) > Date.parse(updatedSeat.updated_at)) {
+        return seat;
+      }
+      return updatedSeat;
+    })
   })),
   setLastAssignedSeatId: (seatId) => set({ lastAssignedSeatId: seatId }),
   setParticipants: (participants) => set({ participants }),
