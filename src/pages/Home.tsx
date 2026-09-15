@@ -39,7 +39,9 @@ export default function Home() {
         <div className="h-[34px]" />
 
         <div className="text-center">
-          <div className="text-[19.5px] font-extrabold tracking-[.02em]" style={{ color: 'var(--c-muted)' }}>
+          {/* 줄 높이를 26px 로 고정: 글자를 17.5→19.5px 로 키우면서도 차지하는 세로
+              공간(이전 17.5×1.5≈26px)은 그대로 둬, 위아래 간격이 벌어지지 않게 한다 */}
+          <div className="text-[19.5px] font-extrabold tracking-[.02em] leading-[26px]" style={{ color: 'var(--c-muted)' }}>
             〈공감 모임〉
           </div>
           <h1 className="text-4xl font-extrabold tracking-[-.03em] leading-tight mt-1.5">좌석 지정</h1>
